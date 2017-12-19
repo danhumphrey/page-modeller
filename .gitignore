@@ -1,0 +1,7 @@
+.idea
+*.zip
+*.xpi
+.DS_Store
+*.build.js
+node_modules
+dist
