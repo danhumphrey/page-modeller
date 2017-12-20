@@ -1,0 +1,22 @@
+{
+    "manifest_version": 2,
+    "name": "Page Modeller",
+    "description" : "A browser extension for modelling page objects to use with Selenium WebDriver",
+    "version": "1.0",
+    "background": {
+        "scripts": ["/js/background.js"],
+        "persistent": false
+    },
+    "devtools_page": "devtools-page.html",
+    "permissions" : [
+        "tabs"
+    ],
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": [
+                "/js/content.js"
+            ]
+        }
+    ]
+}
