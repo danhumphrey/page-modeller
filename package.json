@@ -53,6 +53,7 @@
     "gulp-uglify": "^3.0.0",
     "gulp-util": "^3.0.8",
     "gulp-watch": "^4.3.11",
+    "jquery": "^3.2.1",
     "preprocessify": "^1.0.1",
     "rimraf": "^2.6.1",
     "vinyl-buffer": "^1.0.0",

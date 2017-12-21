@@ -8,7 +8,20 @@
 </head>
 <html lang="en">
 	<body>
-	    <h1>Page Modeller</h1>
-		<script src="js/sidebar.js"></script>
+    <div class="ui fixed menu">
+        <button class="item btn toggle" id="btn-create" data-content="Create a new model" data-position="bottom left" data-delay="500"></button>
+        <button class="item btn toggle" id="btn-add" data-content="Add an element to the model" data-position="bottom left" data-delay="500"></button>
+        <button class="item btn" id="btn-delete" data-content="Delete the model" data-position="bottom left" data-delay="500"></button>
+        <div class="spacer"></div>
+        <button class="item btn text" id="btn-generate" data-content="Delete the model" data-position="bottom left" data-delay="500">Generate</button>
+        <select id="language">
+            <option selected value="JAVA">Java</option>
+            <option value="C#">C#</option>
+        </select>
+    </div>
+    <div class="ui main container">
+        <h1>Page Modeller</h1>
+    </div>
+    <script src="js/sidebar.js"></script>
 	</body>
 </html>
