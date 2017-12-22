@@ -2,7 +2,7 @@ const builder = require('./model-builder');
 const util = require('./util');
 const elementsPanel = chrome.devtools.panels.elements;
 
-let modelling = false;
+let isModelling = false;
 
 const handlePanelShown = function() {
     console.log("Page Modeller panel shown");
@@ -26,11 +26,11 @@ elementsPanel.createSidebarPane(
 );
 
 elementsPanel.onSelectionChanged.addListener(function() {
-    if(modelling) {
+    if(isModelling) {
         chrome.devtools.inspectedWindow.eval('(' + builder.toString() + ')($0).build()',{
             useContentScriptContext: true
         }, handleModelBuild);
-        modelling = false;
+        isModelling = false;
         util.sendMessage('notify-modelling-complete');
     }
 });
@@ -39,10 +39,10 @@ chrome.runtime.onMessage.addListener(function(msg, sender){
     switch(msg.type) {
         case 'notify-start-modelling':
             chrome.devtools.inspectedWindow.eval('inspect(document.body)');
-            modelling = true;
+            isModelling = true;
             break;
         case 'notify-stop-modelling':
-            modelling = false;
+            isModelling = false;
             break;
     }
 });
