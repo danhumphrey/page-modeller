@@ -1,4 +1,4 @@
-.ui.menu {
+.ui.menu.extension {
   min-height: 1em !important;
   padding: 0.2em;
 
@@ -9,7 +9,7 @@
   flex-grow: 1;
 }
 
-.ui.menu .item:before {
+.ui.menu.extension .item:before {
   position: absolute;
   content: '';
   top: 0%;

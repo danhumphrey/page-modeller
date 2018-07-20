@@ -8,19 +8,37 @@
 </head>
 <html lang="en">
 	<body>
-    <div class="ui fixed menu">
+    <div class="ui fixed extension menu">
         <button class="item btn toggle" id="btn-create" data-content="Create a new model" data-position="bottom left" data-delay="500"></button>
         <button class="item btn toggle" id="btn-add" data-content="Add an element to the model" data-position="bottom left" data-delay="500"></button>
         <button class="item btn" id="btn-delete" data-content="Delete the model" data-position="bottom left" data-delay="500"></button>
         <div class="spacer"></div>
+<<<<<<< HEAD
         <button class="item btn text" id="btn-generate" data-content="Generate the model code" data-position="bottom left" data-delay="500">Generate</button>
         <select id="language">
             <option selected value="JAVA">Java</option>
             <option value="C#">C#</option>
         </select>
+=======
+        <button class="item btn text" id="btn-generate" data-content="Generate the model" data-position="bottom left" data-delay="500">Generate</button>
+
+>>>>>>> 96e916f65c551c5a25849c22319fa707365b8a6a
     </div>
     <div class="ui main container">
-        <h1>Page Modeller</h1>
+        <div class="ui top attached tabular menu">
+            <a class="item active" data-tab="model">Model</a>
+            <a class="item" data-tab="template">Template</a>
+        </div>
+        <div class="ui bottom attached tab segment active" data-tab="model">
+            Model
+        </div>
+        <div class="ui bottom attached tab segment" data-tab="template">
+            <select id="language">
+                <option selected value="JAVA">Java</option>
+                <option value="C#">C#</option>
+                <option value="CUSTOM">Custom</option>
+            </select>
+        </div>
     </div>
     <script src="js/sidebar.js"></script>
 	</body>

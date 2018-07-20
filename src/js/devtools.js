@@ -2,7 +2,7 @@ const builder = require('./model-builder');
 const util = require('./util');
 const elementsPanel = chrome.devtools.panels.elements;
 
-let modelling = false;
+let isModelling = false;
 
 const handlePanelShown = function() {
     console.log(`Page Modeller panel shown`);
@@ -26,8 +26,12 @@ elementsPanel.createSidebarPane(
 );
 
 elementsPanel.onSelectionChanged.addListener(function() {
-    if (!modelling) {
-        return;
+    if(isModelling) {
+        chrome.devtools.inspectedWindow.eval('(' + builder.toString() + ')($0).build()',{
+            useContentScriptContext: true
+        }, handleModelBuild);
+        isModelling = false;
+        util.sendMessage('notify-modelling-complete');
     }
     modelling = false;
     chrome.devtools.inspectedWindow.eval('(' + builder.toString() + ')($0).build()', {
@@ -40,12 +44,11 @@ elementsPanel.onSelectionChanged.addListener(function() {
 chrome.runtime.onMessage.addListener(function(msg, sender){
     switch(msg.type) {
         case 'notify-start-modelling':
-            chrome.devtools.inspectedWindow.eval('inspect(document)');
-            modelling = true;
-
+            chrome.devtools.inspectedWindow.eval('inspect(document.body)');
+            isModelling = true;
             break;
         case 'notify-stop-modelling':
-            modelling = false;
+            isModelling = false;
             break;
     }
 });

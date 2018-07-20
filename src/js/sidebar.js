@@ -1,6 +1,5 @@
 const $ = require('jquery');
 const util = require('./util');
-
 window.jQuery = $;
 /*
 require('../../node_modules/semantic-ui-sass/js/api');
@@ -26,9 +25,12 @@ require('../../node_modules/semantic-ui-sass/js/search');
 require('../../node_modules/semantic-ui-sass/js/shape');
 require('../../node_modules/semantic-ui-sass/js/sidebar');
 require('../../node_modules/semantic-ui-sass/js/sticky');
-require('../../node_modules/semantic-ui-sass/js/tab');
 */
+
+require('../../node_modules/semantic-ui-sass/js/tab');
 require('../../node_modules/semantic-ui-sass/js/transition');
+
+let hasModel = false;
 
 $('.btn').popup({
     delay: {
@@ -36,6 +38,10 @@ $('.btn').popup({
         hide: 0
     }
 });
+
+$('.tabular.menu .item')
+  .tab()
+;
 
 $('.btn.toggle').on('click', function() {
     let el = $(this),
