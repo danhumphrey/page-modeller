@@ -51,18 +51,6 @@ $('.btn.toggle').on('click', function() {
 
 chrome.runtime.onMessage.addListener(function(msg, sender){
     switch(msg.type) {
-        case 'notify-start-modelling':
-            modelling = true;
-            break;
-        case 'notify-stop-modelling':
-            modelling = false;
-            break;
-    }
-});
-
-
-chrome.runtime.onMessage.addListener(function(msg, sender){
-    switch(msg.type) {
         case 'notify-modelling-complete':
             $('.btn.toggle.active').removeClass('active').siblings().prop("disabled", false);
             break;
