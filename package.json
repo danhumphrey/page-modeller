@@ -57,7 +57,7 @@
     "preprocessify": "^1.0.1",
     "rimraf": "^2.6.1",
     "vinyl-buffer": "^1.0.0",
-    "vinyl-source-stream": "^1.1.0",
+    "vinyl-source-stream": "^2.0.0",
     "web-ext": "^2.2.2"
   },
   "dependencies": {
