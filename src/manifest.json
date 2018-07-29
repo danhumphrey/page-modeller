@@ -3,6 +3,10 @@
     "name": "Page Modeller",
     "description" : "A browser extension for modelling page objects to use with Selenium WebDriver",
     "version": "1.0",
+    "homepage_url": "https://github.com/danhumphrey/page-modeller",
+    "icons": {
+        "48": "icons/star.png"
+    },
     "background": {
         "scripts": ["/js/background.js"],
         "persistent": false

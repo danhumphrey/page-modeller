@@ -10,12 +10,14 @@
     "src": {
       "base": "./src/",
       "css": "./src/css/",
-      "js": "./src/js/"
+      "js": "./src/js/",
+      "icons": "./src/icons/"
     },
     "dist": {
       "base": "./dist/",
       "css": "./dist/css/",
-      "js": "./dist/js/"
+      "js": "./dist/js/",
+      "icons": "./dist/icons/"
     },
     "build": {
       "base": "./build/"
@@ -26,7 +28,7 @@
       "background.js",
       "devtools.js",
       "content.js",
-      "sidebar.js"
+      "panel.js"
     ]
   },
   "scripts": {
@@ -60,7 +62,5 @@
     "vinyl-source-stream": "^2.0.0",
     "web-ext": "^2.2.2"
   },
-  "dependencies": {
-    "semantic-ui-sass": "^2.2.11"
-  }
+  "dependencies": {}
 }

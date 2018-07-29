@@ -1,6 +1,5 @@
 const builder = require('./model-builder');
 const util = require('./util');
-const elementsPanel = chrome.devtools.panels.elements;
 
 let isModelling = false;
 
@@ -16,28 +15,14 @@ const handleModelBuild = function(model) {
     console.log(model);
 };
 
-elementsPanel.createSidebarPane(
-    "Page Modeller",
-    function(sidebarPanel) {
-        sidebarPanel.setPage('sidebar-page.html');
-        sidebarPanel.onShown.addListener(handlePanelShown);
-        sidebarPanel.onHidden.addListener(handlePanelHidden);
-    }
-);
 
-elementsPanel.onSelectionChanged.addListener(function() {
-    if(isModelling) {
-        chrome.devtools.inspectedWindow.eval('(' + builder.toString() + ')($0).build()',{
-            useContentScriptContext: true
-        }, handleModelBuild);
-        isModelling = false;
-        util.sendMessage('notify-modelling-complete');
-    }
-    modelling = false;
-    chrome.devtools.inspectedWindow.eval('(' + builder.toString() + ')($0).build()', {
-        useContentScriptContext: true
-    }, handleModelBuild);
-    util.sendMessage('notify-modelling-complete');
+chrome.devtools.panels.create(
+  "Page Modeller",
+  "icons/star.png",
+  "panel.html"
+).then((newPanel) => {
+  newPanel.onShown.addListener(handlePanelShown);
+  newPanel.onHidden.addListener(handlePanelHidden);
 });
 
 

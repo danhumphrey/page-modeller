@@ -73,6 +73,14 @@
     }
 
     // =============================================
+    // Icons
+    // =============================================
+    function icons(cb) {
+      return gulp.src(pkg.paths.src.icons + '*.png')
+        .pipe(gulp.dest(pkg.paths.dist.icons));
+    }
+
+    // =============================================
     // Combines javascript files and minifies
     // =============================================
     function javascript(cb) {
@@ -156,6 +164,6 @@
         logUpdate(`Chrome should now be open with the ${pkg.name} extension loaded.`);
     }
 
-    gulp.task('startChrome', gulp.series(env, watch, cleanBuild, cleanDist, sass, minifyHtml, manifest, javascript, launchChrome));
+    gulp.task('startChrome', gulp.series(env, watch, cleanBuild, cleanDist, sass, minifyHtml, manifest, icons, javascript, launchChrome));
 
 })(global.console);
