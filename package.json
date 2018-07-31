@@ -1,7 +1,7 @@
 {
   "name": "page-modeller",
   "version": "0.0.1",
-  "description": "A webextension for modelling page objects",
+  "description": "A browser extension for modelling page objects",
   "main": "gulpfile.js",
   "author": "Dan Humphrey - danh2000@gmail.com",
   "homepage": "https://github.com/danhumphrey/page-modeller#page-modeller",
