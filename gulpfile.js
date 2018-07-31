@@ -152,7 +152,7 @@
         $.sass
           .sync({
             includePaths: [
-              //'./node_modules/some/path/to/sass'
+              './node_modules/vuetify-scss/'
             ]
           })
           .on("error", $.sass.logError)
@@ -190,7 +190,7 @@
       .watch(pkg.paths.src.base + "**/*.scss")
       .on("change", gulp.series(sass, watchTriggered));
     gulp
-      .watch(pkg.paths.src.base + "**/*.js")
+      .watch(pkg.paths.src.base + "**/*.{js,vue}")
       .on("change", gulp.series(javascript, watchTriggered));
     cb();
   }

@@ -62,9 +62,11 @@
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^2.0.0",
     "vueify": "^9.4.1",
+    "vuetify-scss": "^1.0.0",
     "web-ext": "^2.2.2"
   },
   "dependencies": {
-    "vue": "^2.5.16"
+    "vue": "^2.5.16",
+    "vuetify": "^1.1.8"
   }
 }
