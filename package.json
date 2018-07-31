@@ -1,9 +1,10 @@
 {
   "name": "page-modeller",
   "version": "0.0.1",
-  "description": "",
-  "main": "Gulpfile.js",
+  "description": "A webextension for modelling page objects",
+  "main": "gulpfile.js",
   "author": "Dan Humphrey - danh2000@gmail.com",
+  "homepage": "https://github.com/danhumphrey/page-modeller#page-modeller",
   "license": "",
   "private": true,
   "paths": {
@@ -28,12 +29,12 @@
       "background.js",
       "devtools.js",
       "content.js",
-      "panel.js"
+      "panel.js",
+      "app.js"
     ]
   },
   "scripts": {
-    "start:firefox": "web-ext run --source-dir ./dist/",
-    "start:firefox-nightly": "web-ext run --source-dir ./dist/ --firefox=nightly",
+    "start:firefox": "gulp startFirefox --dev",
     "start:chrome": "gulp startChrome --dev",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": ""
@@ -43,6 +44,7 @@
     "babelify": "^8.0.0",
     "browserify": "^16.2.2",
     "chrome-launch": "^1.1.4",
+    "envify": "^4.1.0",
     "gulp": "github:gulpjs/gulp#4.0",
     "gulp-babel": "^7.0.0",
     "gulp-cssnano": "^2.1.2",
@@ -55,12 +57,14 @@
     "gulp-uglify": "^3.0.0",
     "gulp-util": "^3.0.8",
     "gulp-watch": "^5.0.1",
-    "jquery": "^3.2.1",
-    "preprocessify": "^1.0.1",
+    "prettier": "^1.14.0",
     "rimraf": "^2.6.1",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^2.0.0",
+    "vueify": "^9.4.1",
     "web-ext": "^2.2.2"
   },
-  "dependencies": {}
+  "dependencies": {
+    "vue": "^2.5.16"
+  }
 }
