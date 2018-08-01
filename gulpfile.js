@@ -221,6 +221,7 @@
     webext.cmd
       .run(
         {
+          noInput: true,
           sourceDir: distPath,
           startUrl: pkg.homepage
         },
