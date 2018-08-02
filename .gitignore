@@ -4,5 +4,6 @@
 .DS_Store
 *.build.js
 node_modules
-dist
-build
+/*.log
+/dist
+/dist-zip

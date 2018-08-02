@@ -7,65 +7,53 @@
   "homepage": "https://github.com/danhumphrey/page-modeller#page-modeller",
   "license": "",
   "private": true,
-  "paths": {
-    "src": {
-      "base": "./src/",
-      "css": "./src/css/",
-      "js": "./src/js/",
-      "icons": "./src/icons/"
-    },
-    "dist": {
-      "base": "./dist/",
-      "css": "./dist/css/",
-      "js": "./dist/js/",
-      "icons": "./dist/icons/"
-    },
-    "build": {
-      "base": "./build/"
-    }
-  },
-  "files": {
-    "js": [
-      "background.js",
-      "devtools.js",
-      "content.js",
-      "panel.js",
-      "app.js"
-    ]
-  },
   "scripts": {
-    "start:firefox": "gulp startFirefox --dev",
-    "start:chrome": "gulp startChrome --dev",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": ""
-  },
-  "devDependencies": {
-    "babel-preset-env": "^1.6.1",
-    "babelify": "^8.0.0",
-    "browserify": "^16.2.2",
-    "chrome-launch": "^1.1.4",
-    "envify": "^4.1.0",
-    "gulp": "github:gulpjs/gulp#4.0",
-    "gulp-babel": "^7.0.0",
-    "gulp-cssnano": "^2.1.2",
-    "gulp-if": "^2.0.2",
-    "gulp-load-plugins": "^1.5.0",
-    "gulp-minify-html": "^1.0.6",
-    "gulp-purifycss": "^0.2.0",
-    "gulp-sass": "^4.0.1",
-    "gulp-sourcemaps": "^2.6.1",
-    "gulp-uglify": "^3.0.0",
-    "gulp-util": "^3.0.8",
-    "gulp-watch": "^5.0.1",
-    "prettier": "^1.14.0",
-    "rimraf": "^2.6.1",
-    "vinyl-buffer": "^1.0.0",
-    "vinyl-source-stream": "^2.0.0",
-    "vueify": "^9.4.1",
-    "web-ext": "^2.8.0"
+    "lint": "eslint --ext .js,.vue src",
+    "precommit": "pretty-quick --staged",
+    "prettier": "prettier 'src/**/*.{js,vue}'",
+    "prettier:write": "npm run prettier -- --write",
+    "build": "cross-env NODE_ENV=production webpack --hide-modules",
+    "build:dev": "cross-env NODE_ENV=development webpack --hide-modules",
+    "build-zip": "node scripts/build-zip.js",
+    "watch": "npm run build -- --watch",
+    "watch:dev": "cross-env HMR=true npm run build:dev -- --watch"
   },
   "dependencies": {
-    "vue": "^2.5.16",
-    "vuetify": "^1.1.8"
+    "vue": "^2.5.13",
+    "vuetify": "^1.1.9"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0-beta.51",
+    "@babel/plugin-proposal-optional-chaining": "^7.0.0-beta.51",
+    "@babel/preset-env": "^7.0.0-beta.51",
+    "@types/chrome": "^0.0.69",
+    "babel-eslint": "^8.2.5",
+    "babel-loader": "^8.0.0-beta.4",
+    "copy-webpack-plugin": "^4.0.1",
+    "cross-env": "^5.1.6",
+    "css-loader": "^0.28.11",
+    "eslint": "^5.0.1",
+    "eslint-config-airbnb-base": "^13.0.0",
+    "eslint-config-prettier": "^2.9.0",
+    "eslint-friendly-formatter": "^4.0.1",
+    "eslint-import-resolver-webpack": "^0.10.1",
+    "eslint-loader": "^2.0.0",
+    "eslint-plugin-import": "^2.12.0",
+    "eslint-plugin-prettier": "^2.6.1",
+    "eslint-plugin-vue": "^4.5.0",
+    "file-loader": "^1.1.11",
+    "husky": "^0.14.3",
+    "mini-css-extract-plugin": "^0.4.0",
+    "node-sass": "^4.5.3",
+    "prettier": "^1.13.5",
+    "pretty-quick": "^1.6.0",
+    "sass-loader": "^7.0.1",
+    "vue-loader": "^15.2.0",
+    "vue-template-compiler": "^2.5.13",
+    "webpack": "^4.14.0",
+    "webpack-chrome-extension-reloader": "^0.6.7",
+    "webpack-cli": "^3.0.8",
+    "webpack-shell-plugin": "^0.5.0",
+    "zip-folder": "^1.0.0"
   }
 }
