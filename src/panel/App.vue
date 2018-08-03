@@ -1,12 +1,31 @@
 <template>
     <v-app>
         <v-toolbar dense>
-            <v-toolbar-title>{{ title }}</v-toolbar-title>
+
+            <v-btn icon>
+                <v-icon>find_in_page</v-icon>
+            </v-btn>
+            <v-btn icon>
+                <v-icon>delete_sweep</v-icon>
+            </v-btn>
             <v-spacer></v-spacer>
-            <v-toolbar-items >
-                <v-btn flat>Link</v-btn>
-                <v-btn flat>Link</v-btn>
-            </v-toolbar-items>
+
+
+            <v-btn icon>
+                <v-icon>playlist_add</v-icon>
+            </v-btn>
+            <v-btn icon>
+                <v-icon>delete</v-icon>
+            </v-btn>
+
+            <v-btn icon>
+                <v-icon>remove_red_eye</v-icon>
+            </v-btn>
+
+            <v-btn icon>
+                <v-icon>code</v-icon>
+            </v-btn>
+
         </v-toolbar>
     </v-app>
 </template>

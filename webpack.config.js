@@ -47,10 +47,17 @@ const config = {
         use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader?indentedSyntax'],
       },
       {
-        test: /\.(png|jpg|gif|svg|ico)$/,
+        test: /\.(png|jpg|gif)$/,
         loader: 'file-loader',
         options: {
           name: '[name].[ext]?emitFile=false',
+        },
+      },
+      {
+        test: /\.(svg|ico|eot|woff|ttf|woff2)$/,
+        loader: 'file-loader',
+        options: {
+          name: '[name].[ext]',
         },
       },
     ],
