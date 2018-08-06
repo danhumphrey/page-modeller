@@ -76,6 +76,6 @@ export default {
 </script>
 <style scoped>
 .active {
-  background: limegreen;
+  background: #03a9f4;
 }
 </style>
