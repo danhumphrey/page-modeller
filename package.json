@@ -19,7 +19,7 @@
     "watch:dev": "cross-env HMR=true npm run build:dev -- --watch"
   },
   "dependencies": {
-    "vue": "^2.5.13",
+    "vue": "^2.5.17",
     "vuetify": "^1.1.9"
   },
   "devDependencies": {
