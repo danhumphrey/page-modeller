@@ -52,6 +52,7 @@
 </template>
 
 <script>
+import Util from '../util';
 export default {
   name: 'app',
   props: {
@@ -67,15 +68,38 @@ export default {
   },
   methods: {
     inspect: function(e) {
-      console.log(this);
       this.appData.isInspecting = !this.appData.isInspecting;
-      //console.log(this.isInspecting);
+
+      if (this.appData.isInspecting) {
+        Util.sendMessage('startInspectingClick', {});
+      } else {
+        Util.sendMessage('stopInspectingClick', {});
+      }
     },
+  },
+  mounted: function() {
+    this.$nextTick(function() {
+      chrome.runtime.onMessage.addListener(msg => {
+        if (msg.type === 'notifyElementInspected') {
+          console.log('notifyElementInspected message received');
+          console.log(msg.data);
+          this.appData.isInspecting = false;
+        }
+      });
+    });
   },
 };
 </script>
-<style scoped>
-.active {
-  background: #03a9f4;
+<style scoped lang="scss">
+@import '../styles/settings.scss';
+
+button {
+  &:hover {
+    color: $highlight;
+  }
+  &.active {
+    background: $highlight;
+    color: $activeHighlight;
+  }
 }
 </style>
