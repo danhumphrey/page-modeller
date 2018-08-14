@@ -1,5 +1,5 @@
 import inspector from './inspector';
-import './content.css';
+import './content.scss';
 
 chrome.runtime.onMessage.addListener(msg => {
   console.log('content.js onMessage: ');

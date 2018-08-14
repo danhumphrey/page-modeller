@@ -1,0 +1,7 @@
+@import './styles/settings.scss';
+
+.page-modeller-hover {
+  position: relative;
+  border: $highlight solid 2px !important;
+  background-color: $inspector-bg !important;
+}

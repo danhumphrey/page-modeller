@@ -1,38 +1,15 @@
-import inspector from './inspector';
+import util from './util';
 
 chrome.runtime.onMessage.addListener(msg => {
   console.log('background.js onMessage: ');
 
-  if (msg.type === 'startInspectingClick') {
-    console.log('stopInspectingClick message received');
-    chrome.tabs.query(
-      {
-        currentWindow: true,
-        active: true,
-      },
-      function(tabs) {
-        for (let tab of tabs) {
-          chrome.tabs.sendMessage(tab.id, { type: 'notifyStartInspecting' });
-        }
-      }
-    );
-    //inspector.start();
+  if (msg.type === 'uiStartInspecting') {
+    console.log('uiStartInspecting message received');
+    util.sendMessageToActiveTab('notifyStartInspecting');
   }
 
-  if (msg.type === 'stopInspectingClick') {
-    console.log('stopInspectingClick message received');
-    chrome.tabs.query(
-      {
-        currentWindow: true,
-        active: true,
-      },
-      function(tabs) {
-        for (let tab of tabs) {
-          chrome.tabs.sendMessage(tab.id, { type: 'notifyStopInspecting' });
-        }
-      }
-    );
+  if (msg.type === 'uiStopInspecting') {
+    console.log('uiStopInspecting message received');
+    util.sendMessageToActiveTab('notifyStopInspecting');
   }
-
-  return true;
 });

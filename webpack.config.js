@@ -58,6 +58,7 @@ const config = {
         loader: 'file-loader',
         options: {
           name: '[name].[ext]',
+          outputPath: '../fonts/',
         },
       },
     ],
@@ -72,6 +73,7 @@ const config = {
       { from: 'popup/popup.html', to: 'popup/popup.html' },
       { from: 'devtools-page.html', to: 'devtools-page.html' },
       { from: 'panel/panel.html', to: 'panel/panel.html' },
+      { from: 'fonts', to: 'fonts' },
       {
         from: 'manifest.json',
         to: 'manifest.json',

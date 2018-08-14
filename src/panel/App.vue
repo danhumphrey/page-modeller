@@ -71,9 +71,9 @@ export default {
       this.appData.isInspecting = !this.appData.isInspecting;
 
       if (this.appData.isInspecting) {
-        Util.sendMessage('startInspectingClick', {});
+        Util.sendMessage('uiStartInspecting', {});
       } else {
-        Util.sendMessage('stopInspectingClick', {});
+        Util.sendMessage('uiStopInspecting', {});
       }
     },
   },
@@ -92,6 +92,7 @@ export default {
 </script>
 <style scoped lang="scss">
 @import '../styles/settings.scss';
+@import '../styles/material';
 
 button {
   &:hover {
@@ -99,7 +100,7 @@ button {
   }
   &.active {
     background: $highlight;
-    color: $activeHighlight;
+    color: $active-highlight;
   }
 }
 </style>

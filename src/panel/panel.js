@@ -2,7 +2,7 @@ import Vue from 'vue/dist/vue.runtime.esm';
 import Vuetify from 'vuetify';
 import App from './App';
 
-import './panel.css';
+import './panel.scss';
 import 'vuetify/dist/vuetify.css';
 Vue.config.devtools = true;
 Vue.use(Vuetify);
