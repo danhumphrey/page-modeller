@@ -3,6 +3,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const WebpackShellPlugin = require('webpack-shell-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const ChromeExtensionReloader = require('webpack-chrome-extension-reloader');
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 const { VueLoaderPlugin } = require('vue-loader');
 const { version } = require('./package.json');
 
@@ -93,6 +94,18 @@ const config = {
       onBuildEnd: ['node scripts/remove-evals.js'],
     }),
   ],
+  optimization: {
+    minimizer: [
+      new UglifyJSPlugin({
+        test: /\.js($|\?)/i,
+        uglifyOptions: {
+          compress: {
+            drop_console: true,
+          },
+        },
+      }),
+    ],
+  },
 };
 
 if (config.mode === 'production') {

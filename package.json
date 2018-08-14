@@ -48,6 +48,7 @@
     "prettier": "^1.14.2",
     "pretty-quick": "^1.6.0",
     "sass-loader": "^7.0.1",
+    "uglifyjs-webpack-plugin": "^1.2.7",
     "vue-loader": "^15.3.0",
     "vue-template-compiler": "^2.5.13",
     "webpack": "^4.16.5",
