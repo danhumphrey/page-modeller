@@ -1,21 +1,9 @@
-/*
-const builder = require('./model-builder');
-const util = require('./util');
-
-let isModelling = false;
-
-*/
-
 const handlePanelShown = function() {
-  console.log(`Page Modeller panel shown`);
+  console.log('Page Modeller panel shown');
 };
 
 const handlePanelHidden = function() {
   console.log('Page Modeller panel hidden');
-};
-
-const handleModelBuild = function(model) {
-  console.log(model);
 };
 
 chrome.devtools.panels.create('Page Modeller', 'icons/star.png', 'panel/panel.html', function(newPanel) {

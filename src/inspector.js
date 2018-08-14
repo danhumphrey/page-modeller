@@ -3,12 +3,10 @@ import ModelBuilder from './builder';
 
 module.exports = {
   onMouseOver: evt => {
-    let el = evt.target;
-    el.classList.add('page-modeller-hover');
+    evt.target.classList.add('page-modeller-hover');
   },
   onMouseOut: evt => {
-    let el = evt.target;
-    el.classList.remove('page-modeller-hover');
+    evt.target.classList.remove('page-modeller-hover');
   },
   onClick: evt => {
     evt.preventDefault();
