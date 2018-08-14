@@ -1,6 +1,6 @@
 <template>
   <div>
-    <p>Hello world!</p>
+    <p>Please open the developer tools to use the Page Modeller extension.</p>
   </div>
 </template>
 
@@ -12,8 +12,8 @@ export default {
 };
 </script>
 
-<style lang="scss" scoped>
-p {
-  font-size: 20px;
+<style lang="scss" >
+body {
+  width: 200px;
 }
 </style>
