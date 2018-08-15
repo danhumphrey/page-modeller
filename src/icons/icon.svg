@@ -18,9 +18,9 @@
    version="1.0"
    sodipodi:docname="icon.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
-   inkscape:export-filename="Z:\Documents\projects\page-modeller\src\icons\icon_128.png"
-   inkscape:export-xdpi="49.150002"
-   inkscape:export-ydpi="49.150002">
+   inkscape:export-filename="C:\Users\dhumphrey\projects\page-modeller\src\icons\icon_128.png"
+   inkscape:export-xdpi="49.152"
+   inkscape:export-ydpi="49.152">
   <defs
      id="defs2836">
     <linearGradient
@@ -141,15 +141,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1"
-     inkscape:cx="198.36425"
+     inkscape:cx="-46.63575"
      inkscape:cy="85.34041"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1280"
-     inkscape:window-height="737"
-     inkscape:window-x="-8"
-     inkscape:window-y="-8"
+     inkscape:window-width="3200"
+     inkscape:window-height="1675"
+     inkscape:window-x="-13"
+     inkscape:window-y="-13"
      inkscape:window-maximized="1" />
   <metadata
      id="metadata2839">
@@ -219,16 +219,30 @@
     </g>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:150.5891571px;line-height:1.25;font-family:'Arial Rounded MT Bold';-inkscape-font-specification:'Arial Rounded MT Bold, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.86439526"
-       x="100.63357"
-       y="110.7167"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:150.5891571px;line-height:1.25;font-family:'Arial Rounded MT Bold';-inkscape-font-specification:'Arial Rounded MT Bold, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;display:inline;fill:#000000;fill-opacity:1;stroke:#03a9f4;stroke-width:6.8;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       x="85.241173"
+       y="117.73315"
        id="text3918"
-       transform="scale(1.1694073,0.85513404)"><tspan
+       transform="scale(1.1694073,0.85513404)"
+       inkscape:export-xdpi="18.431999"
+       inkscape:export-ydpi="18.431999"><tspan
          sodipodi:role="line"
          id="tspan3922"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:150.5891571px;font-family:'Arial Rounded MT Bold';-inkscape-font-specification:'Arial Rounded MT Bold, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#03a9f4;fill-opacity:1;stroke-width:0.86439526"
-         x="100.63357"
-         y="110.7167">{}</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:150.5891571px;font-family:'Arial Rounded MT Bold';-inkscape-font-specification:'Arial Rounded MT Bold, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#03a9f4;fill-opacity:1;stroke:#03a9f4;stroke-width:6.8;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         x="85.241173"
+         y="117.73315">{</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:150.5891571px;line-height:1.25;font-family:'Arial Rounded MT Bold';-inkscape-font-specification:'Arial Rounded MT Bold, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;display:inline;fill:#000000;fill-opacity:1;stroke:#03a9f4;stroke-width:6.8;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       x="155.36209"
+       y="117.73315"
+       id="text3918-4"
+       transform="scale(1.1694073,0.85513404)"><tspan
+         sodipodi:role="line"
+         id="tspan3922-1"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:150.5891571px;font-family:'Arial Rounded MT Bold';-inkscape-font-specification:'Arial Rounded MT Bold, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;fill:#03a9f4;fill-opacity:1;stroke:#03a9f4;stroke-width:6.8;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         x="155.36209"
+         y="117.73315">}</tspan></text>
   </g>
   <g
      inkscape:groupmode="layer"
