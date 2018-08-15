@@ -51,7 +51,8 @@ const config = {
         test: /\.(png|jpg|gif)$/,
         loader: 'file-loader',
         options: {
-          name: '[name].[ext]?emitFile=false',
+          name: '[name].[ext]',
+          publicPath: '../',
         },
       },
       {
