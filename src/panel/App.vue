@@ -52,7 +52,6 @@
 </template>
 
 <script>
-import Util from '../util';
 export default {
   name: 'app',
   props: {
@@ -71,17 +70,17 @@ export default {
       this.appData.isInspecting = !this.appData.isInspecting;
 
       if (this.appData.isInspecting) {
-        Util.sendMessage('uiStartInspecting', {});
+        chrome.runtime.sendMessage({ type: 'appStartInspecting', data: {} });
       } else {
-        Util.sendMessage('uiStopInspecting', {});
+        chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
     },
   },
   mounted: function() {
     this.$nextTick(function() {
       chrome.runtime.onMessage.addListener(msg => {
-        if (msg.type === 'notifyElementInspected') {
-          console.log('notifyElementInspected message received');
+        if (msg.type === 'elementInspected') {
+          console.log('elementInspected message received');
           console.log(msg.data);
           this.appData.isInspecting = false;
         }

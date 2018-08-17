@@ -1,15 +1,37 @@
 import util from './util';
 
+const sendMessage = function(msgType, data) {
+  chrome.runtime.sendMessage({ type: msgType, data: data });
+};
+const sendMessageToActiveTab = function(msgType, data = {}) {
+  chrome.tabs.query(
+    {
+      currentWindow: true,
+      active: true,
+    },
+    function(tabs) {
+      for (let tab of tabs) {
+        chrome.tabs.sendMessage(tab.id, { type: msgType, data: data });
+      }
+    }
+  );
+};
 chrome.runtime.onMessage.addListener(msg => {
-  console.log('background.js onMessage: ');
+  console.log('background message: ');
+  console.dir(msg);
 
-  if (msg.type === 'uiStartInspecting') {
-    console.log('uiStartInspecting message received');
-    util.sendMessageToActiveTab('notifyStartInspecting');
+  //relay messages between the app and content script <- ->
+  let m = /^(app|content)(.*)$/.exec(msg.type);
+  if (m === null) {
+    return;
   }
-
-  if (msg.type === 'uiStopInspecting') {
-    console.log('uiStopInspecting message received');
-    util.sendMessageToActiveTab('notifyStopInspecting');
+  let msgType = util.lowerCaseFirst(m[2]);
+  switch (m[1]) {
+    case 'app':
+      sendMessageToActiveTab(msgType, msg.data);
+      break;
+    case 'content':
+      sendMessage(msgType, msg.data);
+      break;
   }
 });

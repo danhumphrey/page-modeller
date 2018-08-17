@@ -2,13 +2,14 @@ import inspector from './inspector';
 import './content.scss';
 
 chrome.runtime.onMessage.addListener(msg => {
-  if (msg.type === 'notifyStartInspecting') {
-    console.log('notifyStartInspecting message received');
+  console.log('content message: ');
+  console.dir(msg);
+
+  if (msg.type === 'startInspecting') {
     inspector.start();
   }
 
-  if (msg.type === 'notifyStopInspecting') {
-    console.log('notifyStopInspecting message received');
+  if (msg.type === 'stopInspecting') {
     inspector.stop();
   }
 });

@@ -1,5 +1,4 @@
-import Util from './util';
-import ModelBuilder from './builder';
+import builder from './builder/model-builder';
 
 module.exports = {
   onMouseOver: evt => {
@@ -11,11 +10,11 @@ module.exports = {
   onClick: evt => {
     evt.preventDefault();
     evt.stopPropagation();
-    var el = evt.target;
+    let el = evt.target;
     el.classList.remove('page-modeller-hover');
     module.exports.stop();
-    let b = new ModelBuilder(document, el);
-    Util.sendMessage('notifyElementInspected', { model: b.build() });
+    let b = new builder(document, el);
+    chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.build() } });
     return false;
   },
   start: function() {
