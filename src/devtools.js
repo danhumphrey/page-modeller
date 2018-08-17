@@ -6,7 +6,7 @@ const handlePanelHidden = function() {
   console.log('Page Modeller panel hidden');
 };
 
-chrome.devtools.panels.create('Page Modeller', 'icons/star.png', 'panel/panel.html', function(newPanel) {
+chrome.devtools.panels.create('Page Modeller', 'icons/icon_32.png', 'panel/panel.html', function(newPanel) {
   newPanel.onShown.addListener(handlePanelShown);
   newPanel.onHidden.addListener(handlePanelHidden);
 });
