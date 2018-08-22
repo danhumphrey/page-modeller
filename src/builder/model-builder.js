@@ -1,3 +1,5 @@
+import Model from './Model';
+
 module.exports = function(document, element) {
   const getTagName = function() {
     return element.tagName;
@@ -13,7 +15,11 @@ module.exports = function(document, element) {
     }
   };
   return {
-    build: function() {
+    build: function(model) {
+      if (!model) {
+        model = new Model();
+      }
+
       return {
         tagName: getTagName(),
         tagIndex: getTagIndex(),
