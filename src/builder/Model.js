@@ -15,7 +15,7 @@ export default class Model {
   removeEntity(entity) {
     var i = this.entities.indexOf(entity);
 
-    if (i != -1) {
+    if (i !== -1) {
       this.entities.splice(i, 1);
     }
   }
