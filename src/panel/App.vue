@@ -32,7 +32,7 @@ export default {
       chrome.runtime.onMessage.addListener(msg => {
         if (msg.type === 'elementInspected') {
           console.log('elementInspected message received');
-          console.log(msg.data);
+          console.log(msg.data.model);
           this.$data.isInspecting = false;
         }
       });

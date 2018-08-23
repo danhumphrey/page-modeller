@@ -1,4 +1,8 @@
-class ModelEntity {
+export default class ModelEntity {
+  name = null;
+  element = null;
+  locators = null;
+
   constructor(name, element, locators) {
     this.name = name;
     this.element = element;

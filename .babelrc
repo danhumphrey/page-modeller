@@ -1,5 +1,8 @@
 {
-  "plugins": ["@babel/plugin-proposal-optional-chaining"],
+  "plugins": [
+    "@babel/plugin-proposal-optional-chaining",
+    ["transform-class-properties", { "spec": true }]
+  ],
   "presets": [
     [
       "@babel/preset-env",
