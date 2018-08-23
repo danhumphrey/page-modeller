@@ -15,6 +15,13 @@ const getTagIndex = function(element) {
   }
 };
 
+const getId = function(element) {
+  if (element.id) {
+    return element.id;
+  }
+  return null;
+};
+
 export default class ModelBuilder {
   constructor(document) {
     this.document = document;
@@ -23,11 +30,13 @@ export default class ModelBuilder {
   createModel(element) {
     const model = new Model(element);
 
+    const id = getId.bind(this)(element);
     const tagName = getTagName.bind(this)(element);
     const tagIndex = getTagIndex.bind(this)(element);
 
     const entity = new ModelEntity(tagName + tagIndex, element, [
       {
+        id: id,
         tagName: tagName,
         tagIndex: tagIndex,
       },
