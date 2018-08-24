@@ -49,10 +49,36 @@ const getCssSelector = function(element) {
   const simmer = new Simmer(element.ownerDocument);
   return simmer(element);
 };
-const getXPath = function(document, element) {
-  const tagName = getTagName.bind(this)(element);
-  const tagIndex = getTagIndex.bind(this)(element);
-  return `//${tagName}[${tagIndex}]`;
+
+const getXPath = function(element) {
+  if (element && element.id) {
+    return '//*[@id="' + element.id + '"]';
+  }
+
+  return getElementTreeXPath(element);
+};
+
+const getElementTreeXPath = function(element, strict) {
+  let paths = [];
+
+  for (; element && element.nodeType == 1; element = element.parentNode) {
+    let index = 0;
+    for (let sibling = element.previousSibling; sibling; sibling = sibling.previousSibling) {
+      if (sibling.nodeType == Node.DOCUMENT_TYPE_NODE) {
+        continue;
+      }
+
+      if (sibling.nodeName == element.nodeName) {
+        ++index;
+      }
+    }
+
+    const tagName = element.nodeName.toLowerCase();
+    const pathIndex = strict || index ? '[' + (index + 1) + ']' : '';
+    paths.splice(0, 0, tagName + pathIndex);
+  }
+
+  return paths.length ? '/' + paths.join('/') : null;
 };
 
 export default class ModelBuilder {
@@ -73,7 +99,7 @@ export default class ModelBuilder {
       tagName: tagName,
       tagIndex: tagIndex,
       css: getCssSelector.bind(this)(element),
-      xpath: getXPath.bind(this)(this.document, element),
+      xpath: getXPath.bind(this)(element),
     });
 
     model.addEntity(entity);
