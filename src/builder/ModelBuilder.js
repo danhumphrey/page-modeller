@@ -52,9 +52,8 @@ const getCssSelector = function(element) {
 
 const getXPath = function(element) {
   if (element && element.id) {
-    return '//*[@id="' + element.id + '"]';
+    return `//*[@id="${element.id}"]`;
   }
-
   return getElementTreeXPath(element);
 };
 
@@ -74,7 +73,7 @@ const getElementTreeXPath = function(element, strict) {
     }
 
     const tagName = element.nodeName.toLowerCase();
-    const pathIndex = strict || index ? '[' + (index + 1) + ']' : '';
+    const pathIndex = strict || index ? `[${index + 1}]` : '';
     paths.splice(0, 0, tagName + pathIndex);
   }
 
