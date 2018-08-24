@@ -1,5 +1,6 @@
 import Model from './Model';
 import ModelEntity from './ModelEntity';
+import Simmer from 'simmerjs';
 
 const getTagName = function(element) {
   return element.tagName;
@@ -45,43 +46,8 @@ const getLinkText = function(element) {
 };
 
 const getCssSelector = function(element) {
-  let result = '';
-  const parent = element.ownerDocument;
-  let stop = false;
-
-  while (element && element !== parent && !stop) {
-    let str = '';
-    if (element.nodeType === Node.ELEMENT_NODE) {
-      if (element.nodeName === 'INPUT' && element.name && (element.type === 'radio' || element.type === 'checkbox')) {
-        return "input[name='" + element.name + "'][value='" + element.value + "']";
-      }
-      if (element.id) {
-        str = '#' + element.id;
-        stop = true;
-      } else if (element.name) {
-        str = element.nodeName + "[name='" + element.name + "']";
-      } else if (element.nodeName === 'INPUT' && element.value) {
-        return "input[value='" + element.value + "']";
-      } else if (element.nodeName === 'IMG' && element.alt) {
-        return "img[alt='" + element.alt + "']";
-      } else if (element.nodeName === 'IMG' && element.title) {
-        return "img[title='" + element.title + "']";
-      } else if (element.nodeName === 'IMG' && element.src) {
-        return "img[src*='" + element.src + "']";
-      } else {
-        str = element.localName.toLowerCase();
-      }
-
-      result = str + (result ? ' > ' + result : '');
-    }
-
-    if (element instanceof Attr) {
-      element = element.ownerElement;
-    } else {
-      element = element.parentNode;
-    }
-  }
-  return result;
+  const simmer = new Simmer(element.ownerDocument);
+  return simmer(element);
 };
 const getXPath = function(document, element) {
   const tagName = getTagName.bind(this)(element);
