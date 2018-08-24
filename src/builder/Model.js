@@ -1,10 +1,5 @@
 export default class Model {
-  element = null;
   entities = [];
-
-  constructor(element) {
-    this.element = element;
-  }
 
   get entities() {
     return this.entities;
@@ -18,5 +13,14 @@ export default class Model {
     if (i !== -1) {
       this.entities.splice(i, 1);
     }
+  }
+  hasEntity(tagName, tagIndex) {
+    for (let entity of this.entities) {
+      let l = entity.locators;
+      if (l.tagName === tagName && l.tagIndex === tagIndex) {
+        return true;
+      }
+    }
+    return false;
   }
 }

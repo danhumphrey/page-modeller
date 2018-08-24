@@ -8,12 +8,12 @@ const onMouseOver = evt => {
 const onMouseOut = evt => {
   evt.target.classList.remove(className);
 };
-const onClick = evt => {
+const onClick = function(evt) {
   evt.preventDefault();
   evt.stopPropagation();
   let el = evt.target;
-  el.classList.remove(className);
   stop();
+  el.classList.remove(className);
   let b = new builder(document);
   chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel(el) } });
   return false;
