@@ -63,11 +63,11 @@ const getElementTreeXPath = function(element, strict) {
   for (; element && element.nodeType == 1; element = element.parentNode) {
     let index = 0;
     for (let sibling = element.previousSibling; sibling; sibling = sibling.previousSibling) {
-      if (sibling.nodeType == Node.DOCUMENT_TYPE_NODE) {
+      if (sibling.nodeType === Node.DOCUMENT_TYPE_NODE) {
         continue;
       }
 
-      if (sibling.nodeName == element.nodeName) {
+      if (sibling.nodeName === element.nodeName) {
         ++index;
       }
     }
