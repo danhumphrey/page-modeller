@@ -10,7 +10,7 @@ const getTagIndex = function(element) {
   let all = this.document.getElementsByTagName(n);
   for (let i = 0; i < all.length; i++) {
     if (element === all[i]) {
-      return i;
+      return i + 1;
     }
   }
 };
@@ -83,6 +83,12 @@ const getCssSelector = function(element) {
   }
   return result;
 };
+const getXPath = function(document, element) {
+  const tagName = getTagName.bind(this)(element);
+  const tagIndex = getTagIndex.bind(this)(element);
+  return `//${tagName}[${tagIndex}]`;
+};
+
 export default class ModelBuilder {
   constructor(document) {
     this.document = document;
@@ -90,15 +96,18 @@ export default class ModelBuilder {
 
   createModel(element) {
     const model = new Model();
+    const tagName = getTagName.bind(this)(element);
+    const tagIndex = getTagIndex.bind(this)(element);
 
-    const entity = new ModelEntity('myelement', {
+    const entity = new ModelEntity(`${tagName}${tagIndex}`, {
       id: getId.bind(this)(element),
       name: getName.bind(this)(element),
       linkText: getLinkText.bind(this)(element),
       className: getClassName.bind(this)(element),
-      tagName: getTagName.bind(this)(element),
-      tagIndex: getTagIndex.bind(this)(element),
+      tagName: tagName,
+      tagIndex: tagIndex,
       css: getCssSelector.bind(this)(element),
+      xpath: getXPath.bind(this)(this.document, element),
     });
 
     model.addEntity(entity);
