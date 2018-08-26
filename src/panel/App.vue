@@ -1,15 +1,17 @@
 <template>
     <v-app>
         <Toolbar @inspect="inspect" :is-inspecting="isInspecting" :has-model="hasModel"/>
+        <Table />
     </v-app>
 </template>
 
 <script>
 import Toolbar from './Toolbar';
+import Table from './Table';
 
 export default {
   name: 'app',
-  components: { Toolbar },
+  components: { Table, Toolbar },
   data: function() {
     return {
       isInspecting: false,
