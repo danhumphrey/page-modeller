@@ -1,6 +1,6 @@
 <template>
     <v-app>
-        <Toolbar @scan="scan" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
+        <Toolbar @scan="scan" @deleteModel="deleteModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
         <Table @add="add" :has-model="hasModel" :model="model" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning"/>
     </v-app>
 </template>
@@ -29,7 +29,7 @@ export default {
     };
   },
   methods: {
-    scan: function(e) {
+    scan: function() {
       this.$data.isScanning = !this.$data.isScanning;
 
       if (this.isScanning) {
@@ -38,7 +38,7 @@ export default {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
     },
-    add: function(e) {
+    add: function() {
       this.$data.isAdding = !this.$data.isAdding;
 
       if (this.isAdding) {
@@ -46,6 +46,9 @@ export default {
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
+    },
+    deleteModel: function() {
+      this.$data.model = null;
     },
   },
   mounted: function() {

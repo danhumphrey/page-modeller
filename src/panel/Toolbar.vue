@@ -10,10 +10,10 @@
         </v-tooltip>
 
         <v-tooltip bottom :disabled="!hasModel || isInspecting" open-delay="600">
-            <v-btn slot="activator" icon :disabled="!hasModel || isInspecting" >
+            <v-btn slot="activator" icon :disabled="!hasModel || isInspecting" v-on:click="deleteModel">
                 <v-icon>delete_sweep</v-icon>
             </v-btn>
-            <span>Delete All Elements</span>
+            <span>Delete Model</span>
         </v-tooltip>
 
         <v-spacer></v-spacer>
@@ -51,6 +51,9 @@ export default {
   methods: {
     scan: function() {
       this.$emit('scan');
+    },
+    deleteModel: function() {
+      this.$emit('deleteModel');
     },
   },
 };

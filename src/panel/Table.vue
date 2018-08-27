@@ -15,7 +15,7 @@
                 <v-btn slot="activator" :disabled="!hasModel || isInspecting" icon v-on:click="add">
                     <v-icon>playlist_add</v-icon>
                 </v-btn>
-                <span>Add Single Element</span>
+                <span>Add Entity</span>
             </v-tooltip>
         </v-toolbar>
 
