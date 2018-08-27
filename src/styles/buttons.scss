@@ -1,0 +1,11 @@
+@import './settings';
+
+button {
+  &:hover {
+    color: $highlight;
+  }
+  &.active {
+    background: $highlight;
+    color: $active-highlight;
+  }
+}

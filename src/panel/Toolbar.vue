@@ -1,16 +1,16 @@
 <template>
     <v-toolbar dense>
-        <v-tooltip bottom open-delay="600">
-            <v-btn slot="activator" ref="btn-scan" id="btn-scan" icon v-on:click="inspect" v-bind:class="{active: isInspecting}">
+        <v-tooltip bottom :disabled="hasModel || isAdding" open-delay="600">
+            <v-btn slot="activator" ref="btn-scan" id="btn-scan" icon :disabled="hasModel || isAdding" v-on:click="scan" v-bind:class="{active: isScanning}">
                 <v-icon>find_in_page</v-icon>
             </v-btn>
             <span v-if="!isInspecting">Scan Page</span>
-            <span v-if="isInspecting">Stop Scanning</span>
+            <span v-if="isScanning">Stop Scanning</span>
 
         </v-tooltip>
 
-        <v-tooltip bottom :disabled="!hasModel" open-delay="600">
-            <v-btn slot="activator" icon disabled >
+        <v-tooltip bottom :disabled="!hasModel || isInspecting" open-delay="600">
+            <v-btn slot="activator" icon :disabled="!hasModel || isInspecting" >
                 <v-icon>delete_sweep</v-icon>
             </v-btn>
             <span>Delete All Elements</span>
@@ -18,12 +18,7 @@
 
         <v-spacer></v-spacer>
         <!--
-        <v-tooltip bottom open-delay="600">
-            <v-btn slot="activator" icon>
-                <v-icon>playlist_add</v-icon>
-            </v-btn>
-            <span>Add Element</span>
-        </v-tooltip>
+
 
         <v-tooltip bottom open-delay="600">
             <v-btn slot="activator" icon>
@@ -39,8 +34,8 @@
             <span>View Matches</span>
         </v-tooltip>
         -->
-        <v-tooltip bottom :disabled="!hasModel" open-delay="600">
-            <v-btn slot="activator" icon disabled>
+        <v-tooltip bottom :disabled="!hasModel && !isInspecting" open-delay="600">
+            <v-btn slot="activator" icon :disabled="!hasModel || isInspecting">
                 <v-icon>code</v-icon>
             </v-btn>
             <span>Generate Code</span>
@@ -52,10 +47,10 @@
 <script>
 export default {
   name: 'Toolbar',
-  props: ['isInspecting', 'hasModel'],
+  props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel'],
   methods: {
-    inspect: function() {
-      this.$emit('inspect');
+    scan: function() {
+      this.$emit('scan');
     },
   },
 };
@@ -64,14 +59,5 @@ export default {
 <style scoped lang="scss">
 @import '../styles/settings';
 @import '../styles/material';
-
-button {
-  &:hover {
-    color: $highlight;
-  }
-  &.active {
-    background: $highlight;
-    color: $active-highlight;
-  }
-}
+@import '../styles/buttons';
 </style>

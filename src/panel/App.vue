@@ -1,7 +1,7 @@
 <template>
     <v-app>
-        <Toolbar @inspect="inspect" :is-inspecting="isInspecting" :has-model="hasModel"/>
-        <Table />
+        <Toolbar @scan="scan" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
+        <Table :model="model" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning"/>
     </v-app>
 </template>
 
@@ -12,17 +12,26 @@ import Table from './Table';
 export default {
   name: 'app',
   components: { Table, Toolbar },
+  computed: {
+    isInspecting: function() {
+      return this.isAdding || this.isScanning;
+    },
+    hasModel: function() {
+      return this.model !== null;
+    },
+  },
   data: function() {
     return {
-      isInspecting: false,
-      hasModel: false,
+      isScanning: false,
+      isAdding: false,
+      model: null,
     };
   },
   methods: {
-    inspect: function(e) {
-      this.$data.isInspecting = !this.$data.isInspecting;
+    scan: function(e) {
+      this.$data.isScanning = !this.$data.isScanning;
 
-      if (this.isInspecting) {
+      if (this.isScanning) {
         chrome.runtime.sendMessage({ type: 'appStartInspecting', data: {} });
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
@@ -35,7 +44,9 @@ export default {
         if (msg.type === 'elementInspected') {
           console.log('elementInspected message received');
           console.log(msg.data.model);
-          this.$data.isInspecting = false;
+          this.$data.isScanning = false;
+          this.$data.isAdding = false;
+          this.$data.model = msg.data.model;
         }
       });
     });
