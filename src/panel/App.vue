@@ -32,9 +32,9 @@ export default {
       this.$data.isScanning = !this.$data.isScanning;
 
       if (this.isScanning) {
-        chrome.runtime.sendMessage({ type: 'appStartInspecting', data: {} });
+        chrome.runtime.sendMessage({ type: 'appStartScanning', data: {} });
       } else {
-        chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
+        chrome.runtime.sendMessage({ type: 'appStopScanning', data: {} });
       }
     },
   },

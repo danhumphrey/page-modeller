@@ -1,6 +1,9 @@
 import Model from './Model';
 import ModelEntity from './ModelEntity';
 import Simmer from 'simmerjs';
+import Dom from '../dom';
+
+const INTERACTIVE_ELEMENTS = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
 
 const getTagName = function(element) {
   return element.tagName;
@@ -87,10 +90,34 @@ export default class ModelBuilder {
 
   createModel(element) {
     const model = new Model();
+
+    const walker = this.document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_ELEMENT,
+      {
+        acceptNode: function(node) {
+          if (Dom.isVisible(node)) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_REJECT; //node and children
+        },
+      },
+      true
+    );
+    while (walker.nextNode()) {
+      const childElement = walker.currentNode;
+      if (INTERACTIVE_ELEMENTS.includes(childElement.tagName)) {
+        model.addEntity(this.createEntity(childElement));
+      }
+    }
+    return model;
+  }
+
+  createEntity(element) {
     const tagName = getTagName.bind(this)(element);
     const tagIndex = getTagIndex.bind(this)(element);
 
-    const entity = new ModelEntity(`${tagName}${tagIndex}`, {
+    return new ModelEntity(`${tagName}${tagIndex}`, {
       id: getId.bind(this)(element),
       name: getName.bind(this)(element),
       linkText: getLinkText.bind(this)(element),
@@ -100,8 +127,5 @@ export default class ModelBuilder {
       css: getCssSelector.bind(this)(element),
       xpath: getXPath.bind(this)(element),
     });
-
-    model.addEntity(entity);
-    return model;
   }
 }

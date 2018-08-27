@@ -1,12 +1,12 @@
 import builder from './builder/ModelBuilder';
 
-const className = 'page-modeller-hover';
+const CLASS_NAME = 'page-modeller-hover';
 
 const onMouseOver = evt => {
-  evt.target.classList.add(className);
+  evt.target.classList.add(CLASS_NAME);
 };
 const onMouseOut = evt => {
-  evt.target.classList.remove(className);
+  evt.target.classList.remove(CLASS_NAME);
 };
 const onFocus = evt => {
   evt.preventDefault();
@@ -18,8 +18,9 @@ const onClick = evt => {
   evt.preventDefault();
   evt.stopPropagation();
   let el = evt.target;
-  el.classList.remove(className);
+  el.classList.remove(CLASS_NAME);
   stop();
+
   let b = new builder(document);
   chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel(el) } });
   return false;

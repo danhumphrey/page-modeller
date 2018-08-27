@@ -5,11 +5,11 @@ chrome.runtime.onMessage.addListener(msg => {
   console.log('content message: ');
   console.dir(msg);
 
-  if (msg.type === 'startInspecting') {
+  if (msg.type === 'startScanning') {
     inspector.start();
   }
 
-  if (msg.type === 'stopInspecting') {
+  if (msg.type === 'stopScanning') {
     inspector.stop();
   }
 });
