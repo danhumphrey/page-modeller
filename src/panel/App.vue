@@ -1,13 +1,14 @@
 <template>
     <v-app>
         <Toolbar @scan="scan" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
-        <Table :model="model" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning"/>
+        <Table @add="add" :has-model="hasModel" :model="model" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning"/>
     </v-app>
 </template>
 
 <script>
 import Toolbar from './Toolbar';
 import Table from './Table';
+import Model from '../model/Model';
 
 export default {
   name: 'app',
@@ -34,7 +35,16 @@ export default {
       if (this.isScanning) {
         chrome.runtime.sendMessage({ type: 'appStartScanning', data: {} });
       } else {
-        chrome.runtime.sendMessage({ type: 'appStopScanning', data: {} });
+        chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
+      }
+    },
+    add: function(e) {
+      this.$data.isAdding = !this.$data.isAdding;
+
+      if (this.isAdding) {
+        chrome.runtime.sendMessage({ type: 'appStartAdding', data: {} });
+      } else {
+        chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
     },
   },
@@ -44,9 +54,25 @@ export default {
         if (msg.type === 'elementInspected') {
           console.log('elementInspected message received');
           console.log(msg.data.model);
+
+          if (this.isAdding) {
+            const model = new Model();
+
+            for (let entity of this.model.entities) {
+              model.addEntity(entity);
+            }
+
+            for (let entity of msg.data.model.entities) {
+              model.addEntity(entity);
+            }
+
+            this.$data.model = model;
+          } else {
+            this.$data.model = msg.data.model;
+          }
+
           this.$data.isScanning = false;
           this.$data.isAdding = false;
-          this.$data.model = msg.data.model;
         }
       });
     });

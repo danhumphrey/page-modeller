@@ -9,7 +9,11 @@ chrome.runtime.onMessage.addListener(msg => {
     inspector.start();
   }
 
-  if (msg.type === 'stopScanning') {
+  if (msg.type === 'startAdding') {
+    inspector.start(true);
+  }
+
+  if (msg.type === 'stopInspecting') {
     inspector.stop();
   }
 });

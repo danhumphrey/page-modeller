@@ -1,6 +1,7 @@
-import builder from './builder/ModelBuilder';
+import builder from './model/ModelBuilder';
 
 const CLASS_NAME = 'page-modeller-hover';
+let isAdding = false;
 
 const onMouseOver = evt => {
   evt.target.classList.add(CLASS_NAME);
@@ -22,11 +23,12 @@ const onClick = evt => {
   stop();
 
   let b = new builder(document);
-  chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel(el) } });
+  chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel(el, isAdding) } });
   return false;
 };
 
-let start = () => {
+let start = (addToModel = false) => {
+  isAdding = addToModel;
   document.addEventListener('mouseover', onMouseOver, true);
   document.addEventListener('mouseout', onMouseOut, true);
   document.addEventListener('click', onClick, true);

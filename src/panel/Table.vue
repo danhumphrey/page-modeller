@@ -11,13 +11,14 @@
 
             </v-tooltip>
             -->
-            <v-tooltip bottom open-delay="600">
-                <v-btn slot="activator" icon>
+            <v-tooltip bottom :disabled="!hasModel || isInspecting" open-delay="600">
+                <v-btn slot="activator" :disabled="!hasModel || isInspecting" icon v-on:click="add">
                     <v-icon>playlist_add</v-icon>
                 </v-btn>
                 <span>Add Single Element</span>
             </v-tooltip>
         </v-toolbar>
+
         <v-data-table
                 :items="model == null ? [] : model.entities"
                 hide-actions
@@ -39,7 +40,12 @@
 <script>
 export default {
   name: 'Table',
-  props: ['model', 'isScanning', 'isAdding'],
+  props: ['model', 'isScanning', 'isAdding', 'hasModel'],
+  methods: {
+    add: function() {
+      this.$emit('add');
+    },
+  },
 };
 </script>
 

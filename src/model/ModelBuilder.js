@@ -88,8 +88,14 @@ export default class ModelBuilder {
     this.document = document;
   }
 
-  createModel(element) {
+  createModel(element, isAdding) {
+    console.log('createModel');
+
     const model = new Model();
+    if (isAdding) {
+      model.addEntity(this.createEntity(element));
+      return model;
+    }
 
     const walker = this.document.createTreeWalker(
       element,
