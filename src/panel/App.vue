@@ -1,6 +1,6 @@
 <template>
     <v-app>
-        <Toolbar @scan="scan" @deleteModel="deleteModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
+        <Toolbar @scan="scan" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
         <Table @add="add" :has-model="hasModel" :model="model" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning"/>
     </v-app>
 </template>
@@ -49,6 +49,10 @@ export default {
     },
     deleteModel: function() {
       this.$data.model = null;
+    },
+    generateModel: function() {
+      console.log('Generate Model:');
+      console.log(this.$data.model);
     },
   },
   mounted: function() {

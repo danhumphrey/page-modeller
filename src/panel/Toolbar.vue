@@ -35,7 +35,7 @@
         </v-tooltip>
         -->
         <v-tooltip bottom :disabled="!hasModel && !isInspecting" open-delay="600">
-            <v-btn slot="activator" icon :disabled="!hasModel || isInspecting">
+            <v-btn slot="activator" icon :disabled="!hasModel || isInspecting" v-on:click="generateModel">
                 <v-icon>code</v-icon>
             </v-btn>
             <span>Generate Code</span>
@@ -54,6 +54,9 @@ export default {
     },
     deleteModel: function() {
       this.$emit('deleteModel');
+    },
+    generateModel: function() {
+      this.$emit('generateModel');
     },
   },
 };

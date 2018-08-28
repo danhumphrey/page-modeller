@@ -1,16 +1,6 @@
 <template>
     <div class="model-table">
         <v-toolbar dense flat>
-            <!--
-            <v-tooltip bottom :disabled="hasModel" open-delay="600">
-                <v-btn slot="activator" ref="btn-scan" id="btn-scan" icon :disabled="hasModel" v-on:click="inspect" v-bind:class="{active: isInspecting}">
-                    <v-icon>find_in_page</v-icon>
-                </v-btn>
-                <span v-if="!isInspecting">Scan Page</span>
-                <span v-if="isInspecting">Stop Scanning</span>
-
-            </v-tooltip>
-            -->
             <v-tooltip bottom :disabled="!hasModel || isInspecting" open-delay="600">
                 <v-btn slot="activator" :disabled="!hasModel || isInspecting" icon v-on:click="add">
                     <v-icon>playlist_add</v-icon>
@@ -26,7 +16,21 @@
                 class="elevation-0"
         >
             <template slot="items" slot-scope="props">
-                <td>{{ props.item.name }}</td>
+                <td>
+                    <v-edit-dialog
+                            :return-value.sync="props.item.name"
+
+
+                    > {{ props.item.name }}
+                        <v-text-field
+                                slot="input"
+                                v-model="props.item.name"
+                                :rules="[uniqueNameRule]"
+                                label="Edit"
+                                single-line
+                        ></v-text-field>
+                    </v-edit-dialog>
+                </td>
                 <td class="text-xs-right">Actions</td>
             </template>
             <template slot="no-data">
@@ -40,7 +44,20 @@
 <script>
 export default {
   name: 'Table',
-  props: ['model', 'isScanning', 'isAdding', 'hasModel'],
+  props: ['model', 'isScanning', 'isAdding', 'isInspecting', 'hasModel'],
+  data() {
+    return {
+      uniqueNameRule: v => {
+        let usedCount = 0;
+        for (let entity of this.model.entities) {
+          if (entity.name === v) {
+            usedCount++;
+          }
+        }
+        return usedCount > 1 ? 'Name must be unique!' : true;
+      },
+    };
+  },
   methods: {
     add: function() {
       this.$emit('add');
