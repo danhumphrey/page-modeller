@@ -1,11 +1,12 @@
 <template>
     <div class="model-table">
         <v-toolbar dense flat>
-            <v-tooltip bottom :disabled="!hasModel || isInspecting" open-delay="600">
-                <v-btn slot="activator" :disabled="!hasModel || isInspecting" icon v-on:click="add">
+            <v-tooltip bottom :disabled="!hasModel || isScanning" open-delay="600">
+                <v-btn slot="activator" :disabled="!hasModel || isScanning" icon v-on:click="add" v-bind:class="{active: isAdding}">
                     <v-icon>playlist_add</v-icon>
                 </v-btn>
-                <span>Add Entity</span>
+                <span v-if="!isInspecting">Add Entity</span>
+                <span v-if="isAdding">Stop Adding Entity</span>
             </v-tooltip>
         </v-toolbar>
 
