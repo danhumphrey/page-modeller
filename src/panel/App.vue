@@ -8,7 +8,6 @@
 <script>
 import Toolbar from './Toolbar';
 import Table from './Table';
-import Model from '../model/Model';
 
 export default {
   name: 'app',

@@ -51,10 +51,11 @@ const getClassName = function(element) {
   }
   return null;
 };
+
 const getLinkText = function(element) {
   if (element.nodeName === 'A') {
     if (element.textContent) {
-      return element.textContent;
+      return element.textContent.trim();
     }
   }
   return null;
@@ -95,6 +96,25 @@ const getElementTreeXPath = function(element, strict) {
   return paths.length ? '/' + paths.join('/') : null;
 };
 
+const getLabel = function(element) {
+  //use for attribute to find label
+  const id = getId(element);
+  if (id) {
+    const label = element.ownerDocument.querySelector(`label[for="${id}"`);
+    if (label) {
+      return label;
+    }
+  }
+  //iterate parents looking for wrapping label
+  let parent = element.parentNode;
+  do {
+    if (parent.tagName === 'LABEL') {
+      return parent;
+    }
+  } while ((parent = parent.parentNode));
+  return null;
+};
+
 export default {
   getStyle: getStyle,
   isVisible: isVisible,
@@ -106,5 +126,6 @@ export default {
   getClassName: getClassName,
   getCssSelector: getCssSelector,
   getLinkText: getLinkText,
+  getLabel: getLabel,
   getXPath: getXPath,
 };

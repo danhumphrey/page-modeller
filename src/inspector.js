@@ -1,4 +1,4 @@
-import ModelBuilder from './model/ModelBuilder';
+import ModelBuilder from './ModelBuilder';
 
 const CLASS_NAME = 'page-modeller-hover';
 let existingModel = null;
