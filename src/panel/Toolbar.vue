@@ -34,8 +34,8 @@
             <span>View Matches</span>
         </v-tooltip>
         -->
-        <v-tooltip bottom :disabled="!hasModel || isScanning" open-delay="600">
-            <v-btn slot="activator" :disabled="!hasModel || isScanning" icon v-on:click="add" v-bind:class="{active: isAdding}">
+        <v-tooltip bottom :disabled="isScanning" open-delay="600">
+            <v-btn slot="activator" :disabled="isScanning" icon v-on:click="add" v-bind:class="{active: isAdding}">
                 <v-icon>playlist_add</v-icon>
             </v-btn>
             <span v-if="!isInspecting">Add Entity</span>

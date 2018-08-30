@@ -7,9 +7,9 @@ const INTERACTIVE_ELEMENTS = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
 export default class ModelBuilder {
   deDupeName(name) {
     if (this.model.usedNames.hasOwnProperty(name)) {
-      name = name + this.model.usedNames[name]++;
+      name = `${name}${++this.model.usedNames[name]}`;
     } else {
-      this.model.usedNames[name] = 2;
+      this.model.usedNames[name] = 1;
     }
     return name;
   }
@@ -58,13 +58,16 @@ export default class ModelBuilder {
     return this.cleanName(`${tagName}${tagIndex}`);
   }
 
-  createModel(element, existingModel = null) {
-    console.log('createModel');
-
-    this.model = existingModel || {
+  static createEmptyModel() {
+    return {
       usedNames: {},
       entities: [],
     };
+  }
+  createModel(element, existingModel = null) {
+    console.log('createModel');
+
+    this.model = existingModel || ModelBuilder.createEmptyModel();
 
     if (existingModel) {
       this.model.entities.push(this.createEntity(element));

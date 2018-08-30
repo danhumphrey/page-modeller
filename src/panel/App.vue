@@ -8,6 +8,7 @@
 <script>
 import Toolbar from './Toolbar';
 import Table from './Table';
+import ModelBuilder from '../ModelBuilder';
 
 export default {
   name: 'app',
@@ -41,7 +42,7 @@ export default {
       this.$data.isAdding = !this.$data.isAdding;
 
       if (this.isAdding) {
-        chrome.runtime.sendMessage({ type: 'appStartAdding', data: { model: this.$data.model } });
+        chrome.runtime.sendMessage({ type: 'appStartAdding', data: { model: this.$data.model === null ? ModelBuilder.createEmptyModel() : this.$data.model } });
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
