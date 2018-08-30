@@ -17,23 +17,7 @@
         </v-tooltip>
 
         <v-spacer></v-spacer>
-        <!--
 
-
-        <v-tooltip bottom open-delay="600">
-            <v-btn slot="activator" icon>
-                <v-icon>delete</v-icon>
-            </v-btn>
-            <span>Delete Item</span>
-        </v-tooltip>
-
-        <v-tooltip bottom open-delay="600">
-            <v-btn slot="activator" icon>
-                <v-icon>remove_red_eye</v-icon>
-            </v-btn>
-            <span>View Matches</span>
-        </v-tooltip>
-        -->
         <v-tooltip bottom :disabled="isScanning" open-delay="600">
             <v-btn slot="activator" :disabled="isScanning" icon v-on:click="add" v-bind:class="{active: isAdding}">
                 <v-icon>playlist_add</v-icon>

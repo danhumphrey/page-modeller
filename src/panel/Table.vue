@@ -24,8 +24,14 @@
                     <v-icon
                             small
                             class="mr-2"
+                            @click="viewMatches(props.item)"
+                    >
+                        remove_red_eye
+                    </v-icon>
+                    <v-icon
+                            small
+                            class="mr-2"
                             @click="editItem(props.item)"
-
                     >
                         edit
                     </v-icon>
