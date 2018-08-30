@@ -10,7 +10,7 @@ chrome.runtime.onMessage.addListener(msg => {
   }
 
   if (msg.type === 'startAdding') {
-    inspector.start(true);
+    inspector.start(msg.data.model || null);
   }
 
   if (msg.type === 'stopInspecting') {

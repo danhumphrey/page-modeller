@@ -1,8 +1,10 @@
 export default class Model {
   entities = [];
 
-  get entities() {
-    return this.entities;
+  constructor(model = null) {
+    if (model) {
+      this.entities = model.entities;
+    }
   }
   addEntity(entity) {
     this.entities.push(entity);
@@ -23,11 +25,6 @@ export default class Model {
     return false;
   }
   hasNamedEntity(name) {
-    for (const entity of this.entities) {
-      if (entity.name === name) {
-        return true;
-      }
-    }
-    return false;
+    return this.entities.some(e => e.name === name);
   }
 }

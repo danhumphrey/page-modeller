@@ -6,13 +6,11 @@ import dom from '../dom';
 const INTERACTIVE_ELEMENTS = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
 
 export default class ModelBuilder {
-  constructor() {
-    this.model = new Model();
-  }
-  createModel(element, isAdding) {
+  createModel(element, existingModel = null) {
     console.log('createModel');
+    this.model = new Model(existingModel);
 
-    if (isAdding) {
+    if (existingModel) {
       this.model.addEntity(this.createEntity(element));
       return this.model;
     }

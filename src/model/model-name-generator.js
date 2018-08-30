@@ -21,10 +21,9 @@ const getNameFromLabel = function(element) {
   return null;
 };
 const deDupeName = function(model, name) {
-  console.log('deDupeName');
   let idx = 2;
   while (model.hasNamedEntity(name)) {
-    name = `name${idx}`;
+    name = `${name}${idx}`;
     idx++;
   }
   return name;

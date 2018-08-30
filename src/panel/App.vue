@@ -42,7 +42,7 @@ export default {
       this.$data.isAdding = !this.$data.isAdding;
 
       if (this.isAdding) {
-        chrome.runtime.sendMessage({ type: 'appStartAdding', data: {} });
+        chrome.runtime.sendMessage({ type: 'appStartAdding', data: { model: this.$data.model } });
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
@@ -62,21 +62,7 @@ export default {
           console.log('elementInspected message received');
           console.log(msg.data.model);
 
-          if (this.isAdding) {
-            const model = new Model();
-
-            for (let entity of this.model.entities) {
-              model.addEntity(entity);
-            }
-
-            for (let entity of msg.data.model.entities) {
-              model.addEntity(entity);
-            }
-
-            this.$data.model = model;
-          } else {
-            this.$data.model = msg.data.model;
-          }
+          this.$data.model = msg.data.model;
 
           this.$data.isScanning = false;
           this.$data.isAdding = false;
