@@ -1,21 +1,15 @@
 <template>
     <div class="model-table">
-        <v-toolbar dense flat>
-
-        </v-toolbar>
-
         <v-data-table
                 :items="model == null ? [] : model.entities"
+                :headers="headers"
                 hide-actions
-                hide-headers
                 class="elevation-0"
         >
             <template slot="items" slot-scope="props">
                 <td>
                     <v-edit-dialog
                             :return-value.sync="props.item.name"
-
-
                     > {{ props.item.name }}
                         <v-text-field
                                 slot="input"
@@ -26,7 +20,7 @@
                         ></v-text-field>
                     </v-edit-dialog>
                 </td>
-                <td class="text-xs-right">Actions</td>
+                <td class="text-xs-right">{{ props.item.actions }}</td>
             </template>
             <template slot="no-data">
                 <td>Scan the page or add a single element to build the model</td>
@@ -42,6 +36,18 @@ export default {
   props: ['model'],
   data() {
     return {
+      headers: [
+        {
+          text: 'Name',
+          align: 'left',
+          sortable: false,
+        },
+        {
+          text: 'Actions',
+          align: 'right',
+          sortable: false,
+        },
+      ],
       uniqueNameRule: v => {
         let usedCount = 0;
         for (let entity of this.model.entities) {
