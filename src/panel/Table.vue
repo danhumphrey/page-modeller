@@ -20,10 +20,26 @@
                         ></v-text-field>
                     </v-edit-dialog>
                 </td>
-                <td class="text-xs-right">{{ props.item.actions }}</td>
+                <td class="text-xs-right px-0">
+                    <v-icon
+                            small
+                            class="mr-2"
+                            @click="editItem(props.item)"
+
+                    >
+                        edit
+                    </v-icon>
+                    <v-icon
+                            small
+                            class="mr-4"
+                            @click="deleteItem(props.item)"
+                    >
+                        delete
+                    </v-icon>
+                </td>
             </template>
             <template slot="no-data">
-                <td>Scan the page or add a single element to build the model</td>
+                <td colspan="2">Scan the page or add a single element to build the model</td>
             </template>
         </v-data-table>
     </div>

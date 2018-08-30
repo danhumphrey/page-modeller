@@ -63,6 +63,9 @@ export default {
 
           this.$data.model = msg.data.model;
 
+          if (this.$data.isAdding) {
+            setTimeout(() => (document.scrollingElement.scrollTop = document.scrollingElement.scrollHeight), 100);
+          }
           this.$data.isScanning = false;
           this.$data.isAdding = false;
         }
