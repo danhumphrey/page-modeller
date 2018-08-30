@@ -1,4 +1,4 @@
-import builder from './model/ModelBuilder';
+import ModelBuilder from './model/ModelBuilder';
 
 const CLASS_NAME = 'page-modeller-hover';
 let isAdding = false;
@@ -22,7 +22,7 @@ const onClick = evt => {
   el.classList.remove(CLASS_NAME);
   stop();
 
-  let b = new builder(document);
+  let b = new ModelBuilder();
   chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel(el, isAdding) } });
   return false;
 };

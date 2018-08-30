@@ -15,9 +15,17 @@ export default class Model {
     }
   }
   hasEntity(tagName, tagIndex) {
-    for (let entity of this.entities) {
+    for (const entity of this.entities) {
       let l = entity.locators;
       if (l.tagName === tagName && l.tagIndex === tagIndex) {
+        return true;
+      }
+    }
+    return false;
+  }
+  hasNamedEntity(name) {
+    for (const entity of this.entities) {
+      if (entity.name === name) {
         return true;
       }
     }
