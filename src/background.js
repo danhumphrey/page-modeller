@@ -1,4 +1,4 @@
-import util from './util';
+import lowerFirst from 'lodash/lowerFirst';
 
 const sendMessage = function(msgType, data) {
   chrome.runtime.sendMessage({ type: msgType, data: data });
@@ -25,7 +25,7 @@ chrome.runtime.onMessage.addListener(msg => {
   if (m === null) {
     return;
   }
-  let msgType = util.lowerCaseFirst(m[2]);
+  let msgType = lowerFirst(m[2]);
   switch (m[1]) {
     case 'app':
       sendMessageToActiveTab(msgType, msg.data);

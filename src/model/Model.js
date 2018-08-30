@@ -8,8 +8,7 @@ export default class Model {
     this.entities.push(entity);
   }
   removeEntity(entity) {
-    var i = this.entities.indexOf(entity);
-
+    const i = this.entities.indexOf(entity);
     if (i !== -1) {
       this.entities.splice(i, 1);
     }

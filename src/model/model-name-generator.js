@@ -1,5 +1,6 @@
-import util from '../util';
 import dom from '../dom';
+import upperFirst from 'lodash/upperFirst';
+import camelCase from 'lodash/camelCase';
 
 const getNameFromLabel = function(element) {
   //use for attribute to find label
@@ -20,15 +21,17 @@ const getNameFromLabel = function(element) {
   return null;
 };
 const deDupeName = function(model, name) {
+  console.log('deDupeName');
   let idx = 2;
   while (model.hasNamedEntity(name)) {
     name = `name${idx}`;
+    idx++;
   }
   return name;
 };
 
 const cleanName = function(model, name) {
-  return deDupeName(model, util.upperCaseFirst(name.replace(/[^\w\s]|\s/gi, '').toLowerCase()));
+  return deDupeName(model, upperFirst(camelCase(name)));
 };
 
 const generateName = function(model, element) {

@@ -53,9 +53,8 @@ const getClassName = function(element) {
 };
 const getLinkText = function(element) {
   if (element.nodeName === 'A') {
-    const text = element.textContent;
-    if (!text.match(/^\s*$/)) {
-      return text.replace(/\xA0/g, ' ').replace(/^\s*(.*?)\s*$/, '$1');
+    if (element.textContent) {
+      return element.textContent;
     }
   }
   return null;
