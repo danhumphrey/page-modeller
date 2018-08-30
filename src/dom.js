@@ -97,7 +97,7 @@ const getElementTreeXPath = function(element, strict) {
 };
 
 const getLabel = function(element) {
-  //use for attribute to find label
+  //use 'for' attribute to find label
   const id = getId(element);
   if (id) {
     const label = element.ownerDocument.querySelector(`label[for="${id}"`);
@@ -116,7 +116,6 @@ const getLabel = function(element) {
 };
 
 export default {
-  getStyle: getStyle,
   isVisible: isVisible,
   getTagName: getTagName,
   getTagIndex: getTagIndex,

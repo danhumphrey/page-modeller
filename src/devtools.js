@@ -11,14 +11,12 @@ chrome.devtools.panels.create('Page Modeller', 'icons/icon_32.png', 'panel/panel
   newPanel.onHidden.addListener(handlePanelHidden);
 });
 
-chrome.runtime.onMessage.addListener(function(msg, sender) {
+chrome.runtime.onMessage.addListener(function(msg) {
   switch (msg.type) {
     case 'notify-start-modelling':
       chrome.devtools.inspectedWindow.eval('inspect(document.body)');
-      isModelling = true;
       break;
     case 'notify-stop-modelling':
-      isModelling = false;
       break;
   }
 });
