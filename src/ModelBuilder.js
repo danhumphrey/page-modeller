@@ -9,7 +9,7 @@ export default class ModelBuilder {
     if (this.model.usedNames.hasOwnProperty(name)) {
       name = name + this.model.usedNames[name]++;
     } else {
-      this.model.usedNames[name] = 1;
+      this.model.usedNames[name] = 2;
     }
     return name;
   }

@@ -1,13 +1,7 @@
 <template>
     <div class="model-table">
         <v-toolbar dense flat>
-            <v-tooltip bottom :disabled="!hasModel || isScanning" open-delay="600">
-                <v-btn slot="activator" :disabled="!hasModel || isScanning" icon v-on:click="add" v-bind:class="{active: isAdding}">
-                    <v-icon>playlist_add</v-icon>
-                </v-btn>
-                <span v-if="!isInspecting">Add Entity</span>
-                <span v-if="isAdding">Stop Adding Entity</span>
-            </v-tooltip>
+
         </v-toolbar>
 
         <v-data-table
@@ -45,7 +39,7 @@
 <script>
 export default {
   name: 'Table',
-  props: ['model', 'isScanning', 'isAdding', 'isInspecting', 'hasModel'],
+  props: ['model'],
   data() {
     return {
       uniqueNameRule: v => {
@@ -59,11 +53,7 @@ export default {
       },
     };
   },
-  methods: {
-    add: function() {
-      this.$emit('add');
-    },
-  },
+  methods: {},
 };
 </script>
 
@@ -73,6 +63,6 @@ export default {
 @import '../styles/buttons';
 
 .model-table {
-  margin: 2em;
+  margin: 6em 2em 0 2em;
 }
 </style>
