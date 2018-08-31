@@ -97,45 +97,65 @@ export default class ModelBuilder {
   }
 
   createEntity(element) {
+    //locators in order of preference
+    return {
+      name: this.generateName(element),
+      locators: this.getLocators(element),
+    };
+  }
+
+  getLocators(element) {
     const tagName = dom.getTagName(element);
     const tagIndex = dom.getTagIndex(element);
 
-    return {
-      name: this.generateName(element),
-      locators: [
-        {
-          name: 'id',
-          locator: dom.getId(element),
-        },
-        {
-          name: 'name',
-          locator: dom.getName(element),
-        },
-        {
-          name: 'linktext',
-          locator: dom.getLinkText(element),
-        },
-        {
-          name: 'className',
-          locator: dom.getClassName(element),
-        },
-        {
-          name: 'tagName',
-          locator: tagName,
-        },
-        {
-          name: 'tagIndex',
-          locator: tagIndex,
-        },
-        {
-          name: 'css',
-          locator: dom.getCssSelector(element),
-        },
-        {
-          name: 'xpath',
-          locator: dom.getXPath(element),
-        },
-      ],
-    };
+    const locators = [
+      {
+        name: 'id',
+        locator: dom.getId(element),
+      },
+      {
+        name: 'linkText',
+        locator: dom.getLinkText(element),
+      },
+      {
+        name: 'partialLinkText',
+        locator: dom.getLinkText(element),
+      },
+      {
+        name: 'name',
+        locator: dom.getName(element),
+      },
+      {
+        name: 'css',
+        locator: dom.getCssSelector(element),
+      },
+      {
+        name: 'className',
+        locator: dom.getClassName(element),
+      },
+      {
+        name: 'tagName',
+        locator: tagName,
+      },
+      {
+        name: 'xpath',
+        locator: dom.getXPath(element),
+      },
+      {
+        name: 'tagIndex',
+        locator: `${tagName}${tagIndex}`,
+        selected: true,
+      },
+    ];
+    for (let selectedLocator = locators[locators.length - 1], currentLocator, i = 0; i < locators.length; i++) {
+      currentLocator = locators[i];
+      if (currentLocator.locator) {
+        delete selectedLocator['selected'];
+        currentLocator.selected = true;
+        break;
+      }
+    }
+
+    return locators;
   }
 }

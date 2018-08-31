@@ -1,6 +1,6 @@
 <template>
   <div class="model-table">
-    <v-dialog v-model="dialog" max-width="500px">
+    <v-dialog v-model="dialog">
       <v-card>
         <v-card-title class="pa-2">
           <span class="headline">Edit Model Entity</span>
@@ -15,7 +15,7 @@
             <v-layout wrap>
               <v-flex>
                   <v-select
-                    v-model="editedItem.currentLocator"
+                    v-model="currentLocator"
                     :items="editedItem.locators"
                     item-text="name"
                     item-value="name"
@@ -25,6 +25,9 @@
                     single-line
                   ></v-select>
                 <!-- <v-text-field v-model="editedItem.locators.xpath" label="Locator"></v-text-field> -->
+              </v-flex>
+              <v-flex>
+                <v-text-field v-model="currentLocator.locator"></v-text-field>
               </v-flex>
             </v-layout>
           </v-container>
@@ -115,19 +118,14 @@ export default {
         return usedCount > 1 ? 'Name must be unique!' : true;
       },
       editedIndex: -1,
+      currentLocator: {},
       editedItem: {
         name: '',
-        locators: {
-          xpath: '',
-        },
-        currentLocator: {},
+        locators: [],
       },
       defaultItem: {
         name: '',
-        locators: {
-          xpath: '',
-        },
-        currentLocator: {},
+        locators: [],
       },
     };
   },
@@ -140,6 +138,7 @@ export default {
     editItem(item) {
       this.editedIndex = this.model.entities.indexOf(item);
       this.editedItem = Object.assign({}, item);
+      this.currentLocator = this.editedItem.locators.find(l => l.selected);
       this.dialog = true;
     },
 
@@ -158,6 +157,8 @@ export default {
 
     save() {
       if (this.editedIndex > -1) {
+        delete this.editedItem.locators.find(l => l.selected).selected;
+        this.editedItem.locators.find(l => l.name === this.currentLocator.name).selected = true;
         Object.assign(this.model.entities[this.editedIndex], this.editedItem);
       }
       this.close();
