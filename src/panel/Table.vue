@@ -21,27 +21,39 @@
                     </v-edit-dialog>
                 </td>
                 <td class="text-xs-right px-0">
-                    <v-icon
-                            small
-                            class="mr-2"
-                            @click="viewMatches(props.item)"
-                    >
-                        remove_red_eye
-                    </v-icon>
-                    <v-icon
+                    <v-tooltip left open-delay="600">
+                        <v-icon
+                                slot="activator"
+                                small
+                                class="mr-2"
+                                @click="viewMatches(props.item)"
+                        >
+                            remove_red_eye
+                        </v-icon>
+                        <span>View Matched Elements</span>
+                    </v-tooltip>
+                    <v-tooltip left open-delay="600">
+                        <v-icon
+                            slot="activator"
                             small
                             class="mr-2"
                             @click="editItem(props.item)"
-                    >
+                        >
                         edit
-                    </v-icon>
-                    <v-icon
-                            small
-                            class="mr-4"
-                            @click="deleteItem(props.item)"
-                    >
-                        delete
-                    </v-icon>
+                        </v-icon>
+                        <span>Edit</span>
+                    </v-tooltip>
+                    <v-tooltip left open-delay="600">
+                        <v-icon
+                                slot="activator"
+                                small
+                                class="mr-4"
+                                @click="deleteItem(props.item)"
+                        >
+                            delete
+                        </v-icon>
+                        <span>Delete</span>
+                    </v-tooltip>
                 </td>
             </template>
             <template slot="no-data">
