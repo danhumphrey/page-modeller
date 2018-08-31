@@ -1,8 +1,8 @@
 <template>
-    <v-app>
-        <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
-        <Table  :model="model" />
-    </v-app>
+  <v-app>
+    <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
+    <Table  :model="model" />
+  </v-app>
 </template>
 
 <script>
