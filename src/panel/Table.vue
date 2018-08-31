@@ -27,8 +27,24 @@
                 <!-- <v-text-field v-model="editedItem.locators.xpath" label="Locator"></v-text-field> -->
               </v-flex>
               <v-flex>
-                <v-text-field v-model="currentLocator.locator"></v-text-field>
+                <v-text-field v-model="currentLocator.locator" :append-icon="remove_red_eye">
+
+                  <v-tooltip left open-delay="1000" slot="append">
+                    <v-icon
+                            slot="activator"
+                            small
+                            class="mr-2"
+                            @click="viewMatches(currentLocator)"
+                    >
+                      remove_red_eye
+                    </v-icon>
+                    <span>View Matched Elements</span>
+                  </v-tooltip>
+                </v-text-field>
               </v-flex>
+
+
+
             </v-layout>
           </v-container>
         </v-card-text>
