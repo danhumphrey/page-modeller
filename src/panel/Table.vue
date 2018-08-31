@@ -14,7 +14,17 @@
             </v-layout>
             <v-layout wrap>
               <v-flex>
-                <v-text-field v-model="editedItem.locators.xpath" label="Locator"></v-text-field>
+                  <v-select
+                    v-model="editedItem.currentLocator"
+                    :items="editedItem.locators"
+                    item-text="name"
+                    item-value="name"
+                    label="Locator"
+                    persistent-hint
+                    return-object
+                    single-line
+                  ></v-select>
+                <!-- <v-text-field v-model="editedItem.locators.xpath" label="Locator"></v-text-field> -->
               </v-flex>
             </v-layout>
           </v-container>
@@ -110,12 +120,14 @@ export default {
         locators: {
           xpath: '',
         },
+        currentLocator: {},
       },
       defaultItem: {
         name: '',
         locators: {
           xpath: '',
         },
+        currentLocator: {},
       },
     };
   },

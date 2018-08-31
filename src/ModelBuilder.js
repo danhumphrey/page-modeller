@@ -102,16 +102,40 @@ export default class ModelBuilder {
 
     return {
       name: this.generateName(element),
-      locators: {
-        id: dom.getId(element),
-        name: dom.getName(element),
-        linkText: dom.getLinkText(element),
-        className: dom.getClassName(element),
-        tagName: tagName,
-        tagIndex: tagIndex,
-        css: dom.getCssSelector(element),
-        xpath: dom.getXPath(element),
-      },
+      locators: [
+        {
+          name: 'id',
+          locator: dom.getId(element),
+        },
+        {
+          name: 'name',
+          locator: dom.getName(element),
+        },
+        {
+          name: 'linktext',
+          locator: dom.getLinkText(element),
+        },
+        {
+          name: 'className',
+          locator: dom.getClassName(element),
+        },
+        {
+          name: 'tagName',
+          locator: tagName,
+        },
+        {
+          name: 'tagIndex',
+          locator: tagIndex,
+        },
+        {
+          name: 'css',
+          locator: dom.getCssSelector(element),
+        },
+        {
+          name: 'xpath',
+          locator: dom.getXPath(element),
+        },
+      ],
     };
   }
 }
