@@ -27,7 +27,7 @@
                 <!-- <v-text-field v-model="editedItem.locators.xpath" label="Locator"></v-text-field> -->
               </v-flex>
               <v-flex>
-                <v-text-field v-model="currentLocator.locator" :append-icon="remove_red_eye">
+                <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
 
                   <v-tooltip left open-delay="1000" slot="append">
                     <v-icon
@@ -42,8 +42,6 @@
                   </v-tooltip>
                 </v-text-field>
               </v-flex>
-
-
 
             </v-layout>
           </v-container>
@@ -103,11 +101,14 @@
         <td colspan="2">Scan the page or add a single element to build the model</td>
       </template>
     </v-data-table>
+    <confirm ref="confirm"></confirm>
   </div>
 </template>
 <script>
+import Confirm from '../Confirm';
 export default {
   name: 'Table',
+  components: { Confirm },
   props: ['model'],
   data() {
     return {
@@ -124,15 +125,6 @@ export default {
           sortable: false,
         },
       ],
-      uniqueNameRule: v => {
-        let usedCount = 0;
-        for (let entity of this.model.entities) {
-          if (entity.name === v) {
-            usedCount++;
-          }
-        }
-        return usedCount > 1 ? 'Name must be unique!' : true;
-      },
       editedIndex: -1,
       currentLocator: {},
       editedItem: {
@@ -160,7 +152,11 @@ export default {
 
     deleteItem(item) {
       const index = this.model.entities.indexOf(item);
-      confirm('Are you sure you want to delete this element?') && this.model.entities.splice(index, 1);
+      this.$refs.confirm.open('Delete Element', `Really delete ${item.name}?`).then(confirm => {
+        if (confirm) {
+          this.model.entities.splice(index, 1);
+        }
+      });
     },
 
     close() {
