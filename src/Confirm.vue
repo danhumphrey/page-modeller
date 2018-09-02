@@ -1,17 +1,17 @@
 <template>
-    <v-dialog v-model="dialog" :max-width="options.width" @keydown.esc="cancel">
-        <v-card>
-            <v-toolbar dark :color="options.color" dense flat>
-                <v-toolbar-title class="white--text">{{ title }}</v-toolbar-title>
-            </v-toolbar>
-            <v-card-text v-show="!!message" class="body-1">{{ message }}</v-card-text>
-            <v-card-actions class="pt-0">
-                <v-spacer></v-spacer>
-                <v-btn color="primary darken-1" flat="flat" @click.native="agree">Yes</v-btn>
-                <v-btn color="grey" flat="flat" @click.native="cancel">Cancel</v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
+  <v-dialog v-model="dialog" :max-width="options.width" @keydown.esc="cancel">
+    <v-card>
+      <v-toolbar dark :color="options.color" dense flat>
+        <v-toolbar-title class="white--text">{{ title }}</v-toolbar-title>
+      </v-toolbar>
+      <v-card-text v-show="!!message" class="body-1">{{ message }}</v-card-text>
+      <v-card-actions class="pt-0">
+        <v-spacer></v-spacer>
+        <v-btn color="primary darken-1" flat="flat" @click.native="agree">Yes</v-btn>
+        <v-btn color="grey" flat="flat" @click.native="cancel">Cancel</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
@@ -34,8 +34,8 @@
  * Alternatively you can place it in main App component and access it globally via this.$root.$confirm
  * <template>
  *   <v-app>
- *     ...
- *     <confirm ref="confirm"></confirm>
+ *   ...
+ *   <confirm ref="confirm"></confirm>
  *   </v-app>
  * </template>
  *

@@ -22,8 +22,8 @@
       <v-btn slot="activator" :disabled="isScanning" icon v-on:click="add" v-bind:class="{active: isAdding}">
         <v-icon>playlist_add</v-icon>
       </v-btn>
-      <span v-if="!isInspecting">Add Entity</span>
-      <span v-if="isAdding">Stop Adding Entity</span>
+      <span v-if="!isInspecting">Add Element</span>
+      <span v-if="isAdding">Stop Adding Element</span>
     </v-tooltip>
 
     <v-tooltip bottom :disabled="!hasModel && !isInspecting" open-delay="600">

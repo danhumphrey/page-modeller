@@ -3,7 +3,7 @@
     <v-dialog v-model="dialog">
       <v-card>
         <v-card-title class="pa-2">
-          <span class="headline">Edit Model Entity</span>
+          <span class="headline">Edit Element</span>
         </v-card-title>
         <v-card-text class="pb-1">
           <v-container grid-list-md pa-0>
@@ -14,27 +14,26 @@
             </v-layout>
             <v-layout wrap>
               <v-flex>
-                  <v-select
-                    v-model="currentLocator"
-                    :items="editedItem.locators"
-                    item-text="name"
-                    item-value="name"
-                    label="Locator"
-                    persistent-hint
-                    return-object
-                    single-line
-                  ></v-select>
-                <!-- <v-text-field v-model="editedItem.locators.xpath" label="Locator"></v-text-field> -->
+                <v-select
+                  v-model="currentLocator"
+                  :items="editedItem.locators"
+                  item-text="name"
+                  item-value="name"
+                  label="Locator"
+                  persistent-hint
+                  return-object
+                  single-line
+                ></v-select>
               </v-flex>
               <v-flex>
                 <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
 
                   <v-tooltip left open-delay="1000" slot="append">
                     <v-icon
-                            slot="activator"
-                            small
-                            class="mr-2"
-                            @click="viewMatches(currentLocator)"
+                      slot="activator"
+                      small
+                      class="mr-2"
+                      @click="viewMatches(currentLocator)"
                     >
                       remove_red_eye
                     </v-icon>
@@ -54,20 +53,20 @@
       </v-card>
     </v-dialog>
     <v-data-table
-        :items="model == null ? [] : model.entities"
-        :headers="headers"
-        hide-actions
-        class="elevation-0"
+      :items="model == null ? [] : model.entities"
+      :headers="headers"
+      hide-actions
+      class="elevation-0"
     >
       <template slot="items" slot-scope="props">
         <td>{{ props.item.name }}</td>
         <td class="text-xs-right px-0">
           <v-tooltip left open-delay="1000">
             <v-icon
-                slot="activator"
-                small
-                class="mr-2"
-                @click="viewMatches(props.item)"
+              slot="activator"
+              small
+              class="mr-2"
+              @click="viewMatches(props.item)"
             >
               remove_red_eye
             </v-icon>
@@ -75,10 +74,10 @@
           </v-tooltip>
           <v-tooltip left open-delay="1000">
             <v-icon
-                slot="activator"
-                small
-                class="mr-2"
-                @click="editItem(props.item)"
+              slot="activator"
+              small
+              class="mr-2"
+              @click="editItem(props.item)"
             >
               edit
             </v-icon>
@@ -86,10 +85,10 @@
           </v-tooltip>
           <v-tooltip left open-delay="1000">
             <v-icon
-                slot="activator"
-                small
-                class="mr-4"
-                @click="deleteItem(props.item)"
+              slot="activator"
+              small
+              class="mr-4"
+              @click="deleteItem(props.item)"
             >
               delete
             </v-icon>
