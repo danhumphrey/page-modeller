@@ -65,45 +65,48 @@
       class="elevation-0"
     >
       <template slot="items" slot-scope="props">
-        <td>{{ props.item.name }}</td>
-        <td class="text-xs-right px-0">
-          <v-tooltip left open-delay="1000">
-            <v-icon
-              slot="activator"
-              small
-              class="mr-2"
-              @click="viewMatches(props.item)"
-            >
-              remove_red_eye
-            </v-icon>
-            <span>View Matched Elements</span>
-          </v-tooltip>
-          <v-tooltip left open-delay="1000">
-            <v-icon
-              slot="activator"
-              small
-              class="mr-2"
-              @click="editItem(props.item)"
-            >
-              edit
-            </v-icon>
-            <span>Edit</span>
-          </v-tooltip>
-          <v-tooltip left open-delay="1000">
-            <v-icon
-              slot="activator"
-              small
-              class="mr-4"
-              @click="deleteItem(props.item)"
-            >
-              delete
-            </v-icon>
-            <span>Delete</span>
-          </v-tooltip>
-        </td>
+        <tr v-on:dblclick="editItem(props.item)">
+          <td class="unselectable">{{ props.item.name }}</td>
+          <td class="unselectable">{{ itemLocator(props.item) }}</td>
+          <td class="text-xs-right px-0 unselectable">
+            <v-tooltip left open-delay="1000">
+              <v-icon
+                slot="activator"
+                small
+                class="mr-2"
+                @click="viewMatches(props.item)"
+              >
+                remove_red_eye
+              </v-icon>
+              <span>View Matched Elements</span>
+            </v-tooltip>
+            <v-tooltip left open-delay="1000">
+              <v-icon
+                slot="activator"
+                small
+                class="mr-2"
+                @click="editItem(props.item)"
+              >
+                edit
+              </v-icon>
+              <span>Edit</span>
+            </v-tooltip>
+            <v-tooltip left open-delay="1000">
+              <v-icon
+                slot="activator"
+                small
+                class="mr-4"
+                @click="deleteItem(props.item)"
+              >
+                delete
+              </v-icon>
+              <span>Delete</span>
+            </v-tooltip>
+          </td>
+        </tr>
       </template>
       <template slot="no-data">
-        <td colspan="2">Scan the page or add a single element to build the model</td>
+        <td colspan="3">Scan the page or add a single element to build the model</td>
       </template>
     </v-data-table>
     <confirm ref="confirm"></confirm>
@@ -131,6 +134,11 @@ export default {
       headers: [
         {
           text: 'Name',
+          align: 'left',
+          sortable: false,
+        },
+        {
+          text: 'Locator',
           align: 'left',
           sortable: false,
         },
@@ -204,6 +212,11 @@ export default {
         this.close();
       }
     },
+    itemLocator(item) {
+      console.log('itemLocator');
+      const current = item.locators.find(l => l.selected === true);
+      return `${current.name}: ${current.locator}`;
+    },
   },
 };
 </script>
@@ -215,5 +228,13 @@ export default {
 
 .model-table {
   margin: 6em 2em 0 2em;
+}
+
+.unselectable {
+  -moz-user-select: -moz-none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 </style>
