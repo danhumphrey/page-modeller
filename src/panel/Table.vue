@@ -1,56 +1,62 @@
 <template>
   <div class="model-table">
     <v-dialog v-model="dialog">
-      <v-card>
-        <v-card-title class="pa-2">
-          <span class="headline">Edit Element</span>
-        </v-card-title>
-        <v-card-text class="pb-1">
-          <v-container grid-list-md pa-0>
-            <v-layout wrap>
-              <v-flex>
-                <v-text-field v-model="editedItem.name" label="Name"></v-text-field>
-              </v-flex>
-            </v-layout>
-            <v-layout wrap>
-              <v-flex>
-                <v-select
-                  v-model="currentLocator"
-                  :items="editedItem.locators"
-                  item-text="name"
-                  item-value="name"
-                  label="Locator"
-                  persistent-hint
-                  return-object
-                  single-line
-                ></v-select>
-              </v-flex>
-              <v-flex>
-                <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
-
-                  <v-tooltip left open-delay="1000" slot="append">
-                    <v-icon
-                      slot="activator"
-                      small
-                      class="mr-2"
-                      @click="viewMatches(currentLocator)"
-                    >
-                      remove_red_eye
-                    </v-icon>
-                    <span>View Matched Elements</span>
-                  </v-tooltip>
-                </v-text-field>
-              </v-flex>
-
-            </v-layout>
-          </v-container>
-        </v-card-text>
-        <v-card-actions class="py-1">
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" flat @click.native="close">Cancel</v-btn>
-          <v-btn color="blue darken-1" flat @click.native="save">Save</v-btn>
-        </v-card-actions>
-      </v-card>
+      <form>
+        <v-card>
+          <v-card-title class="pa-2">
+            <span class="headline">Edit Element</span>
+          </v-card-title>
+          <v-card-text class="pb-1">
+            <v-container grid-list-md pa-0>
+              <v-layout wrap>
+                <v-flex>
+                  <v-text-field v-model="editedItemName"
+                                label="Name"
+                                :error-messages="editedItemNameErrors"
+                                required
+                                @input="$v.editedItemName.$touch()"
+                                @blur="$v.editedItemName.$touch()"
+                  ></v-text-field>
+                </v-flex>
+              </v-layout>
+              <v-layout wrap>
+                <v-flex>
+                  <v-select
+                    v-model="currentLocator"
+                    :items="editedItem.locators"
+                    item-text="name"
+                    item-value="name"
+                    label="Locator"
+                    persistent-hint
+                    return-object
+                    single-line
+                  ></v-select>
+                </v-flex>
+                <v-flex>
+                  <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
+                    <v-tooltip left open-delay="1000" slot="append">
+                      <v-icon
+                        slot="activator"
+                        small
+                        class="mr-2"
+                        @click="viewMatches(currentLocator)"
+                      >
+                        remove_red_eye
+                      </v-icon>
+                      <span>View Matched Elements</span>
+                    </v-tooltip>
+                  </v-text-field>
+                </v-flex>
+              </v-layout>
+            </v-container>
+          </v-card-text>
+          <v-card-actions class="py-1">
+            <v-spacer></v-spacer>
+            <v-btn color="blue darken-1" flat @click.native="close">Cancel</v-btn>
+            <v-btn color="blue darken-1" flat @click.native="save">Save</v-btn>
+          </v-card-actions>
+        </v-card>
+      </form>
     </v-dialog>
     <v-data-table
       :items="model == null ? [] : model.entities"
@@ -105,7 +111,17 @@
 </template>
 <script>
 import Confirm from '../Confirm';
+import { validationMixin } from 'vuelidate';
+import { required } from 'vuelidate/lib/validators';
+const uniqueName = function(n) {
+  const res = this.model.entities.filter(e => e.name === n);
+  return res.length === 0 || n === this.editedItem.name;
+};
 export default {
+  mixins: [validationMixin],
+  validations: {
+    editedItemName: { required, uniqueName },
+  },
   name: 'Table',
   components: { Confirm },
   props: ['model'],
@@ -130,11 +146,23 @@ export default {
         name: '',
         locators: [],
       },
+      editedItemName: '',
       defaultItem: {
         name: '',
         locators: [],
       },
     };
+  },
+  computed: {
+    editedItemNameErrors() {
+      const errors = [];
+      if (!this.$v.editedItemName.$dirty) {
+        return errors;
+      }
+      !this.$v.editedItemName.required && errors.push('Name is required.');
+      !this.$v.editedItemName.uniqueName && errors.push('Name must be unique.');
+      return errors;
+    },
   },
   watch: {
     dialog(val) {
@@ -145,10 +173,10 @@ export default {
     editItem(item) {
       this.editedIndex = this.model.entities.indexOf(item);
       this.editedItem = Object.assign({}, item);
+      this.editedItemName = this.editedItem.name;
       this.currentLocator = this.editedItem.locators.find(l => l.selected);
       this.dialog = true;
     },
-
     deleteItem(item) {
       const index = this.model.entities.indexOf(item);
       this.$refs.confirm.open('Delete Element', `Really delete ${item.name}?`).then(confirm => {
@@ -157,7 +185,6 @@ export default {
         }
       });
     },
-
     close() {
       this.dialog = false;
       setTimeout(() => {
@@ -165,14 +192,16 @@ export default {
         this.editedIndex = -1;
       }, 200);
     },
-
     save() {
-      if (this.editedIndex > -1) {
+      this.$v.$touch();
+      console.log('save');
+      if (!this.$v.$invalid) {
         delete this.editedItem.locators.find(l => l.selected).selected;
         this.editedItem.locators.find(l => l.name === this.currentLocator.name).selected = true;
+        this.editedItem.name = this.editedItemName;
         Object.assign(this.model.entities[this.editedIndex], this.editedItem);
+        this.close();
       }
-      this.close();
     },
   },
 };
