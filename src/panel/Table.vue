@@ -188,8 +188,9 @@ export default {
     close() {
       this.dialog = false;
       setTimeout(() => {
-        this.editedItem = Object.assign({}, this.defaultItem);
+        (this.editedItemName = this.defaultItem.name), (this.editedItem = Object.assign({}, this.defaultItem));
         this.editedIndex = -1;
+        this.$v.$reset();
       }, 200);
     },
     save() {
