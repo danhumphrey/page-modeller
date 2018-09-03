@@ -1,4 +1,4 @@
-import inspector from './inspector';
+import inspector from './panel/inspector';
 import './content.scss';
 
 chrome.runtime.onMessage.addListener(msg => {

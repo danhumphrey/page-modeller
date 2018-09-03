@@ -2,15 +2,15 @@
   <v-app>
     <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
     <Table  :model="model" />
-    <alert ref="alert"></alert>
+    <Alert ref="alert"></Alert>
   </v-app>
 </template>
 
 <script>
-import Alert from '../Alert';
+import Alert from '../components/Alert';
 import Toolbar from './Toolbar';
 import Table from './Table';
-import ModelBuilder from '../ModelBuilder';
+import ModelBuilder from './ModelBuilder';
 
 export default {
   name: 'app',

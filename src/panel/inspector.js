@@ -1,5 +1,5 @@
 import ModelBuilder from './ModelBuilder';
-import dom from './dom';
+import dom from '../dom';
 
 const CLASS_NAME = 'page-modeller-hover';
 let existingModel = null;
@@ -28,7 +28,6 @@ const onClick = evt => {
   if (
     existingModel &&
     existingModel.entities.find(function(entity) {
-      console.log(`${tagName}${tagIndex}`);
       return undefined !== entity.locators.find(l => l.name === 'tagIndex' && l.locator === `${tagName}${tagIndex}`);
     })
   ) {

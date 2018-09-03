@@ -109,11 +109,11 @@
         <td colspan="3">Scan the page or add a single element to build the model</td>
       </template>
     </v-data-table>
-    <confirm ref="confirm"></confirm>
+    <Confirm ref="confirm"></Confirm>
   </div>
 </template>
 <script>
-import Confirm from '../Confirm';
+import Confirm from '../components/Confirm';
 import { validationMixin } from 'vuelidate';
 import { required } from 'vuelidate/lib/validators';
 const uniqueName = function(n) {
@@ -203,7 +203,6 @@ export default {
     },
     save() {
       this.$v.$touch();
-      console.log('save');
       if (!this.$v.$invalid) {
         delete this.editedItem.locators.find(l => l.selected).selected;
         this.editedItem.locators.find(l => l.name === this.currentLocator.name).selected = true;
@@ -213,7 +212,6 @@ export default {
       }
     },
     itemLocator(item) {
-      console.log('itemLocator');
       const current = item.locators.find(l => l.selected === true);
       return `${current.name}: ${current.locator}`;
     },
