@@ -1,4 +1,5 @@
 import ModelBuilder from './ModelBuilder';
+import dom from './dom';
 
 const CLASS_NAME = 'page-modeller-hover';
 let existingModel = null;
@@ -18,8 +19,23 @@ const onFocus = evt => {
 const onClick = evt => {
   evt.preventDefault();
   evt.stopPropagation();
-  let el = evt.target;
+  const el = evt.target;
   el.classList.remove(CLASS_NAME);
+
+  const tagName = dom.getTagName(el);
+  const tagIndex = dom.getTagIndex(el);
+
+  if (
+    existingModel &&
+    existingModel.entities.find(function(entity) {
+      console.log(`${tagName}${tagIndex}`);
+      return undefined !== entity.locators.find(l => l.name === 'tagIndex' && l.locator === `${tagName}${tagIndex}`);
+    })
+  ) {
+    chrome.runtime.sendMessage({ type: 'contentAlertMessage', data: { title: 'Add Element', message: 'That element already exists in the model' } });
+    return false;
+  }
+
   stop();
 
   let b = new ModelBuilder();
