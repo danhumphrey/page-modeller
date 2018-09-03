@@ -2,17 +2,19 @@
   <v-app>
     <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
     <Table  :model="model" />
+    <alert ref="alert"></alert>
   </v-app>
 </template>
 
 <script>
+import Alert from '../Alert';
 import Toolbar from './Toolbar';
 import Table from './Table';
 import ModelBuilder from '../ModelBuilder';
 
 export default {
   name: 'app',
-  components: { Table, Toolbar },
+  components: { Table, Toolbar, Alert },
   computed: {
     isInspecting: function() {
       return this.isAdding || this.isScanning;
@@ -56,8 +58,14 @@ export default {
     },
   },
   mounted: function() {
+    this.$root.$alert = this.$refs.alert.open;
+
     this.$nextTick(function() {
       chrome.runtime.onMessage.addListener(msg => {
+        if (msg.type === 'alertMessage') {
+          this.$root.$alert(msg.data.title || 'Page Modeller', msg.data.message);
+        }
+
         if (msg.type === 'elementInspected') {
           console.log('elementInspected message received');
           console.log(msg.data.model);
