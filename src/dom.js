@@ -115,6 +115,63 @@ const getLabel = function(element) {
   return null;
 };
 
+const findElementByXPath = function(document, locator) {
+  return document.evaluate(locator, document, null, FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+};
+
+const findElementsByXPath = function(document, locator) {
+  const els = [];
+  try {
+    const snapshot = document.evaluate(locator, document, null, ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+    if (snapshot && snapshot.snapshotLength) {
+      for (let i = 0, j = snapshot.snapshotLength; i < j; i++) {
+        els.push(snapshot.snapshotItem(i));
+      }
+    }
+  } catch (e) {}
+
+  return els;
+};
+const findElementsByCssSelector = function(document, locator) {
+  try {
+    return document.querySelectorAll(locator);
+  } catch (e) {}
+};
+
+const findElementsByName = function(document, locator) {
+  return document.getElementsByName(locator);
+};
+
+const findElementsByTagName = function(document, locator) {
+  return document.getElementsByTagName(locator);
+};
+
+const findElementsByClassName = function(document, locator) {
+  return findElementsByCssSelector(document, '.' + locator);
+};
+
+const findElementsById = function(document, locator) {
+  return findElementsByCssSelector(document, '#' + locator);
+};
+
+const findElementsByLinkText = function(document, locator) {
+  var els = Array.prototype.slice.call(findElementsByTagName(document, 'A'));
+
+  return els.filter(function(el) {
+    var c = el.textContent.replace(/\xA0/g, ' ').replace(/^\s*(.*?)\s*$/, '$1');
+    return c === locator;
+  });
+};
+
+const findElementsByPartialLinkText = function(document, locator) {
+  var els = Array.prototype.slice.call(findElementsByTagName('A'));
+
+  return els.filter(function(el) {
+    return el.textContent.indexOf(locator) !== -1;
+  });
+};
+
 export default {
   isVisible: isVisible,
   getTagName: getTagName,
@@ -127,4 +184,12 @@ export default {
   getLinkText: getLinkText,
   getLabel: getLabel,
   getXPath: getXPath,
+  findElementsById: findElementsById,
+  findElementsByName: findElementsByName,
+  findElementsByLinkText: findElementsByLinkText,
+  findElementsByPartialLinkText: findElementsByPartialLinkText,
+  findElementsByClassName: findElementsByClassName,
+  findElementsByTagName: findElementsByTagName,
+  findElementsByCssSelector: findElementsByCssSelector,
+  findElementsByXPath: findElementsByXPath,
 };

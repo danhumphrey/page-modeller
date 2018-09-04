@@ -1,6 +1,11 @@
+$yellow: rgba(255, 255, 0, 0.5);
+$red: red;
 $blue: #03a9f4;
 $white: #fff;
 $inspector-bg: rgba(70, 142, 212, 0.5);
 
-$highlight: $blue;
-$active-highlight: $white;
+$hover: $blue;
+$active-hover: $white;
+
+$highlight-border: $red;
+$highlight-bg: $yellow;

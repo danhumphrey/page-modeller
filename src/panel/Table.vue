@@ -39,7 +39,7 @@
                         slot="activator"
                         small
                         class="mr-2"
-                        @click="viewMatches(currentLocator)"
+                        @click="showMatchesForLocator(currentLocator)"
                       >
                         remove_red_eye
                       </v-icon>
@@ -74,7 +74,7 @@
                 slot="activator"
                 small
                 class="mr-2"
-                @click="viewMatches(props.item)"
+                @click="showMatchesForEntity(props.item)"
               >
                 remove_red_eye
               </v-icon>
@@ -150,6 +150,10 @@ export default {
       ],
       editedIndex: -1,
       currentLocator: {},
+      originalItem: {
+        name: '',
+        locators: [],
+      },
       editedItem: {
         name: '',
         locators: [],
@@ -181,6 +185,7 @@ export default {
     editItem(item) {
       this.editedIndex = this.model.entities.indexOf(item);
       this.editedItem = Object.assign({}, item);
+      this.originalItem = JSON.parse(JSON.stringify(Object.assign({}, item)));
       this.editedItemName = this.editedItem.name;
       this.currentLocator = this.editedItem.locators.find(l => l.selected);
       this.dialog = true;
@@ -193,9 +198,12 @@ export default {
         }
       });
     },
-    close() {
+    close(saved = false) {
       this.dialog = false;
       setTimeout(() => {
+        if (!saved) {
+          Object.assign(this.model.entities[this.editedIndex], this.originalItem);
+        }
         (this.editedItemName = this.defaultItem.name), (this.editedItem = Object.assign({}, this.defaultItem));
         this.editedIndex = -1;
         this.$v.$reset();
@@ -208,12 +216,20 @@ export default {
         this.editedItem.locators.find(l => l.name === this.currentLocator.name).selected = true;
         this.editedItem.name = this.editedItemName;
         Object.assign(this.model.entities[this.editedIndex], this.editedItem);
-        this.close();
+        this.close(true);
       }
     },
     itemLocator(item) {
       const current = item.locators.find(l => l.selected === true);
       return `${current.name}: ${current.locator}`;
+    },
+    showMatchesForLocator(locator) {
+      chrome.runtime.sendMessage({ type: 'appShowMatches', data: { locator: locator } });
+    },
+    showMatchesForEntity(entity) {
+      console.log(entity);
+      const locator = entity.locators.find(l => l.selected);
+      this.showMatchesForLocator(locator);
     },
   },
 };

@@ -3,6 +3,7 @@
     <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
     <Table  :model="model" />
     <Alert ref="alert"></Alert>
+    <Popup ref="popup"></Popup>
   </v-app>
 </template>
 
@@ -11,10 +12,11 @@ import Alert from '../components/Alert';
 import Toolbar from './Toolbar';
 import Table from './Table';
 import ModelBuilder from './ModelBuilder';
+import Popup from '../components/Popup';
 
 export default {
   name: 'app',
-  components: { Table, Toolbar, Alert },
+  components: { Table, Toolbar, Alert, Popup },
   computed: {
     isInspecting: function() {
       return this.isAdding || this.isScanning;
@@ -59,11 +61,31 @@ export default {
   },
   mounted: function() {
     this.$root.$alert = this.$refs.alert.open;
+    this.$root.$popupInfo = this.$refs.popup.info;
+    this.$root.$popupError = this.$refs.popup.error;
+    this.$root.$popupWarning = this.$refs.popup.warning;
+    this.$root.$popupSuccess = this.$refs.popup.success;
 
     this.$nextTick(function() {
       chrome.runtime.onMessage.addListener(msg => {
         if (msg.type === 'alertMessage') {
           this.$root.$alert(msg.data.title || 'Page Modeller', msg.data.message);
+        }
+
+        if (msg.type === 'popupInfo') {
+          this.$root.$popupInfo(msg.data.message);
+        }
+
+        if (msg.type === 'popupError') {
+          this.$root.$popupError(msg.data.message);
+        }
+
+        if (msg.type === 'popupWarning') {
+          this.$root.$popupWarning(msg.data.message);
+        }
+
+        if (msg.type === 'popupSuccess') {
+          this.$root.$popupSuccess(msg.data.message);
         }
 
         if (msg.type === 'elementInspected') {

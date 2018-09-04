@@ -2,10 +2,10 @@
 
 button {
   &:hover {
-    color: $highlight;
+    color: $hover;
   }
   &.active {
-    background: $highlight;
-    color: $active-highlight;
+    background: $hover;
+    color: $active-hover;
   }
 }
