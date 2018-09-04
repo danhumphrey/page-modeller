@@ -52,7 +52,7 @@
           </v-card-text>
           <v-card-actions class="py-1">
             <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" flat @click.native="close">Cancel</v-btn>
+            <v-btn color="blue darken-1" flat @click.native="dialog = false">Cancel</v-btn>
             <v-btn color="blue darken-1" flat @click.native="save">Save</v-btn>
           </v-card-actions>
         </v-card>
@@ -199,14 +199,14 @@ export default {
       });
     },
     close(saved = false) {
-      this.dialog = false;
       setTimeout(() => {
-        if (!saved) {
+        if (!saved && this.editedIndex > -1) {
           Object.assign(this.model.entities[this.editedIndex], this.originalItem);
         }
         (this.editedItemName = this.defaultItem.name), (this.editedItem = Object.assign({}, this.defaultItem));
         this.editedIndex = -1;
         this.$v.$reset();
+        this.dialog = false;
       }, 200);
     },
     save() {
