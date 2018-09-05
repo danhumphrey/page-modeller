@@ -48,27 +48,27 @@ chrome.runtime.onMessage.addListener(msg => {
         matches = dom.findElementsByPartialLinkText(document, locator.locator);
         break;
     }
-    if (matches) {
-      matches = [...matches];
-      matches.forEach(function(el) {
-        el.classList.add('page-modeller-highlight');
-        setTimeout(function() {
-          el.classList.remove('page-modeller-highlight');
-        }, 3000);
-      });
 
-      if (matches.length === 0) {
-        chrome.runtime.sendMessage({ type: 'contentPopupError', data: { message: `0 elements match that locator` } });
-        return;
-      }
-      if (matches.length === 1) {
-        chrome.runtime.sendMessage({ type: 'contentPopupSuccess', data: { message: `1 element matches that locator` } });
-        return;
-      }
-      if (matches.length > 1) {
-        chrome.runtime.sendMessage({ type: 'contentPopupWarning', data: { message: `${matches.length} elements match that locator` } });
-        return;
-      }
+    matches = [...matches];
+
+    if (matches.length === 0) {
+      chrome.runtime.sendMessage({ type: 'contentPopupError', data: { message: `0 elements match that locator` } });
+      return;
     }
+    if (matches.length === 1) {
+      chrome.runtime.sendMessage({ type: 'contentPopupSuccess', data: { message: `1 element matches that locator` } });
+    }
+    if (matches.length > 1) {
+      chrome.runtime.sendMessage({ type: 'contentPopupWarning', data: { message: `${matches.length} elements match that locator` } });
+    }
+
+    matches[0].scrollIntoViewIfNeeded();
+
+    matches.forEach(function(el) {
+      el.classList.add('page-modeller-highlight');
+      setTimeout(function() {
+        el.classList.remove('page-modeller-highlight');
+      }, 3000);
+    });
   }
 });
