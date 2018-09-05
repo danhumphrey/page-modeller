@@ -66,37 +66,40 @@
     >
       <template slot="items" slot-scope="props">
         <tr v-on:dblclick="editItem(props.item)">
-          <td class="unselectable">{{ props.item.name }}</td>
-          <td class="unselectable">{{ itemLocator(props.item) }}</td>
+          <td class="unselectable" v-bind:class="{disabled: isInspecting}">{{ props.item.name }}</td>
+          <td class="unselectable" v-bind:class="{disabled: isInspecting}">{{ itemLocator(props.item) }}</td>
           <td class="text-xs-right px-0 unselectable">
-            <v-tooltip left open-delay="1000">
+            <v-tooltip left open-delay="1000" :disabled="isInspecting">
               <v-icon
                 slot="activator"
                 small
                 class="mr-2"
                 @click="showMatchesForEntity(props.item)"
+                :disabled="isInspecting"
               >
                 remove_red_eye
               </v-icon>
               <span>View Matched Elements</span>
             </v-tooltip>
-            <v-tooltip left open-delay="1000">
+            <v-tooltip left open-delay="1000" :disabled="isInspecting">
               <v-icon
                 slot="activator"
                 small
                 class="mr-2"
                 @click="editItem(props.item)"
+                :disabled="isInspecting"
               >
                 edit
               </v-icon>
               <span>Edit</span>
             </v-tooltip>
-            <v-tooltip left open-delay="1000">
+            <v-tooltip left open-delay="1000" :disabled="isInspecting">
               <v-icon
                 slot="activator"
                 small
                 class="mr-4"
                 @click="deleteItem(props.item)"
+                :disabled="isInspecting"
               >
                 delete
               </v-icon>
@@ -127,7 +130,7 @@ export default {
   },
   name: 'Table',
   components: { Confirm },
-  props: ['model'],
+  props: ['isInspecting', 'model'],
   data() {
     return {
       dialog: false,
@@ -183,6 +186,9 @@ export default {
   },
   methods: {
     editItem(item) {
+      if (this.isInspecting) {
+        return;
+      }
       this.editedIndex = this.model.entities.indexOf(item);
       this.editedItem = Object.assign({}, item);
       this.originalItem = JSON.parse(JSON.stringify(Object.assign({}, item)));
@@ -195,6 +201,10 @@ export default {
       this.$refs.confirm.open('Delete Element', `Really delete ${item.name}?`).then(confirm => {
         if (confirm) {
           this.model.entities.splice(index, 1);
+          if (this.model.usedNames.hasOwnProperty(item.name)) {
+            //simple match
+            delete this.model.usedNames[item.name];
+          }
         }
       });
     },
@@ -250,5 +260,8 @@ export default {
   -webkit-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+.disabled {
+  opacity: 0.6;
 }
 </style>

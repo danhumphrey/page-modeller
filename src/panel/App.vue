@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
-    <Table  :model="model" />
+    <Table  :model="model" :is-inspecting="isInspecting" />
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
   </v-app>
