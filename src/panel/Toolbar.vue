@@ -6,7 +6,6 @@
       </v-btn>
       <span v-if="!isInspecting">Scan Page</span>
       <span v-if="isScanning">Stop Scanning</span>
-
     </v-tooltip>
 
     <v-tooltip bottom :disabled="!hasModel || isInspecting" open-delay="600">
@@ -15,6 +14,21 @@
       </v-btn>
       <span>Delete Model</span>
     </v-tooltip>
+
+    <v-menu :nudge-width="100">
+      <v-btn flat small class="text-capitalize" slot="activator">Selenium WebDriver - Java
+       <v-icon >arrow_drop_down</v-icon>
+      </v-btn>
+      <v-list>
+        <v-list-tile
+                v-for="item in profiles"
+                :key="item"
+                @click=""
+        >
+          <v-list-tile-title v-text="item"></v-list-tile-title>
+        </v-list-tile>
+      </v-list>
+    </v-menu>
 
     <v-spacer></v-spacer>
 
@@ -38,7 +52,7 @@
 <script>
 export default {
   name: 'Toolbar',
-  props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel'],
+  props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel', 'profiles'],
   methods: {
     scan: function() {
       this.$emit('scan');

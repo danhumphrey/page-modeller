@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel"/>
+    <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel" :profiles="profiles"/>
     <Table  :model="model" :is-inspecting="isInspecting" />
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
@@ -30,6 +30,7 @@ export default {
       isScanning: false,
       isAdding: false,
       model: null,
+      profiles: ['Selenium WebDriver - Java', 'Selenium WebDriver - C#'],
     };
   },
   methods: {
