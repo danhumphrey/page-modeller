@@ -52,7 +52,7 @@ export default {
     title: null,
     options: {
       color: 'primary',
-      width: 490,
+      width: 390,
     },
   }),
   methods: {

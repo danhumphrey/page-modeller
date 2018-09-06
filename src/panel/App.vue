@@ -1,9 +1,10 @@
 <template>
   <v-app>
-    <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel" :profiles="profiles"/>
+    <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel" :currentProfile="currentProfile"/>
     <Table  :model="model" :is-inspecting="isInspecting" />
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
+    <Confirm ref="confirm"></Confirm>
   </v-app>
 </template>
 
@@ -13,10 +14,11 @@ import Toolbar from './Toolbar';
 import Table from './Table';
 import ModelBuilder from './ModelBuilder';
 import Popup from '../components/Popup';
+import Confirm from '../components/Confirm';
 
 export default {
   name: 'app',
-  components: { Table, Toolbar, Alert, Popup },
+  components: { Table, Toolbar, Alert, Popup, Confirm },
   computed: {
     isInspecting: function() {
       return this.isAdding || this.isScanning;
@@ -30,7 +32,7 @@ export default {
       isScanning: false,
       isAdding: false,
       model: null,
-      profiles: ['Selenium WebDriver - Java', 'Selenium WebDriver - C#'],
+      currentProfile: 'Selenium WebDriver - Java',
     };
   },
   methods: {
@@ -53,7 +55,11 @@ export default {
       }
     },
     deleteModel: function() {
-      this.$data.model = null;
+      this.$refs.confirm.open('Delete Model', `Really delete the model?`).then(confirm => {
+        if (confirm) {
+          this.$data.model = null;
+        }
+      });
     },
     generateModel: function() {
       console.log('Generate Model:');
@@ -61,6 +67,7 @@ export default {
     },
   },
   mounted: function() {
+    this.$root.$confirm = this.$refs.confirm.open;
     this.$root.$alert = this.$refs.alert.open;
     this.$root.$popupInfo = this.$refs.popup.info;
     this.$root.$popupError = this.$refs.popup.error;

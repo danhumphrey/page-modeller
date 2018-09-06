@@ -15,20 +15,12 @@
       <span>Delete Model</span>
     </v-tooltip>
 
-    <v-menu :nudge-width="100">
-      <v-btn flat small class="text-capitalize" slot="activator">Selenium WebDriver - Java
-       <v-icon >arrow_drop_down</v-icon>
+    <v-tooltip bottom :disabled="hasModel || isInspecting" open-delay="600">
+      <v-btn flat small round class="text-capitalize" slot="activator" :disabled="hasModel || isInspecting">{{currentProfile}}
+        <v-icon>arrow_right</v-icon>
       </v-btn>
-      <v-list>
-        <v-list-tile
-                v-for="item in profiles"
-                :key="item"
-                @click=""
-        >
-          <v-list-tile-title v-text="item"></v-list-tile-title>
-        </v-list-tile>
-      </v-list>
-    </v-menu>
+      <span>Select Modelling Profile</span>
+    </v-tooltip>
 
     <v-spacer></v-spacer>
 
@@ -52,7 +44,7 @@
 <script>
 export default {
   name: 'Toolbar',
-  props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel', 'profiles'],
+  props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel', 'currentProfile'],
   methods: {
     scan: function() {
       this.$emit('scan');
