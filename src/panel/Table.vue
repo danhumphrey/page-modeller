@@ -109,7 +109,7 @@
         </tr>
       </template>
       <template slot="no-data">
-        <td colspan="3">Scan the page or add a single element to build the model</td>
+        <td colspan="3">Scan the page or start adding elements to build the model</td>
       </template>
     </v-data-table>
   </div>
