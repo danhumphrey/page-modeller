@@ -112,7 +112,6 @@
         <td colspan="3">Scan the page or add a single element to build the model</td>
       </template>
     </v-data-table>
-    <Confirm ref="confirm"></Confirm>
   </div>
 </template>
 <script>
@@ -129,7 +128,6 @@ export default {
     editedItemName: { required, uniqueName },
   },
   name: 'Table',
-  components: { Confirm },
   props: ['isInspecting', 'model'],
   data() {
     return {
@@ -198,7 +196,7 @@ export default {
     },
     deleteItem(item) {
       const index = this.model.entities.indexOf(item);
-      this.$refs.confirm.open('Delete Element', `Really delete ${item.name}?`).then(confirm => {
+      this.$root.$confirm('Delete Element', `Really delete ${item.name}?`).then(confirm => {
         if (confirm) {
           this.model.entities.splice(index, 1);
           if (this.model.usedNames.hasOwnProperty(item.name)) {

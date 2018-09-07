@@ -5,6 +5,7 @@
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
     <Confirm ref="confirm"></Confirm>
+    <ProfileEditor ref="profileEditor"></ProfileEditor>
   </v-app>
 </template>
 
@@ -15,10 +16,11 @@ import Table from './Table';
 import ModelBuilder from './ModelBuilder';
 import Popup from '../components/Popup';
 import Confirm from '../components/Confirm';
+import ProfileEditor from '../components/ProfileEditor';
 
 export default {
   name: 'app',
-  components: { Table, Toolbar, Alert, Popup, Confirm },
+  components: { ProfileEditor, Table, Toolbar, Alert, Popup, Confirm },
   computed: {
     isInspecting: function() {
       return this.isAdding || this.isScanning;
@@ -32,7 +34,7 @@ export default {
       isScanning: false,
       isAdding: false,
       model: null,
-      currentProfile: 'Selenium WebDriver - Java',
+      currentProfile: null,
     };
   },
   methods: {
@@ -63,7 +65,7 @@ export default {
     },
     generateModel: function() {
       console.log('Generate Model:');
-      console.log(this.$data.model);
+      console.dir(this.$data.model);
     },
   },
   mounted: function() {
@@ -73,6 +75,12 @@ export default {
     this.$root.$popupError = this.$refs.popup.error;
     this.$root.$popupWarning = this.$refs.popup.warning;
     this.$root.$popupSuccess = this.$refs.popup.success;
+    this.$root.$profileEditor = this.$refs.profileEditor;
+
+    //force selection of a modelling profile
+    if (this.currentProfile === null) {
+      this.$root.$profileEditor.show(true);
+    }
 
     this.$nextTick(function() {
       chrome.runtime.onMessage.addListener(msg => {
