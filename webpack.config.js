@@ -14,6 +14,7 @@ const config = {
     background: './background.js',
     content: './content.js',
     devtools: './devtools.js',
+    options: './options.js',
     'panel/panel': './panel/panel.js',
     'popup/popup': './popup/popup.js',
   },
@@ -75,6 +76,7 @@ const config = {
       { from: 'popup/popup.html', to: 'popup/popup.html' },
       { from: 'devtools-page.html', to: 'devtools-page.html' },
       { from: 'panel/panel.html', to: 'panel/panel.html' },
+      { from: 'options.html', to: 'options.html' },
       { from: 'fonts', to: 'fonts' },
       {
         from: 'manifest.json',

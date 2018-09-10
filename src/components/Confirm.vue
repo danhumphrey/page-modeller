@@ -31,7 +31,7 @@
  *   // cancel
  * }
  *
- * Alternatively you can place it in main App component and access it globally via this.$root.$confirm
+ * Alternatively you can place it in main Options component and access it globally via this.$root.$confirm
  * <template>
  *   <v-app>
  *   ...

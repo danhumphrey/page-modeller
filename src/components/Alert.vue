@@ -23,7 +23,7 @@
  * Call it:
  * this.$refs.alert.open('Uh Oh', 'Message text', { color: 'red' });
  *
- * Alternatively you can place it in main App component and access it globally via this.$root.$alert
+ * Alternatively you can place it in main Options component and access it globally via this.$root.$alert
  * <template>
  *   <v-app>
  *   ...

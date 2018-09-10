@@ -22,8 +22,13 @@ chrome.runtime.onMessage.addListener(msg => {
 
   //relay messages between the app and content script <- ->
   let m = /^(app|content)(.*)$/.exec(msg.type);
+
   if (m === null) {
-    return;
+    switch (msg.type) {
+      case 'showOptions':
+        chrome.runtime.openOptionsPage();
+        return;
+    }
   }
   let msgType = lowerFirst(m[2]);
   switch (m[1]) {

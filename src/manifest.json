@@ -28,5 +28,8 @@
       "js": ["content.js"],
       "css": ["content.css"]
     }
-  ]
+  ],
+  "options_ui": {
+    "page": "options.html"
+  }
 }

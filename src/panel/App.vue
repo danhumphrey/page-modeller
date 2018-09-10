@@ -5,7 +5,7 @@
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
     <Confirm ref="confirm"></Confirm>
-    <ProfileEditor ref="profileEditor"></ProfileEditor>
+    <ProfileEditor ref="profileEditor" :profiles="profiles"></ProfileEditor>
   </v-app>
 </template>
 
@@ -35,6 +35,7 @@ export default {
       isAdding: false,
       model: null,
       currentProfile: null,
+      profiles: ['Selenium WebDriver Java', 'Selenium WebDriver C#'],
     };
   },
   methods: {
@@ -79,7 +80,8 @@ export default {
 
     //force selection of a modelling profile
     if (this.currentProfile === null) {
-      this.$root.$profileEditor.show(true);
+      //this.$root.$profileEditor.show(true);
+      chrome.runtime.sendMessage({ type: 'showOptions', data: {} });
     }
 
     this.$nextTick(function() {

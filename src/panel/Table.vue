@@ -115,7 +115,6 @@
   </div>
 </template>
 <script>
-import Confirm from '../components/Confirm';
 import { validationMixin } from 'vuelidate';
 import { required } from 'vuelidate/lib/validators';
 const uniqueName = function(n) {
