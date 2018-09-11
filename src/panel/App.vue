@@ -5,7 +5,6 @@
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
     <Confirm ref="confirm"></Confirm>
-    <ProfileEditor ref="profileEditor" :profiles="profiles"></ProfileEditor>
   </v-app>
 </template>
 
@@ -16,20 +15,19 @@ import Table from './Table';
 import ModelBuilder from './ModelBuilder';
 import Popup from '../components/Popup';
 import Confirm from '../components/Confirm';
-import ProfileEditor from '../components/ProfileEditor';
 
 export default {
   name: 'app',
-  components: { ProfileEditor, Table, Toolbar, Alert, Popup, Confirm },
+  components: { Table, Toolbar, Alert, Popup, Confirm },
   computed: {
-    isInspecting: function() {
+    isInspecting() {
       return this.isAdding || this.isScanning;
     },
-    hasModel: function() {
+    hasModel() {
       return this.model !== null;
     },
   },
-  data: function() {
+  data() {
     return {
       isScanning: false,
       isAdding: false,
@@ -39,7 +37,7 @@ export default {
     };
   },
   methods: {
-    scan: function() {
+    scan() {
       this.$data.isScanning = !this.$data.isScanning;
 
       if (this.isScanning) {
@@ -48,7 +46,7 @@ export default {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
     },
-    add: function() {
+    add() {
       this.$data.isAdding = !this.$data.isAdding;
 
       if (this.isAdding) {
@@ -57,19 +55,19 @@ export default {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
     },
-    deleteModel: function() {
+    deleteModel() {
       this.$refs.confirm.open('Delete Model', `Really delete the model?`).then(confirm => {
         if (confirm) {
           this.$data.model = null;
         }
       });
     },
-    generateModel: function() {
+    generateModel() {
       console.log('Generate Model:');
       console.dir(this.$data.model);
     },
   },
-  mounted: function() {
+  mounted() {
     this.$root.$confirm = this.$refs.confirm.open;
     this.$root.$alert = this.$refs.alert.open;
     this.$root.$popupInfo = this.$refs.popup.info;
@@ -78,9 +76,8 @@ export default {
     this.$root.$popupSuccess = this.$refs.popup.success;
     this.$root.$profileEditor = this.$refs.profileEditor;
 
-    //force selection of a modelling profile
+    // force selection of a modelling profile
     if (this.currentProfile === null) {
-      //this.$root.$profileEditor.show(true);
       chrome.runtime.sendMessage({ type: 'showOptions', data: {} });
     }
 
@@ -113,7 +110,9 @@ export default {
           this.$data.model = msg.data.model;
 
           if (this.$data.isAdding) {
-            setTimeout(() => (document.scrollingElement.scrollTop = document.scrollingElement.scrollHeight), 100);
+            setTimeout(() => {
+              document.scrollingElement.scrollTop = document.scrollingElement.scrollHeight;
+            }, 100);
           }
           this.$data.isScanning = false;
           this.$data.isAdding = false;

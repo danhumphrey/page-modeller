@@ -16,9 +16,9 @@ const getTagName = function(element) {
 };
 
 const getTagIndex = function(element) {
-  let n = getTagName(element);
-  let all = element.ownerDocument.getElementsByTagName(n);
-  for (let i = 0; i < all.length; i++) {
+  const n = getTagName(element);
+  const all = element.ownerDocument.getElementsByTagName(n);
+  for (let i = 0; i < all.length; i += 1) {
     if (element === all[i]) {
       return i + 1;
     }
@@ -74,7 +74,7 @@ const getXPath = function(element) {
 };
 
 const getElementTreeXPath = function(element, strict) {
-  let paths = [];
+  const paths = [];
 
   for (; element && element.nodeType === Node.ELEMENT_NODE; element = element.parentNode) {
     let index = 0;
@@ -93,11 +93,11 @@ const getElementTreeXPath = function(element, strict) {
     paths.splice(0, 0, tagName + pathIndex);
   }
 
-  return paths.length ? '/' + paths.join('/') : null;
+  return paths.length ? `/${paths.join('/')}` : null;
 };
 
 const getLabel = function(element) {
-  //use 'for' attribute to find label
+  // use 'for' attribute to find label
   const id = getId(element);
   if (id) {
     const label = element.ownerDocument.querySelector(`label[for="${id}"`);
@@ -105,7 +105,7 @@ const getLabel = function(element) {
       return label;
     }
   }
-  //iterate parents looking for wrapping label
+  // iterate parents looking for wrapping label
   let parent = element.parentNode;
   do {
     if (parent.tagName === 'LABEL') {
@@ -148,18 +148,18 @@ const findElementsByTagName = function(document, locator) {
 };
 
 const findElementsByClassName = function(document, locator) {
-  return findElementsByCssSelector(document, '.' + locator);
+  return findElementsByCssSelector(document, `.${locator}`);
 };
 
 const findElementsById = function(document, locator) {
-  return findElementsByCssSelector(document, '#' + locator);
+  return findElementsByCssSelector(document, `#${locator}`);
 };
 
 const findElementsByLinkText = function(document, locator) {
-  var els = Array.prototype.slice.call(findElementsByTagName(document, 'A'));
+  const els = Array.prototype.slice.call(findElementsByTagName(document, 'A'));
 
-  return els.filter(function(el) {
-    var c = el.textContent.replace(/\xA0/g, ' ').replace(/^\s*(.*?)\s*$/, '$1');
+  return els.filter(el => {
+    const c = el.textContent.replace(/\xA0/g, ' ').replace(/^\s*(.*?)\s*$/, '$1');
     return c === locator;
   });
 };
@@ -167,21 +167,17 @@ const findElementsByLinkText = function(document, locator) {
 const findElementsByPartialLinkText = function(document, locator) {
   const els = Array.prototype.slice.call(findElementsByTagName('A'));
 
-  return els.filter(function(el) {
-    return el.textContent.indexOf(locator) !== -1;
-  });
+  return els.filter(el => el.textContent.indexOf(locator) !== -1);
 };
 
 if (!Element.prototype.scrollIntoViewIfNeeded) {
   Element.prototype.scrollIntoViewIfNeeded = function(centerIfNeeded) {
-    'use strict';
-
     function makeRange(start, length) {
-      return { start: start, length: length, end: start + length };
+      return { start, length, end: start + length };
     }
 
     function coverRange(inner, outer) {
-      if (false === centerIfNeeded || (outer.start < inner.end && inner.start < outer.end)) {
+      if (centerIfNeeded === false || (outer.start < inner.end && inner.start < outer.end)) {
         return Math.max(inner.end - outer.length, Math.min(outer.start, inner.start));
       }
       return (inner.start + inner.end - outer.length) / 2;
@@ -189,8 +185,8 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
 
     function makePoint(x, y) {
       return {
-        x: x,
-        y: y,
+        x,
+        y,
         translate: function translate(dX, dY) {
           return makePoint(x + dX, y + dY);
         },
@@ -205,13 +201,15 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
       return pt;
     }
 
-    let target = absolute(this, makePoint(0, 0)),
-      extent = makePoint(this.offsetWidth, this.offsetHeight),
-      elem = this.parentNode;
+    let target = absolute(this, makePoint(0, 0));
+
+    const extent = makePoint(this.offsetWidth, this.offsetHeight);
+
+    let elem = this.parentNode;
 
     while (elem instanceof HTMLElement) {
       // Apply desired scroll amount.
-      let origin = absolute(elem, makePoint(elem.clientLeft, elem.clientTop));
+      const origin = absolute(elem, makePoint(elem.clientLeft, elem.clientTop));
       elem.scrollLeft = coverRange(makeRange(target.x - origin.x, extent.x), makeRange(elem.scrollLeft, elem.clientWidth));
       elem.scrollTop = coverRange(makeRange(target.y - origin.y, extent.y), makeRange(elem.scrollTop, elem.clientHeight));
 
@@ -223,23 +221,23 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
 }
 
 export default {
-  isVisible: isVisible,
-  getTagName: getTagName,
-  getTagIndex: getTagIndex,
-  getTextContent: getTextContent,
-  getId: getId,
-  getName: getName,
-  getClassName: getClassName,
-  getCssSelector: getCssSelector,
-  getLinkText: getLinkText,
-  getLabel: getLabel,
-  getXPath: getXPath,
-  findElementsById: findElementsById,
-  findElementsByName: findElementsByName,
-  findElementsByLinkText: findElementsByLinkText,
-  findElementsByPartialLinkText: findElementsByPartialLinkText,
-  findElementsByClassName: findElementsByClassName,
-  findElementsByTagName: findElementsByTagName,
-  findElementsByCssSelector: findElementsByCssSelector,
-  findElementsByXPath: findElementsByXPath,
+  isVisible,
+  getTagName,
+  getTagIndex,
+  getTextContent,
+  getId,
+  getName,
+  getClassName,
+  getCssSelector,
+  getLinkText,
+  getLabel,
+  getXPath,
+  findElementsById,
+  findElementsByName,
+  findElementsByLinkText,
+  findElementsByPartialLinkText,
+  findElementsByClassName,
+  findElementsByTagName,
+  findElementsByCssSelector,
+  findElementsByXPath,
 };

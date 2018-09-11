@@ -38,6 +38,7 @@
                         :items="locators"
                         attach
                         chips
+                        small-chips
                         label="Enabled Locators"
                         multiple
                 ></v-select>
@@ -47,7 +48,7 @@
                         solo
                         name="template"
                         value=""
-                        rows="10"
+                        rows="8"
                 ></v-textarea>
               </v-flex>
             </v-layout>

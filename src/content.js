@@ -19,7 +19,8 @@ chrome.runtime.onMessage.addListener(msg => {
   }
 
   if (msg.type === 'showMatches') {
-    const locator = msg.data.locator;
+    const { locator } = msg.data;
+
     let matches;
 
     switch (locator.name) {
@@ -47,6 +48,8 @@ chrome.runtime.onMessage.addListener(msg => {
       case 'partialLinkText':
         matches = dom.findElementsByPartialLinkText(document, locator.locator);
         break;
+      default:
+        break;
     }
 
     matches = [...matches];
@@ -64,9 +67,9 @@ chrome.runtime.onMessage.addListener(msg => {
 
     matches[0].scrollIntoViewIfNeeded();
 
-    matches.forEach(function(el) {
+    matches.forEach(el => {
       el.classList.add('page-modeller-highlight');
-      setTimeout(function() {
+      setTimeout(() => {
         el.classList.remove('page-modeller-highlight');
       }, 3000);
     });

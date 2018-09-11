@@ -1,7 +1,7 @@
 import lowerFirst from 'lodash/lowerFirst';
 
 const sendMessage = function(msgType, data) {
-  chrome.runtime.sendMessage({ type: msgType, data: data });
+  chrome.runtime.sendMessage({ type: msgType, data });
 };
 const sendMessageToActiveTab = function(msgType, data = {}) {
   chrome.tabs.query(
@@ -9,9 +9,9 @@ const sendMessageToActiveTab = function(msgType, data = {}) {
       currentWindow: true,
       active: true,
     },
-    function(tabs) {
-      for (let tab of tabs) {
-        chrome.tabs.sendMessage(tab.id, { type: msgType, data: data });
+    tabs => {
+      for (const tab of tabs) {
+        chrome.tabs.sendMessage(tab.id, { type: msgType, data });
       }
     }
   );
@@ -20,8 +20,8 @@ chrome.runtime.onMessage.addListener(msg => {
   console.log('background message: ');
   console.dir(msg);
 
-  //relay messages between the app and content script <- ->
-  let m = /^(app|content)(.*)$/.exec(msg.type);
+  // relay messages between the app and content script <- ->
+  const m = /^(app|content)(.*)$/.exec(msg.type);
 
   if (m === null) {
     switch (msg.type) {
@@ -30,7 +30,7 @@ chrome.runtime.onMessage.addListener(msg => {
         return;
     }
   }
-  let msgType = lowerFirst(m[2]);
+  const msgType = lowerFirst(m[2]);
   switch (m[1]) {
     case 'app':
       sendMessageToActiveTab(msgType, msg.data);
