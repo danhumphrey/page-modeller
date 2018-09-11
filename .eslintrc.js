@@ -14,7 +14,7 @@ module.exports = {
   // consider switching to `plugin:vue/strongly-recommended` or `plugin:vue/recommended` for stricter rules.
   extends: ['plugin:vue/essential', 'airbnb-base', 'plugin:prettier/recommended'],
   // required to lint *.vue files
-  plugins: ['vue'],
+  plugins: ['vue', 'prettier'],
   // check if imports actually resolve
   settings: {
     'import/resolver': {
