@@ -1,4 +1,4 @@
-import inspector from './panel/inspector';
+import inspector from './inspector';
 import './content.scss';
 import dom from './dom';
 
@@ -49,7 +49,7 @@ chrome.runtime.onMessage.addListener(msg => {
         matches = dom.findElementsByPartialLinkText(document, locator.locator);
         break;
       default:
-        break;
+        console.error(`Unexpected locator ${locator}`);
     }
 
     matches = [...matches];

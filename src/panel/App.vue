@@ -12,7 +12,7 @@
 import Alert from '../components/Alert';
 import Toolbar from './Toolbar';
 import Table from './Table';
-import ModelBuilder from './ModelBuilder';
+import ModelBuilder from '../content/ModelBuilder';
 import Popup from '../components/Popup';
 import Confirm from '../components/Confirm';
 

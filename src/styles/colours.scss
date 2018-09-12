@@ -9,3 +9,7 @@ $active-hover: $white;
 
 $highlight-border: $red;
 $highlight-bg: $yellow;
+
+:export {
+  active: $blue;
+}

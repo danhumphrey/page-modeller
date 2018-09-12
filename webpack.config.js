@@ -9,17 +9,17 @@ const { version } = require('./package.json');
 
 const config = {
   mode: process.env.NODE_ENV,
-  context: __dirname + '/src',
+  context: `${__dirname}/src`,
   entry: {
-    background: './background.js',
-    content: './content.js',
-    devtools: './devtools.js',
-    options: './options.js',
+    background: './background/background.js',
+    content: './content/content.js',
+    devtools: './devtools/devtools.js',
+    options: './options/options.js',
     'panel/panel': './panel/panel.js',
     'popup/popup': './popup/popup.js',
   },
   output: {
-    path: __dirname + '/dist',
+    path: `${__dirname}/dist`,
     filename: '[name].js',
   },
   resolve: {
@@ -74,9 +74,9 @@ const config = {
     new CopyWebpackPlugin([
       { from: 'icons', to: 'icons', ignore: ['icon.svg', 'icon_bw.svg', 'icon_32_colour.png'] },
       { from: 'popup/popup.html', to: 'popup/popup.html' },
-      { from: 'devtools-page.html', to: 'devtools-page.html' },
+      { from: 'devtools/devtools-page.html', to: 'devtools-page.html' },
       { from: 'panel/panel.html', to: 'panel/panel.html' },
-      { from: 'options.html', to: 'options.html' },
+      { from: 'options/options.html', to: 'options.html' },
       { from: 'fonts', to: 'fonts' },
       {
         from: 'manifest.json',
@@ -86,7 +86,7 @@ const config = {
           jsonContent.version = version;
 
           if (config.mode === 'development') {
-            jsonContent['content_security_policy'] = "script-src 'self' 'unsafe-eval'; object-src 'self'";
+            jsonContent.content_security_policy = "script-src 'self' 'unsafe-eval'; object-src 'self'";
           }
 
           return JSON.stringify(jsonContent, null, 2);

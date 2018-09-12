@@ -63,7 +63,7 @@ export default {
 </script>
 
 <style scoped lang="scss">
-@import '../styles/settings';
+@import '../styles/colours';
 @import '../styles/material';
 @import '../styles/buttons';
 </style>

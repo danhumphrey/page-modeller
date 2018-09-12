@@ -8,7 +8,13 @@ const isVisible = function(element) {
   const h = element.offsetHeight;
   const force = element.tagName === 'TR';
 
-  return w === 0 && h === 0 && !force ? false : w !== 0 && h !== 0 && !force ? true : getStyle(element, 'display') !== 'none';
+  if (w === 0 && h === 0 && !force) {
+    return false;
+  }
+  if (w !== 0 && h !== 0 && !force) {
+    return true;
+  }
+  return getStyle(element, 'display') !== 'none';
 };
 
 const getTagName = function(element) {
@@ -27,6 +33,7 @@ const getTagIndex = function(element) {
       return i + 1;
     }
   }
+  return null;
 };
 const getId = function(element) {
   if (element.id) {
@@ -70,25 +77,18 @@ const getCssSelector = function(element) {
   return simmer(element);
 };
 
-const getXPath = function(element) {
-  if (element && element.id) {
-    return `//*[@id="${element.id.trim()}"]`;
-  }
-  return getElementTreeXPath(element);
-};
-
 const getElementTreeXPath = function(element, strict) {
   const paths = [];
 
-  for (; element && element.nodeType === Node.ELEMENT_NODE; element = element.parentNode) {
+  let el = element;
+
+  for (; element && element.nodeType === Node.ELEMENT_NODE; el = el.parentNode) {
     let index = 0;
     for (let sibling = element.previousSibling; sibling; sibling = sibling.previousSibling) {
-      if (sibling.nodeType === Node.DOCUMENT_TYPE_NODE) {
-        continue;
-      }
-
-      if (sibling.nodeName === element.nodeName) {
-        ++index;
+      if (sibling.nodeType !== Node.DOCUMENT_TYPE_NODE) {
+        if (sibling.nodeName === element.nodeName) {
+          index += 1;
+        }
       }
     }
 
@@ -98,6 +98,13 @@ const getElementTreeXPath = function(element, strict) {
   }
 
   return paths.length ? `/${paths.join('/')}` : null;
+};
+
+const getXPath = function(element) {
+  if (element && element.id) {
+    return `//*[@id="${element.id.trim()}"]`;
+  }
+  return getElementTreeXPath(element);
 };
 
 const getLabel = function(element) {
@@ -120,27 +127,33 @@ const getLabel = function(element) {
 };
 
 const findElementByXPath = function(document, locator) {
+  // eslint-disable-next-line no-undef
   return document.evaluate(locator, document, null, FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 };
 
 const findElementsByXPath = function(document, locator) {
   const els = [];
   try {
+    // eslint-disable-next-line no-undef
     const snapshot = document.evaluate(locator, document, null, ORDERED_NODE_SNAPSHOT_TYPE, null);
 
     if (snapshot && snapshot.snapshotLength) {
-      for (let i = 0, j = snapshot.snapshotLength; i < j; i++) {
+      for (let i = 0, j = snapshot.snapshotLength; i < j; i += 1) {
         els.push(snapshot.snapshotItem(i));
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    return [];
+  }
 
   return els;
 };
 const findElementsByCssSelector = function(document, locator) {
   try {
     return document.querySelectorAll(locator);
-  } catch (e) {}
+  } catch (e) {
+    return [];
+  }
 };
 
 const findElementsByName = function(document, locator) {
@@ -197,10 +210,12 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
       };
     }
 
-    function absolute(elem, pt) {
-      while (elem) {
-        pt = pt.translate(elem.offsetLeft, elem.offsetTop);
-        elem = elem.offsetParent;
+    function absolute(element, parent) {
+      let currentElement = element;
+      let pt = parent;
+      while (currentElement) {
+        pt = pt.translate(element.offsetLeft, element.offsetTop);
+        currentElement = currentElement.offsetParent;
       }
       return pt;
     }

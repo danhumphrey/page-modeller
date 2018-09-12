@@ -1,5 +1,5 @@
 import ModelBuilder from './ModelBuilder';
-import dom from '../dom';
+import dom from './dom';
 
 const CLASS_NAME = 'page-modeller-hover';
 let existingModel = null;
@@ -13,7 +13,7 @@ const onMouseOut = evt => {
 const onFocus = evt => {
   evt.preventDefault();
   evt.stopPropagation();
-  let el = evt.target;
+  const el = evt.target;
   el.blur();
 };
 const onClick = evt => {
@@ -25,24 +25,19 @@ const onClick = evt => {
   const tagName = dom.getTagName(el);
   const tagIndex = dom.getTagIndex(el);
 
-  if (
-    existingModel &&
-    existingModel.entities.find(function(entity) {
-      return undefined !== entity.locators.find(l => l.name === 'tagIndex' && l.locator === `${tagName}${tagIndex}`);
-    })
-  ) {
+  if (existingModel && existingModel.entities.find(entity => undefined !== entity.locators.find(l => l.name === 'tagIndex' && l.locator === `${tagName}${tagIndex}`))) {
     chrome.runtime.sendMessage({ type: 'contentAlertMessage', data: { title: 'Add Element', message: 'That element already exists in the model' } });
     return false;
   }
 
   stop();
 
-  let b = new ModelBuilder();
+  const b = new ModelBuilder();
   chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel(el, existingModel) } });
   return false;
 };
 
-let start = (currentModel = null) => {
+const start = (currentModel = null) => {
   existingModel = currentModel;
   document.addEventListener('mouseover', onMouseOver, true);
   document.addEventListener('mouseout', onMouseOut, true);
@@ -50,13 +45,14 @@ let start = (currentModel = null) => {
   document.addEventListener('focus', onFocus, true);
 };
 
-let stop = () => {
+const stop = () => {
   document.removeEventListener('mouseover', onMouseOver, true);
   document.removeEventListener('mouseout', onMouseOut, true);
   document.removeEventListener('click', onClick, true);
   document.removeEventListener('focus', onFocus, true);
 };
+
 export default {
-  start: start,
-  stop: stop,
+  start,
+  stop,
 };

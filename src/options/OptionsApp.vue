@@ -1,7 +1,7 @@
 <template>
     <v-app>
       <v-tabs
-        slider-color="#03a9f4"
+        slider-color="highlight"
       >
         <v-tab
           :key="profilesTab"
