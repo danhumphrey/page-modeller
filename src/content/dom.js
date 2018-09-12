@@ -78,17 +78,17 @@ const getCssSelector = function(element) {
 };
 
 const getElementTreeXPath = function(element, strict) {
-  const paths = [];
+  let paths = [];
 
-  let el = element;
-
-  for (; element && element.nodeType === Node.ELEMENT_NODE; el = el.parentNode) {
+  for (; element && element.nodeType === Node.ELEMENT_NODE; element = element.parentNode) {
     let index = 0;
     for (let sibling = element.previousSibling; sibling; sibling = sibling.previousSibling) {
-      if (sibling.nodeType !== Node.DOCUMENT_TYPE_NODE) {
-        if (sibling.nodeName === element.nodeName) {
-          index += 1;
-        }
+      if (sibling.nodeType === Node.DOCUMENT_TYPE_NODE) {
+        continue;
+      }
+
+      if (sibling.nodeName === element.nodeName) {
+        ++index;
       }
     }
 
@@ -97,7 +97,7 @@ const getElementTreeXPath = function(element, strict) {
     paths.splice(0, 0, tagName + pathIndex);
   }
 
-  return paths.length ? `/${paths.join('/')}` : null;
+  return paths.length ? '/' + paths.join('/') : null;
 };
 
 const getXPath = function(element) {
@@ -125,28 +125,13 @@ const getLabel = function(element) {
   } while ((parent = parent.parentNode));
   return null;
 };
-
-const findElementByXPath = function(document, locator) {
-  // eslint-disable-next-line no-undef
-  return document.evaluate(locator, document, null, FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-};
-
 const findElementsByXPath = function(document, locator) {
-  const els = [];
-  try {
-    // eslint-disable-next-line no-undef
-    const snapshot = document.evaluate(locator, document, null, ORDERED_NODE_SNAPSHOT_TYPE, null);
-
-    if (snapshot && snapshot.snapshotLength) {
-      for (let i = 0, j = snapshot.snapshotLength; i < j; i += 1) {
-        els.push(snapshot.snapshotItem(i));
-      }
-    }
-  } catch (e) {
-    return [];
+  let results = [];
+  let query = document.evaluate(locator, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+  for (let i = 0, length = query.snapshotLength; i < length; ++i) {
+    results.push(query.snapshotItem(i));
   }
-
-  return els;
+  return results;
 };
 const findElementsByCssSelector = function(document, locator) {
   try {
@@ -180,9 +165,15 @@ const findElementsByLinkText = function(document, locator) {
     return c === locator;
   });
 };
+const findElementsByTagIndex = function(document, locator) {
+  console.log('findElementsByTagIndex');
+  const matches = /(.*)(\d+)$/.exec(locator);
+  const els = Array.prototype.slice.call(findElementsByTagName(document, matches[1]));
+  return [els[parseInt(matches[2]) - 1]];
+};
 
 const findElementsByPartialLinkText = function(document, locator) {
-  const els = Array.prototype.slice.call(findElementsByTagName('A'));
+  const els = Array.prototype.slice.call(findElementsByTagName(document, 'A'));
 
   return els.filter(el => el.textContent.indexOf(locator) !== -1);
 };
@@ -260,4 +251,5 @@ export default {
   findElementsByTagName,
   findElementsByCssSelector,
   findElementsByXPath,
+  findElementsByTagIndex,
 };

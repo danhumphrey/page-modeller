@@ -36,6 +36,9 @@ chrome.runtime.onMessage.addListener(msg => {
       case 'tagName':
         matches = dom.findElementsByTagName(document, locator.locator);
         break;
+      case 'tagIndex':
+        matches = dom.findElementsByTagIndex(document, locator.locator);
+        break;
       case 'className':
         matches = dom.findElementsByClassName(document, locator.locator);
         break;

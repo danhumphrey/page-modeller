@@ -36,10 +36,10 @@ chrome.runtime.onMessage.addListener(msg => {
   }
 
   // relay messages between the app and content script <- ->
-  const m = /^(app|content)(.*)$/.exec(msg.type);
+  const matches = /^(app|content)(.*)$/.exec(msg.type);
 
-  const msgType = lowerFirst(m[2]);
-  switch (m[1]) {
+  const msgType = lowerFirst(matches[2]);
+  switch (matches[1]) {
     case 'app':
       sendMessageToActiveTab(msgType, msg.data);
       break;
