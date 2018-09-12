@@ -15,6 +15,10 @@ const getTagName = function(element) {
   return element.tagName;
 };
 
+const getTagType = function(element) {
+  return element.type;
+};
+
 const getTagIndex = function(element) {
   const n = getTagName(element);
   const all = element.ownerDocument.getElementsByTagName(n);
@@ -223,6 +227,7 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
 export default {
   isVisible,
   getTagName,
+  getTagType,
   getTagIndex,
   getTextContent,
   getId,

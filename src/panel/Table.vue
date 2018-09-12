@@ -152,15 +152,21 @@ export default {
       currentLocator: {},
       originalItem: {
         name: '',
+        tagName: '',
+        type: '',
         locators: [],
       },
       editedItem: {
         name: '',
+        tagName: '',
+        type: '',
         locators: [],
       },
       editedItemName: '',
       defaultItem: {
         name: '',
+        tagName: '',
+        type: '',
         locators: [],
       },
     };

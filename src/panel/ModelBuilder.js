@@ -26,7 +26,8 @@ export default class ModelBuilder {
     const tagIndex = dom.getTagIndex(element);
 
     if (/^(?:^INPUT$|^BUTTON$|^SELECT$|^TEXTAREA$|^PROGRESS$|^METER$)$/im.test(tagName)) {
-      const labelName = dom.getLabel(element).textContent.trim();
+      const label = dom.getLabel(element);
+      const labelName = label ? label.textContent.trim() : '';
 
       if (labelName) {
         return this.cleanName(labelName);
@@ -97,10 +98,11 @@ export default class ModelBuilder {
   }
 
   createEntity(element) {
-    //locators in order of preference
     return {
       name: this.generateName(element),
       locators: this.getLocators(element),
+      tagName: dom.getTagName(element),
+      type: dom.getTagType(element),
     };
   }
 
