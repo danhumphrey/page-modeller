@@ -21,6 +21,9 @@ ${
     ? ` public void click${entity.name}() {\n	get${entity.name}Element().click();\n }`
     : ''
 }
+${
+  ['INPUT', 'A', 'BUTTON', 'IMG', 'SELECT', 'TEXTAREA'].includes(entity.tagName) ? '' : ` public String get${entity.name}() {\n	get${entity.name}Element().getText();\n }`      
+}
 `
   )
   .join('')}
