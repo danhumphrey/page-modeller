@@ -98,7 +98,7 @@ export default class ModelBuilder {
         this.model.entities.push(this.createEntity(childElement));
       }
     }
-    return this.model;
+    return this.model.entities.length === 0 ? null : this.model;
   }
 
   createEntity(element) {
