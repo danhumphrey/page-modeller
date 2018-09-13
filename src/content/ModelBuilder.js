@@ -6,12 +6,15 @@ const INTERACTIVE_ELEMENTS = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
 
 export default class ModelBuilder {
   deDupeName(name) {
-    if (this.model.usedNames.hasOwnProperty(name)) {
-      name = `${name}${++this.model.usedNames[name]}`;
+    let returnName = name;
+
+    if (name in this.model.usedNames) {
+      this.model.usedNames[name] += 1;
+      returnName = `${name}${this.model.usedNames[name]}`;
     } else {
       this.model.usedNames[name] = 1;
     }
-    return name;
+    return returnName;
   }
 
   cleanName(name) {
@@ -49,7 +52,7 @@ export default class ModelBuilder {
     }
 
     if (tagName === 'A' && element.href && element.href.startsWith('mailto:')) {
-      return this.cleanName(element.href.replace('mailto:', '').split('@')[0] + 'EmailLink');
+      return this.cleanName(`${element.href.replace('mailto:', '').split('@')[0]}EmailLink`);
     }
 
     if (textContent) {
@@ -65,6 +68,7 @@ export default class ModelBuilder {
       entities: [],
     };
   }
+
   createModel(element, existingModel = null) {
     console.log('createModel');
 
@@ -79,11 +83,11 @@ export default class ModelBuilder {
       element,
       NodeFilter.SHOW_ELEMENT,
       {
-        acceptNode: function(node) {
+        acceptNode(node) {
           if (dom.isVisible(node)) {
             return NodeFilter.FILTER_ACCEPT;
           }
-          return NodeFilter.FILTER_REJECT; //node and children
+          return NodeFilter.FILTER_REJECT; // node and children
         },
       },
       true
@@ -100,13 +104,13 @@ export default class ModelBuilder {
   createEntity(element) {
     return {
       name: this.generateName(element),
-      locators: this.getLocators(element),
+      locators: ModelBuilder.getLocators(element),
       tagName: dom.getTagName(element),
       type: dom.getTagType(element),
     };
   }
 
-  getLocators(element) {
+  static getLocators(element) {
     const tagName = dom.getTagName(element);
     const tagIndex = dom.getTagIndex(element);
 
@@ -149,10 +153,10 @@ export default class ModelBuilder {
         selected: true,
       },
     ];
-    for (let selectedLocator = locators[locators.length - 1], currentLocator, i = 0; i < locators.length; i++) {
+    for (let selectedLocator = locators[locators.length - 1], currentLocator, i = 0; i < locators.length; i += 1) {
       currentLocator = locators[i];
       if (currentLocator.locator) {
-        delete selectedLocator['selected'];
+        delete selectedLocator.selected;
         currentLocator.selected = true;
         break;
       }

@@ -19,6 +19,5 @@ chrome.runtime.onMessage.addListener(msg => {
     case 'notify-stop-modelling':
       break;
     default:
-      console.error(`unexpected message received ${msg}`);
   }
 });
