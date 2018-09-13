@@ -33,7 +33,6 @@ export default {
       isAdding: false,
       model: null,
       currentProfile: null,
-      profiles: ['Selenium WebDriver Java', 'Selenium WebDriver C#'],
     };
   },
   methods: {
@@ -78,7 +77,7 @@ export default {
 
     // force selection of a modelling profile
     if (this.currentProfile === null) {
-      chrome.runtime.sendMessage({ type: 'showOptions', data: {} });
+      //chrome.runtime.sendMessage({ type: 'showOptions', data: {} });
     }
 
     this.$nextTick(function() {

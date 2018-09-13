@@ -10,6 +10,13 @@ Vue.config.devtools = true;
 Vue.use(Vuetify, {
   theme: {
     highlight: colours.active,
+    primary: '#BDBDBD',
+    secondary: '#607D8B',
+    accent: colours.active,
+    error: '#f44336',
+    warning: '#ffeb3b',
+    info: '#2196f3',
+    success: '#4caf50',
   },
 });
 

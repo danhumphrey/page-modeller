@@ -1,6 +1,7 @@
 @import 'colours';
 
-button {
+button,
+.v-icon--link {
   &:hover {
     color: $hover;
   }
