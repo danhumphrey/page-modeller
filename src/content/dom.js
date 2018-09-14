@@ -78,26 +78,25 @@ const getCssSelector = function(element) {
 };
 
 const getElementTreeXPath = function(element, strict) {
-  let paths = [];
+  const paths = [];
+  let currentElement = element;
 
-  for (; element && element.nodeType === Node.ELEMENT_NODE; element = element.parentNode) {
+  for (; currentElement && currentElement.nodeType === Node.ELEMENT_NODE; currentElement = currentElement.parentNode) {
     let index = 0;
     for (let sibling = element.previousSibling; sibling; sibling = sibling.previousSibling) {
-      if (sibling.nodeType === Node.DOCUMENT_TYPE_NODE) {
-        continue;
-      }
-
-      if (sibling.nodeName === element.nodeName) {
-        ++index;
+      if (sibling.nodeType !== Node.DOCUMENT_TYPE_NODE) {
+        if (sibling.nodeName === currentElement.nodeName) {
+          index += 1;
+        }
       }
     }
 
-    const tagName = element.nodeName.toLowerCase();
+    const tagName = currentElement.nodeName.toLowerCase();
     const pathIndex = strict || index ? `[${index + 1}]` : '';
     paths.splice(0, 0, tagName + pathIndex);
   }
 
-  return paths.length ? '/' + paths.join('/') : null;
+  return paths.length ? `/${paths.join('/')}` : null;
 };
 
 const getXPath = function(element) {
@@ -122,17 +121,20 @@ const getLabel = function(element) {
     if (parent.tagName === 'LABEL') {
       return parent;
     }
-  } while ((parent = parent.parentNode));
+    parent = parent.parentNode;
+  } while (parent);
   return null;
 };
+
 const findElementsByXPath = function(document, locator) {
-  let results = [];
-  let query = document.evaluate(locator, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-  for (let i = 0, length = query.snapshotLength; i < length; ++i) {
+  const results = [];
+  const query = document.evaluate(locator, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+  for (let i = 0, length = query.snapshotLength; i < length; i += 1) {
     results.push(query.snapshotItem(i));
   }
   return results;
 };
+
 const findElementsByCssSelector = function(document, locator) {
   try {
     return document.querySelectorAll(locator);
@@ -169,7 +171,7 @@ const findElementsByTagIndex = function(document, locator) {
   console.log('findElementsByTagIndex');
   const matches = /(.*)(\d+)$/.exec(locator);
   const els = Array.prototype.slice.call(findElementsByTagName(document, matches[1]));
-  return [els[parseInt(matches[2]) - 1]];
+  return [els[parseInt(matches[2], 10) - 1]];
 };
 
 const findElementsByPartialLinkText = function(document, locator) {

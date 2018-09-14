@@ -20,8 +20,8 @@ Vue.use(Vuetify, {
   },
 });
 
-// eslint-disable-next-line no-new
-new Vue({
-  el: '#app',
-  render: h => h(OptionsApp),
-});
+(() =>
+  new Vue({
+    el: '#app',
+    render: h => h(OptionsApp),
+  }))();
