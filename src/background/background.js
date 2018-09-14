@@ -1,4 +1,5 @@
 import lowerFirst from 'lodash/lowerFirst';
+import templates from '../templates/templates';
 
 const setupDefaultProfiles = function() {
   console.log('setting default profiles');
@@ -9,12 +10,11 @@ const setupDefaultProfiles = function() {
       locators: ['ID', 'Link Text', 'Partial Link Text', 'Name', 'CSS', 'XPath', 'Class Name'],
       active: true,
       inbuilt: true,
-      template: 'selenium-webdriver-java.js',
     },
   ];
 
   chrome.storage.sync.set({
-    profiles: profiles,
+    profiles,
   });
 };
 
@@ -48,9 +48,25 @@ chrome.runtime.onMessage.addListener(msg => {
   console.log('background message: ');
   console.dir(msg);
 
-  if (msg.type === 'showOptions') {
-    chrome.runtime.openOptionsPage();
-    return;
+  switch (msg.type) {
+    case 'showOptions':
+      chrome.runtime.openOptionsPage();
+      return;
+    case 'generateModel':
+      chrome.storage.sync.get('profiles', items => {
+        console.log('got profiles from sync');
+        console.log(items);
+
+        const activeProfile = items.profiles.find(p => p.active);
+        const templateName = `${activeProfile.name
+          .toLowerCase()
+          .split(' ')
+          .join('')}`;
+
+        console.log(templates[templateName](msg.data.model));
+      });
+      return;
+    default:
   }
 
   // relay messages between the app and content script <- ->

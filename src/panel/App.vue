@@ -64,15 +64,7 @@ export default {
     generateModel() {
       console.log('Generate Model:');
       console.dir(this.$data.model);
-      chrome.storage.sync.get('profiles', items => {
-        console.log('got profiles from sync');
-        console.log(items);
-        this.profiles = items.profiles;
-        this.activeProfile = this.profiles.find(p => p.active);
-
-        const output = require(`../templates/${this.activeProfile.template}`)(this.model);
-        console.log(output);
-      });
+      chrome.runtime.sendMessage({ type: 'generateModel', data: { model: this.$data.model } });
     },
   },
   mounted() {
@@ -86,7 +78,7 @@ export default {
 
     // force selection of a modelling profile
     if (this.currentProfile === null) {
-      //chrome.runtime.sendMessage({ type: 'showOptions', data: {} });
+      // chrome.runtime.sendMessage({ type: 'showOptions', data: {} });
     }
 
     this.$nextTick(function() {
