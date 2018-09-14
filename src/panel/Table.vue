@@ -10,12 +10,13 @@
             <v-container grid-list-md pa-0>
               <v-layout wrap>
                 <v-flex>
-                  <v-text-field v-model="editedItemName"
-                                label="Name"
-                                :error-messages="editedItemNameErrors"
-                                required
-                                @input="$v.editedItemName.$touch()"
-                                @blur="$v.editedItemName.$touch()"
+                  <v-text-field
+                    v-model="editedItemName"
+                    label="Name"
+                    :error-messages="editedItemNameErrors"
+                    required
+                    @input="$v.editedItemName.$touch()"
+                    @blur="$v.editedItemName.$touch()"
                   ></v-text-field>
                 </v-flex>
               </v-layout>
@@ -33,7 +34,8 @@
                   ></v-select>
                 </v-flex>
                 <v-flex>
-                  <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
+                  <v-text-field
+                    v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
                     <v-tooltip left open-delay="1000" slot="append">
                       <v-icon
                         slot="activator"
@@ -117,6 +119,7 @@
 <script>
 import { validationMixin } from 'vuelidate';
 import { required } from 'vuelidate/lib/validators';
+
 const uniqueName = function(n) {
   const res = this.model.entities.filter(e => e.name === n);
   return res.length === 0 || n === this.editedItem.name;
@@ -125,6 +128,7 @@ export default {
   mixins: [validationMixin],
   validations: {
     editedItemName: { required, uniqueName },
+    currentLocator: { required },
   },
   name: 'Table',
   props: ['isInspecting', 'model'],

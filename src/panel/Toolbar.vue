@@ -17,7 +17,7 @@
 
     <v-tooltip bottom :disabled="hasModel || isInspecting" open-delay="600">
       <v-btn flat small round class="text-capitalize" slot="activator" :disabled="hasModel || isInspecting">{{currentProfile}}
-        <v-icon>arrow_right</v-icon>
+        <v-icon>arrow_drop_down</v-icon>
       </v-btn>
       <span>Select Modelling Profile</span>
     </v-tooltip>

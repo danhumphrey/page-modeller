@@ -32,7 +32,7 @@ export default {
       isScanning: false,
       isAdding: false,
       model: null,
-      currentProfile: null,
+      currentProfile: 'Selenium WebDriver Java',
     };
   },
   methods: {
@@ -64,6 +64,15 @@ export default {
     generateModel() {
       console.log('Generate Model:');
       console.dir(this.$data.model);
+      chrome.storage.sync.get('profiles', items => {
+        console.log('got profiles from sync');
+        console.log(items);
+        this.profiles = items.profiles;
+        this.activeProfile = this.profiles.find(p => p.active);
+
+        const output = require(`../templates/${this.activeProfile.template}`)(this.model);
+        console.log(output);
+      });
     },
   },
   mounted() {

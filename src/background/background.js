@@ -1,8 +1,26 @@
 import lowerFirst from 'lodash/lowerFirst';
 
+const setupDefaultProfiles = function() {
+  console.log('setting default profiles');
+
+  const profiles = [
+    {
+      name: 'Selenium WebDriver Java',
+      locators: ['ID', 'Link Text', 'Partial Link Text', 'Name', 'CSS', 'XPath', 'Class Name'],
+      active: true,
+      inbuilt: true,
+      template: 'selenium-webdriver-java.js',
+    },
+  ];
+
+  chrome.storage.sync.set({
+    profiles: profiles,
+  });
+};
+
 chrome.runtime.onInstalled.addListener(details => {
   if (details.reason === 'install') {
-    console.log('This is the first install!');
+    setupDefaultProfiles();
   } else if (details.reason === 'update') {
     const thisVersion = chrome.runtime.getManifest().version;
     console.log(`Updated from ${details.previousVersion} to ${thisVersion}!`);

@@ -78,6 +78,7 @@ const config = {
       { from: 'panel/panel.html', to: 'panel/panel.html' },
       { from: 'options/options.html', to: 'options.html' },
       { from: 'fonts', to: 'fonts' },
+      { from: 'templates', to: 'templates' },
       {
         from: 'manifest.json',
         to: 'manifest.json',

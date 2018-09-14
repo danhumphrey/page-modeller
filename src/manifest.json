@@ -3,6 +3,12 @@
   "description": "A browser extension for modelling page objects",
   "version": "0.0.1",
   "manifest_version": 2,
+  "applications": {
+    "gecko": {
+      "id": "pagemodeller@example.com",
+      "strict_min_version": "48.0"
+    }
+  },
   "icons": {
     "16": "icons/icon_16.png",
     "32": "icons/icon_32.png",
@@ -20,7 +26,7 @@
     "scripts": ["background.js"]
   },
   "devtools_page": "devtools-page.html",
-  "permissions": ["activeTab", "tabs"],
+  "permissions": ["activeTab", "tabs", "storage"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -32,7 +38,7 @@
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true,
-    "browser_style": false,
     "chrome_style": false
-  }
+  },
+  "web_accessible_resources": ["templates/*.js"]
 }

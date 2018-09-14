@@ -1,4 +1,4 @@
-`
+module.exports = (model) => `
 ${model.entities
   .map(
     entity =>
