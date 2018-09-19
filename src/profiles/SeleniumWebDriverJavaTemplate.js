@@ -1,6 +1,4 @@
-const isClickable = entity => ['A', 'BUTTON', 'IMG'].includes(entity.tagName) || (entity.tagName === 'INPUT' && ['button', 'reset', 'image', 'submit'].includes(entity.type));
-
-const isInteractive = entity => ['INPUT', 'A', 'BUTTON', 'IMG', 'SELECT', 'TEXTAREA'].includes(entity.tagName);
+import { isClickable, isInteractive } from './templates-helpers';
 
 const renderEntityComment = entity => `
 /*
@@ -103,11 +101,7 @@ const renderGetTextMethod = entity => {
 `;
 };
 
-const seleniumwebdriverjava = model =>
+export default model =>
   model.entities
     .map(entity => `${renderEntityComment(entity)}${renderGetElementMethod(entity)}${renderClickMethod(entity)}${renderGetAndSetMethods(entity)}${renderGetTextMethod(entity)}`)
     .join('');
-
-export default {
-  seleniumwebdriverjava,
-};

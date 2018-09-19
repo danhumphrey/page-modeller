@@ -1,14 +1,5 @@
 import lowerFirst from 'lodash/lowerFirst';
-import templates from '../templates/templates';
-
-const profiles = [
-  {
-    name: 'Selenium WebDriver Java',
-    locators: ['ID', 'Link Text', 'Partial Link Text', 'Name', 'CSS', 'XPath', 'Class Name'],
-    active: true,
-    inbuilt: true,
-  },
-];
+import profiles from '../profiles/profiles';
 
 chrome.runtime.onInstalled.addListener(details => {
   const thisVersion = chrome.runtime.getManifest().version;
@@ -45,13 +36,13 @@ chrome.runtime.onMessage.addListener(msg => {
     case 'showOptions':
       chrome.runtime.openOptionsPage();
       return;
+    case 'activateProfile':
+      profiles.find(p => p.active).active = false;
+      profiles.find(p => p.name === msg.data.profileName).active = true;
+      console.log('SAVE ACTIVE PROFILE TO OPTIONS');
+      return;
     case 'generateModel':
-      const activeProfile = profiles.find(p => p.active);
-      const templateName = `${activeProfile.name
-        .toLowerCase()
-        .split(' ')
-        .join('')}`;
-      console.log(templates[templateName](msg.data.model));
+      console.log(profiles.find(p => p.active).template(msg.data.model));
       return;
     default:
   }

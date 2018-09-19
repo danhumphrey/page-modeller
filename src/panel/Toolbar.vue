@@ -16,9 +16,20 @@
     </v-tooltip>
 
     <v-tooltip bottom :disabled="hasModel || isInspecting" open-delay="600">
-      <v-btn flat small round class="text-capitalize" slot="activator" :disabled="hasModel || isInspecting">{{currentProfile}}
-        <v-icon>arrow_drop_down</v-icon>
-      </v-btn>
+      <v-menu :nudge-width="100" slot="activator" :disabled="hasModel || isInspecting">
+          <v-btn flat small round class="text-capitalize" slot="activator" :disabled="hasModel || isInspecting">{{currentProfile}}
+            <v-icon>arrow_drop_down</v-icon>
+          </v-btn>
+        <v-list>
+          <v-list-tile
+                  v-for="item in profileList"
+                  :key="item.name"
+                  @click="selectProfile(item)"
+          >
+            <v-list-tile-title v-text="item.name"></v-list-tile-title>
+          </v-list-tile>
+        </v-list>
+      </v-menu>
       <span>Select Modelling Profile</span>
     </v-tooltip>
 
@@ -44,19 +55,26 @@
 <script>
 export default {
   name: 'Toolbar',
-  props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel', 'currentProfile'],
+  props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel', 'profileList', 'currentProfile'],
   methods: {
-    scan: function() {
+    scan() {
       this.$emit('scan');
     },
-    add: function() {
+    add() {
       this.$emit('add');
     },
-    deleteModel: function() {
+    deleteModel() {
       this.$emit('deleteModel');
     },
-    generateModel: function() {
+    generateModel() {
       this.$emit('generateModel');
+    },
+    selectProfile(profile) {
+      console.log(profile);
+      this.profileList.find(p => p.active).active = false;
+      this.profileList.find(p => p.name === profile.name).active = true;
+      // this.currentProfile = profile.name;
+      this.$emit('activateProfile', profile.name);
     },
   },
 };

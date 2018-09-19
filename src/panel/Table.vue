@@ -209,7 +209,7 @@ export default {
         if (confirm) {
           this.model.entities.splice(index, 1);
           if (this.model.usedNames.hasOwnProperty(item.name)) {
-            //simple match
+            // simple match
             delete this.model.usedNames[item.name];
           }
         }
@@ -241,7 +241,7 @@ export default {
       return `${current.name}: ${current.locator}`;
     },
     showMatchesForLocator(locator) {
-      chrome.runtime.sendMessage({ type: 'appShowMatches', data: { locator: locator } });
+      chrome.runtime.sendMessage({ type: 'appShowMatches', data: { locator } });
     },
     showMatchesForEntity(entity) {
       console.log(entity);

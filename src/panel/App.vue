@@ -1,6 +1,19 @@
 <template>
   <v-app>
-    <Toolbar @scan="scan" @add="add" @deleteModel="deleteModel" @generateModel="generateModel" :is-inspecting="isInspecting" :is-adding="isAdding" :is-scanning="isScanning" :has-model="hasModel" :currentProfile="currentProfile"/>
+    <Toolbar
+        @scan="scan"
+        @add="add"
+        @deleteModel="deleteModel"
+        @generateModel="generateModel"
+        @activateProfile="activateProfile"
+        :is-inspecting="isInspecting"
+        :is-adding="isAdding"
+        :is-scanning="isScanning"
+        :has-model="hasModel"
+        :profile-list="profiles"
+        :currentProfile="currentProfile"
+
+    />
     <Table  :model="model" :is-inspecting="isInspecting" />
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
@@ -15,6 +28,7 @@ import Table from './Table';
 import ModelBuilder from '../content/ModelBuilder';
 import Popup from '../components/Popup';
 import Confirm from '../components/Confirm';
+import profiles from '../profiles/profiles';
 
 export default {
   name: 'app',
@@ -32,6 +46,7 @@ export default {
       isScanning: false,
       isAdding: false,
       model: null,
+      profiles,
       currentProfile: 'Selenium WebDriver Java',
     };
   },
@@ -65,6 +80,12 @@ export default {
       console.log('Generate Model:');
       console.dir(this.$data.model);
       chrome.runtime.sendMessage({ type: 'generateModel', data: { model: this.$data.model } });
+    },
+    activateProfile(profileName) {
+      this.profiles.find(p => p.active).active = false;
+      this.profiles.find(p => p.name === profileName).active = true;
+      this.currentProfile = profileName;
+      chrome.runtime.sendMessage({ type: 'activateProfile', data: { profileName } });
     },
   },
   mounted() {
