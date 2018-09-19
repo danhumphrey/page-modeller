@@ -71,7 +71,7 @@ const renderGetAndSetSelect = entity => `
 `;
 
 const renderGetAndSetMethods = entity => {
-  if (['INPUT'].includes(entity.tagName)) {
+  if (['INPUT', 'TEXTAREA'].includes(entity.tagName)) {
     if (['checkbox', 'radio'].includes(entity.type)) {
       return renderGetAndSetCheckboxRadio(entity);
     }
@@ -89,18 +89,6 @@ const renderGetAndSetMethods = entity => {
   if (entity.tagName === 'SELECT') {
     return renderGetAndSetSelect(entity);
   }
-  if (entity.tagName === 'TEXTAREA') {
-    return `
- public String get${entity.name}() {
-     return get${entity.name}Element().getText();
- }
-
- public void set${entity.name}(String value) {
-     get${entity.name}Element().sendKeys(value);
- } 
-`;
-  }
-
   return '';
 };
 

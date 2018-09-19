@@ -1,28 +1,21 @@
 import lowerFirst from 'lodash/lowerFirst';
 import templates from '../templates/templates';
 
-const setupDefaultProfiles = function() {
-  console.log('setting default profiles');
-
-  const profiles = [
-    {
-      name: 'Selenium WebDriver Java',
-      locators: ['ID', 'Link Text', 'Partial Link Text', 'Name', 'CSS', 'XPath', 'Class Name'],
-      active: true,
-      inbuilt: true,
-    },
-  ];
-
-  chrome.storage.sync.set({
-    profiles,
-  });
-};
+const profiles = [
+  {
+    name: 'Selenium WebDriver Java',
+    locators: ['ID', 'Link Text', 'Partial Link Text', 'Name', 'CSS', 'XPath', 'Class Name'],
+    active: true,
+    inbuilt: true,
+  },
+];
 
 chrome.runtime.onInstalled.addListener(details => {
+  const thisVersion = chrome.runtime.getManifest().version;
+
   if (details.reason === 'install') {
-    setupDefaultProfiles();
+    console.log(`First install of version ${thisVersion}`);
   } else if (details.reason === 'update') {
-    const thisVersion = chrome.runtime.getManifest().version;
     console.log(`Updated from ${details.previousVersion} to ${thisVersion}!`);
   }
 });
@@ -53,18 +46,12 @@ chrome.runtime.onMessage.addListener(msg => {
       chrome.runtime.openOptionsPage();
       return;
     case 'generateModel':
-      chrome.storage.sync.get('profiles', items => {
-        console.log('got profiles from sync');
-        console.log(items);
-
-        const activeProfile = items.profiles.find(p => p.active);
-        const templateName = `${activeProfile.name
-          .toLowerCase()
-          .split(' ')
-          .join('')}`;
-
-        console.log(templates[templateName](msg.data.model));
-      });
+      const activeProfile = profiles.find(p => p.active);
+      const templateName = `${activeProfile.name
+        .toLowerCase()
+        .split(' ')
+        .join('')}`;
+      console.log(templates[templateName](msg.data.model));
       return;
     default:
   }
