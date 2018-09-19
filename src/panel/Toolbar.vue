@@ -73,7 +73,6 @@ export default {
       console.log(profile);
       this.profileList.find(p => p.active).active = false;
       this.profileList.find(p => p.name === profile.name).active = true;
-      // this.currentProfile = profile.name;
       this.$emit('activateProfile', profile.name);
     },
   },

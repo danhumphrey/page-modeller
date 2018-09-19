@@ -97,11 +97,6 @@ export default {
     this.$root.$popupSuccess = this.$refs.popup.success;
     this.$root.$profileEditor = this.$refs.profileEditor;
 
-    // force selection of a modelling profile
-    if (this.currentProfile === null) {
-      // chrome.runtime.sendMessage({ type: 'showOptions', data: {} });
-    }
-
     this.$nextTick(function() {
       chrome.runtime.onMessage.addListener(msg => {
         if (msg.type === 'alertMessage') {

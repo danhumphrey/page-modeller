@@ -181,14 +181,21 @@ export default {
       if (!this.$v.editedItemName.$dirty) {
         return errors;
       }
-      !this.$v.editedItemName.required && errors.push('Name is required.');
-      !this.$v.editedItemName.uniqueName && errors.push('Name must be unique.');
+      if (!this.$v.editedItemName.required) {
+        errors.push('Name is required.');
+      }
+      if (!this.$v.editedItemName.uniqueName) {
+        errors.push('Name must be unique.');
+      }
       return errors;
     },
   },
   watch: {
-    dialog(val) {
-      val || this.close();
+    dialog(active) {
+      if (active) {
+        return;
+      }
+      this.close();
     },
   },
   methods: {
@@ -208,8 +215,7 @@ export default {
       this.$root.$confirm('Delete Element', `Really delete ${item.name}?`).then(confirm => {
         if (confirm) {
           this.model.entities.splice(index, 1);
-          if (this.model.usedNames.hasOwnProperty(item.name)) {
-            // simple match
+          if (item.name in this.model.usedNames) {
             delete this.model.usedNames[item.name];
           }
         }
@@ -220,7 +226,8 @@ export default {
         if (!saved && this.editedIndex > -1) {
           Object.assign(this.model.entities[this.editedIndex], this.originalItem);
         }
-        (this.editedItemName = this.defaultItem.name), (this.editedItem = Object.assign({}, this.defaultItem));
+        this.editedItemName = this.defaultItem.name;
+        this.editedItem = Object.assign({}, this.defaultItem);
         this.editedIndex = -1;
         this.$v.$reset();
         this.dialog = false;
