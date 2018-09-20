@@ -1,4 +1,5 @@
 import { isClickable, isInteractive } from './templates-helpers';
+import upperFirst from 'lodash/upperFirst';
 
 const renderEntityComment = entity => `
 /*
@@ -7,18 +8,21 @@ const renderEntityComment = entity => `
  */
 `;
 
-const renderFindByLocatorStatement = locator => {
-  if (!locator.selected) {
-    return '';
+const transformLocatorName = locatorName => {
+  if (locatorName === 'css') {
+    return 'cssSelector';
   }
-  const locatorName = locator.name === 'css' ? 'cssSelector' : locator.name;
-  return `driver.findElement(By.${locatorName}("${locator.locator}"));`;
+  return locatorName;
+};
+
+const renderFindByLocatorStatement = locator => {
+  return `driver.findElement(By.${transformLocatorName(locator.name)}("${locator.locator}"));`;
 };
 
 const renderGetElementMethod = entity => {
   let output = `
  public WebElement get${entity.name}Element() {
-     return ${entity.locators.map(locator => renderFindByLocatorStatement(locator)).join('')}
+     return ${renderFindByLocatorStatement(entity.locators.find(l => l.selected))}
  }
 `;
   if (entity.tagName === 'SELECT') {

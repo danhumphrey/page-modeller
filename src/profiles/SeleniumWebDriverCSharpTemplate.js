@@ -8,19 +8,22 @@ const renderEntityComment = entity => `
  */
 `;
 
-const renderFindByLocatorStatement = locator => {
-  if (!locator.selected) {
-    return '';
+const transformLocatorName = locatorName => {
+  if (locatorName === 'css') {
+    return 'CssSelector';
   }
-  const locatorName = locator.name === 'css' ? 'CssSelector' : upperFirst(locator.name);
-  return `driver.FindElement(By.${locatorName}("${locator.locator}"));`;
+  return upperFirst(locatorName);
+};
+
+const renderFindByLocatorStatement = locator => {
+  return `driver.FindElement(By.${transformLocatorName(locator.name)}("${locator.locator}"));`;
 };
 
 const renderGetElementMethod = entity => {
   let output = `
  public IWebElement Get${entity.name}Element() 
  {
-     return ${entity.locators.map(locator => renderFindByLocatorStatement(locator)).join('')}
+     return ${renderFindByLocatorStatement(entity.locators.find(l => l.selected))}
  }
 `;
   if (entity.tagName === 'SELECT') {
