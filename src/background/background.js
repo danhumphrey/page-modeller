@@ -1,8 +1,10 @@
 import lowerFirst from 'lodash/lowerFirst';
 import profiles from '../profiles/profiles';
 
+let activeProfile = null;
+
 const activateProfile = profileName => {
-  const activeProfile = profiles.find(p => p.active);
+  activeProfile = profiles.find(p => p.active);
   if (activeProfile) {
     if (activeProfile.name === profileName) {
       return;
@@ -10,7 +12,8 @@ const activateProfile = profileName => {
     activeProfile.active = false;
   }
   // make profile active and persist to storage sync
-  profiles.find(p => p.name === profileName).active = true;
+  activeProfile = profiles.find(p => p.name === profileName);
+  activeProfile.active = true;
   chrome.storage.sync.set({ activeProfileName: profileName }, () => {});
 };
 
@@ -53,7 +56,18 @@ chrome.runtime.onMessage.addListener(msg => {
       activateProfile(msg.data.profileName);
       return;
     case 'generateModel':
-      console.log(profiles.find(p => p.active).template(msg.data.model));
+      chrome.storage.sync.get('activeProfileName', result => {
+        // get the active profile from storage sync or activate the first profile as default
+        if (result && result.activeProfileName) {
+          activeProfile = profiles.find(p => p.name === result.activeProfileName);
+          activeProfile.active = true;
+        } else {
+          [activeProfile] = profiles;
+        }
+        const code = activeProfile.template(msg.data.model);
+        sendMessage('showCode', { code });
+        console.log(code);
+      });
       return;
     default:
   }

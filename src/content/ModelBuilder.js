@@ -18,7 +18,8 @@ export default class ModelBuilder {
   }
 
   cleanName(name) {
-    return this.deDupeName(upperFirst(camelCase(name)));
+    const cc = camelCase(name) || name; // accommodate for weird bug which results in empty string for single character!
+    return this.deDupeName(upperFirst(cc));
   }
 
   generateName(element) {
@@ -28,7 +29,7 @@ export default class ModelBuilder {
     const tagName = dom.getTagName(element);
     const tagIndex = dom.getTagIndex(element);
 
-    if (/^(?:^INPUT$|^BUTTON$|^SELECT$|^TEXTAREA$|^PROGRESS$|^METER$)$/im.test(tagName)) {
+    if (['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'PROGRESS', 'METER'].includes(tagName)) {
       const label = dom.getLabel(element);
       const labelName = label ? label.textContent.trim() : '';
 
@@ -36,7 +37,7 @@ export default class ModelBuilder {
         return this.cleanName(labelName);
       }
 
-      if (tagName === 'BUTTON' || /^(?:^SUBMIT$|^RESET$)$/im.test(element.type)) {
+      if (tagName === 'BUTTON' || ['submit', 'reset'].includes(element.type)) {
         const val = element.value.trim();
         if (val) {
           return this.cleanName(val);

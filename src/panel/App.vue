@@ -18,6 +18,7 @@
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
     <Confirm ref="confirm"></Confirm>
+    <CodeDialog ref="code"></CodeDialog>
   </v-app>
 </template>
 
@@ -29,10 +30,11 @@ import ModelBuilder from '../content/ModelBuilder';
 import Popup from '../components/Popup';
 import Confirm from '../components/Confirm';
 import profiles from '../profiles/profiles';
+import CodeDialog from '../components/CodeDialog';
 
 export default {
   name: 'app',
-  components: { Table, Toolbar, Alert, Popup, Confirm },
+  components: { Table, Toolbar, Alert, Popup, Confirm, CodeDialog },
   computed: {
     isInspecting() {
       return this.isAdding || this.isScanning;
@@ -52,7 +54,7 @@ export default {
   },
   methods: {
     scan() {
-      this.$data.isScanning = !this.$data.isScanning;
+      this.isScanning = !this.isScanning;
 
       if (this.isScanning) {
         chrome.runtime.sendMessage({ type: 'appStartScanning', data: {} });
@@ -61,10 +63,10 @@ export default {
       }
     },
     add() {
-      this.$data.isAdding = !this.$data.isAdding;
+      this.isAdding = !this.isAdding;
 
       if (this.isAdding) {
-        chrome.runtime.sendMessage({ type: 'appStartAdding', data: { model: this.$data.model === null ? ModelBuilder.createEmptyModel() : this.$data.model } });
+        chrome.runtime.sendMessage({ type: 'appStartAdding', data: { model: this.model === null ? ModelBuilder.createEmptyModel() : this.model } });
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
@@ -72,14 +74,14 @@ export default {
     deleteModel() {
       this.$refs.confirm.open('Delete Model', `Really delete the model?`).then(confirm => {
         if (confirm) {
-          this.$data.model = null;
+          this.model = null;
         }
       });
     },
     generateModel() {
       console.log('Generate Model:');
-      console.dir(this.$data.model);
-      chrome.runtime.sendMessage({ type: 'generateModel', data: { model: this.$data.model } });
+      console.dir(this.model);
+      chrome.runtime.sendMessage({ type: 'generateModel', data: { model: this.model } });
     },
     activateProfile(profileName) {
       const currentActiveProfile = this.profiles.find(p => p.active);
@@ -102,7 +104,7 @@ export default {
 
     chrome.storage.sync.get('activeProfileName', result => {
       // get the active profile from storage sync or activate the first profile as default
-      if (result.activeProfileName) {
+      if (result && result.activeProfileName) {
         this.profiles.find(p => p.name === result.activeProfileName).active = true;
         this.activeProfile = result.activeProfileName;
       } else {
@@ -112,39 +114,41 @@ export default {
 
     this.$nextTick(function() {
       chrome.runtime.onMessage.addListener(msg => {
-        if (msg.type === 'alertMessage') {
-          this.$root.$alert(msg.data.title || 'Page Modeller', msg.data.message);
-        }
+        switch (msg.type) {
+          case 'alertMessage':
+            this.$root.$alert(msg.data.title || 'Page Modeller', msg.data.message);
+            return;
+          case 'popupInfo':
+            this.$root.$popupInfo(msg.data.message);
+            return;
+          case 'popupError':
+            this.$root.$popupError(msg.data.message);
+            return;
+          case 'popupWarning':
+            this.$root.$popupWarning(msg.data.message);
+            return;
+          case 'popupSuccess':
+            this.$root.$popupSuccess(msg.data.message);
+            return;
+          case 'elementInspected':
+            console.log('elementInspected message received');
+            console.log(msg.data.model);
 
-        if (msg.type === 'popupInfo') {
-          this.$root.$popupInfo(msg.data.message);
-        }
+            this.model = msg.data.model;
 
-        if (msg.type === 'popupError') {
-          this.$root.$popupError(msg.data.message);
-        }
-
-        if (msg.type === 'popupWarning') {
-          this.$root.$popupWarning(msg.data.message);
-        }
-
-        if (msg.type === 'popupSuccess') {
-          this.$root.$popupSuccess(msg.data.message);
-        }
-
-        if (msg.type === 'elementInspected') {
-          console.log('elementInspected message received');
-          console.log(msg.data.model);
-
-          this.$data.model = msg.data.model;
-
-          if (this.$data.isAdding) {
-            setTimeout(() => {
-              document.scrollingElement.scrollTop = document.scrollingElement.scrollHeight;
-            }, 100);
-          }
-          this.$data.isScanning = false;
-          this.$data.isAdding = false;
+            if (this.isAdding) {
+              setTimeout(() => {
+                document.scrollingElement.scrollTop = document.scrollingElement.scrollHeight;
+              }, 100);
+            }
+            this.isScanning = false;
+            this.isAdding = false;
+            return;
+          case 'showCode':
+            console.log('show code');
+            this.$refs.code.show(this.activeProfile, msg.data.code);
+            break;
+          default:
         }
       });
     });
