@@ -1,13 +1,21 @@
 import SeleniumWebDriverJavaTemplate from './SeleniumWebDriverJavaTemplate';
 import SeleniumWebDriverCSharpTemplate from './SeleniumWebDriverCSharpTemplate';
+import RobotFrameworkTemplate from './RobotFrameworkTemplate';
 
 export default [
   {
     name: 'Selenium WebDriver Java',
     template: SeleniumWebDriverJavaTemplate,
+    locators: ['id', 'linkText', 'partialLinkText', 'name', 'css', 'xpath', 'className', 'tagName'],
   },
   {
     name: 'Selenium WebDriver C#',
     template: SeleniumWebDriverCSharpTemplate,
+    locators: ['id', 'linkText', 'partialLinkText', 'name', 'css', 'xpath', 'className', 'tagName'],
+  },
+  {
+    name: 'Robot Framework',
+    template: RobotFrameworkTemplate,
+    locators: ['id', 'linkText', 'name', 'css', 'xpath', 'tagName'],
   },
 ];

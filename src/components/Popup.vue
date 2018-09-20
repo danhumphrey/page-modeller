@@ -59,7 +59,10 @@ export default {
       this.show(message, timeout);
     },
     reset() {
-      this.infoIcon = this.errorIcon = this.warningIcon = this.successIcon = false;
+      this.infoIcon = false;
+      this.errorIcon = false;
+      this.warningIcon = false;
+      this.successIcon = false;
     },
     close() {
       this.snackbar = false;

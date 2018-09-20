@@ -168,7 +168,6 @@ const findElementsByLinkText = function(document, locator) {
   });
 };
 const findElementsByTagIndex = function(document, locator) {
-  console.log('findElementsByTagIndex');
   const matches = /(.*)(\d+)$/.exec(locator);
   const els = Array.prototype.slice.call(findElementsByTagName(document, matches[1]));
   return [els[parseInt(matches[2], 10) - 1]];
