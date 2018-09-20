@@ -17,7 +17,7 @@
 
     <v-tooltip bottom :disabled="hasModel || isInspecting" open-delay="600">
       <v-menu :nudge-width="100" slot="activator" :disabled="hasModel || isInspecting">
-          <v-btn flat small round class="text-capitalize" slot="activator" :disabled="hasModel || isInspecting">{{currentProfile}}
+          <v-btn flat small round class="text-capitalize" slot="activator" :disabled="hasModel || isInspecting">{{activeProfile}}
             <v-icon>arrow_drop_down</v-icon>
           </v-btn>
         <v-list>
@@ -55,7 +55,7 @@
 <script>
 export default {
   name: 'Toolbar',
-  props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel', 'profileList', 'currentProfile'],
+  props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel', 'profileList', 'activeProfile'],
   methods: {
     scan() {
       this.$emit('scan');

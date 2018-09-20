@@ -1,9 +1,21 @@
 import lowerFirst from 'lodash/lowerFirst';
 import profiles from '../profiles/profiles';
 
+const activateProfile = profileName => {
+  const activeProfile = profiles.find(p => p.active);
+  if (activeProfile) {
+    if (activeProfile.name === profileName) {
+      return;
+    }
+    activeProfile.active = false;
+  }
+  // make profile active and persist to storage sync
+  profiles.find(p => p.name === profileName).active = true;
+  chrome.storage.sync.set({ activeProfileName: profileName }, () => {});
+};
+
 chrome.runtime.onInstalled.addListener(details => {
   const thisVersion = chrome.runtime.getManifest().version;
-
   if (details.reason === 'install') {
     console.log(`First install of version ${thisVersion}`);
   } else if (details.reason === 'update') {
@@ -28,6 +40,7 @@ const sendMessageToActiveTab = function(msgType, data = {}) {
     }
   );
 };
+
 chrome.runtime.onMessage.addListener(msg => {
   console.log('background message: ');
   console.dir(msg);
@@ -37,9 +50,7 @@ chrome.runtime.onMessage.addListener(msg => {
       chrome.runtime.openOptionsPage();
       return;
     case 'activateProfile':
-      profiles.find(p => p.active).active = false;
-      profiles.find(p => p.name === msg.data.profileName).active = true;
-      console.log('SAVE ACTIVE PROFILE TO OPTIONS');
+      activateProfile(msg.data.profileName);
       return;
     case 'generateModel':
       console.log(profiles.find(p => p.active).template(msg.data.model));

@@ -11,7 +11,7 @@
         :is-scanning="isScanning"
         :has-model="hasModel"
         :profile-list="profiles"
-        :currentProfile="currentProfile"
+        :active-profile="activeProfile"
 
     />
     <Table  :model="model" :is-inspecting="isInspecting" />
@@ -47,7 +47,7 @@ export default {
       isAdding: false,
       model: null,
       profiles,
-      currentProfile: 'Selenium WebDriver Java',
+      activeProfile: '',
     };
   },
   methods: {
@@ -82,9 +82,12 @@ export default {
       chrome.runtime.sendMessage({ type: 'generateModel', data: { model: this.$data.model } });
     },
     activateProfile(profileName) {
-      this.profiles.find(p => p.active).active = false;
+      const currentActiveProfile = this.profiles.find(p => p.active);
+      if (currentActiveProfile) {
+        currentActiveProfile.active = false;
+      }
       this.profiles.find(p => p.name === profileName).active = true;
-      this.currentProfile = profileName;
+      this.activeProfile = profileName;
       chrome.runtime.sendMessage({ type: 'activateProfile', data: { profileName } });
     },
   },
@@ -96,6 +99,16 @@ export default {
     this.$root.$popupWarning = this.$refs.popup.warning;
     this.$root.$popupSuccess = this.$refs.popup.success;
     this.$root.$profileEditor = this.$refs.profileEditor;
+
+    chrome.storage.sync.get('activeProfileName', result => {
+      // get the active profile from storage sync or activate the first profile as default
+      if (result.activeProfileName) {
+        this.profiles.find(p => p.name === result.activeProfileName).active = true;
+        this.activeProfile = result.activeProfileName;
+      } else {
+        this.activateProfile(profiles[0].name);
+      }
+    });
 
     this.$nextTick(function() {
       chrome.runtime.onMessage.addListener(msg => {
