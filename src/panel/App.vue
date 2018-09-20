@@ -14,7 +14,7 @@
         :active-profile="activeProfile"
 
     />
-    <Table  :model="model" :is-inspecting="isInspecting" />
+    <Table  :model="model" :is-inspecting="isInspecting" @emptyModel="emptyModel" />
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
     <Confirm ref="confirm"></Confirm>
@@ -70,6 +70,9 @@ export default {
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
+    },
+    emptyModel() {
+      this.model = null;
     },
     deleteModel() {
       this.$refs.confirm.open('Delete Model', `Really delete the model?`).then(confirm => {

@@ -218,6 +218,9 @@ export default {
           if (item.name in this.model.usedNames) {
             delete this.model.usedNames[item.name];
           }
+          if (this.model.entities.length === 0) {
+            this.$emit('emptyModel');
+          }
         }
       });
     },
