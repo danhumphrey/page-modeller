@@ -120,7 +120,7 @@
 import { validationMixin } from 'vuelidate';
 import { required } from 'vuelidate/lib/validators';
 
-const uniqueName = function(n) {
+const uniqueName = n => {
   const res = this.model.entities.filter(e => e.name === n);
   return res.length === 0 || n === this.editedItem.name;
 };

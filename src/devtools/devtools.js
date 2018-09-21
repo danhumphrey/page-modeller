@@ -1,8 +1,8 @@
-const handlePanelShown = function() {
+const handlePanelShown = () => {
   console.log('Page Modeller panel shown');
 };
 
-const handlePanelHidden = function() {
+const handlePanelHidden = () => {
   console.log('Page Modeller panel hidden');
 };
 

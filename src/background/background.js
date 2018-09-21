@@ -26,11 +26,11 @@ chrome.runtime.onInstalled.addListener(details => {
   }
 });
 
-const sendMessage = function(msgType, data) {
+const sendMessage = (msgType, data) => {
   chrome.runtime.sendMessage({ type: msgType, data });
 };
 
-const sendMessageToActiveTab = function(msgType, data = {}) {
+const sendMessageToActiveTab = (msgType, data = {}) => {
   chrome.tabs.query(
     {
       currentWindow: true,

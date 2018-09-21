@@ -115,7 +115,7 @@ export default {
       }
     });
 
-    this.$nextTick(function() {
+    this.$nextTick(() => {
       chrome.runtime.onMessage.addListener(msg => {
         switch (msg.type) {
           case 'alertMessage':

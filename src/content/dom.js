@@ -1,9 +1,8 @@
 import Simmer from 'simmerjs';
 
-const getStyle = function(element, style) {
-  return element.ownerDocument.defaultView.getComputedStyle(element, null)[style];
-};
-const isVisible = function(element) {
+const getStyle = (element, style) => element.ownerDocument.defaultView.getComputedStyle(element, null)[style];
+
+const isVisible = element => {
   const w = element.offsetWidth;
   const h = element.offsetHeight;
   const force = element.tagName === 'TR';
@@ -17,15 +16,11 @@ const isVisible = function(element) {
   return getStyle(element, 'display') !== 'none';
 };
 
-const getTagName = function(element) {
-  return element.tagName;
-};
+const getTagName = element => element.tagName;
 
-const getTagType = function(element) {
-  return element.type;
-};
+const getTagType = element => element.type;
 
-const getTagIndex = function(element) {
+const getTagIndex = element => {
   const n = getTagName(element);
   const all = element.ownerDocument.getElementsByTagName(n);
   for (let i = 0; i < all.length; i += 1) {
@@ -35,35 +30,36 @@ const getTagIndex = function(element) {
   }
   return null;
 };
-const getId = function(element) {
+
+const getId = element => {
   if (element.id) {
     return element.id.trim();
   }
   return null;
 };
 
-const getName = function(element) {
+const getName = element => {
   if (element.name) {
     return element.name.trim();
   }
   return null;
 };
 
-const getTextContent = function(element) {
+const getTextContent = element => {
   if (element.textContent) {
     return element.textContent.trim();
   }
   return null;
 };
 
-const getClassName = function(element) {
+const getClassName = element => {
   if (element.className) {
     return element.className.match(/\S+/g)[0];
   }
   return null;
 };
 
-const getLinkText = function(element) {
+const getLinkText = element => {
   if (element.nodeName === 'A') {
     if (element.textContent) {
       return element.textContent.trim();
@@ -72,12 +68,12 @@ const getLinkText = function(element) {
   return null;
 };
 
-const getCssSelector = function(element) {
+const getCssSelector = element => {
   const simmer = new Simmer(element.ownerDocument);
   return simmer(element);
 };
 
-const getElementTreeXPath = function(element, strict) {
+const getElementTreeXPath = (element, strict) => {
   const paths = [];
   let currentElement = element;
 
@@ -99,14 +95,14 @@ const getElementTreeXPath = function(element, strict) {
   return paths.length ? `/${paths.join('/')}` : null;
 };
 
-const getXPath = function(element) {
+const getXPath = element => {
   if (element && element.id) {
     return `//*[@id="${element.id.trim()}"]`;
   }
   return getElementTreeXPath(element);
 };
 
-const getLabel = function(element) {
+const getLabel = element => {
   // use 'for' attribute to find label
   const id = getId(element);
   if (id) {
@@ -126,7 +122,7 @@ const getLabel = function(element) {
   return null;
 };
 
-const findElementsByXPath = function(document, locator) {
+const findElementsByXPath = (document, locator) => {
   const results = [];
   const query = document.evaluate(locator, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
   for (let i = 0, length = query.snapshotLength; i < length; i += 1) {
@@ -135,7 +131,7 @@ const findElementsByXPath = function(document, locator) {
   return results;
 };
 
-const findElementsByCssSelector = function(document, locator) {
+const findElementsByCssSelector = (document, locator) => {
   try {
     return document.querySelectorAll(locator);
   } catch (e) {
@@ -143,23 +139,15 @@ const findElementsByCssSelector = function(document, locator) {
   }
 };
 
-const findElementsByName = function(document, locator) {
-  return document.getElementsByName(locator);
-};
+const findElementsByName = (document, locator) => document.getElementsByName(locator);
 
-const findElementsByTagName = function(document, locator) {
-  return document.getElementsByTagName(locator);
-};
+const findElementsByTagName = (document, locator) => document.getElementsByTagName(locator);
 
-const findElementsByClassName = function(document, locator) {
-  return findElementsByCssSelector(document, `.${locator}`);
-};
+const findElementsByClassName = (document, locator) => findElementsByCssSelector(document, `.${locator}`);
 
-const findElementsById = function(document, locator) {
-  return findElementsByCssSelector(document, `#${locator}`);
-};
+const findElementsById = (document, locator) => findElementsByCssSelector(document, `#${locator}`);
 
-const findElementsByLinkText = function(document, locator) {
+const findElementsByLinkText = (document, locator) => {
   const els = Array.prototype.slice.call(findElementsByTagName(document, 'A'));
 
   return els.filter(el => {
@@ -167,42 +155,38 @@ const findElementsByLinkText = function(document, locator) {
     return c === locator;
   });
 };
-const findElementsByTagIndex = function(document, locator) {
+const findElementsByTagIndex = (document, locator) => {
   const matches = /(.*)(\d+)$/.exec(locator);
   const els = Array.prototype.slice.call(findElementsByTagName(document, matches[1]));
   return [els[parseInt(matches[2], 10) - 1]];
 };
 
-const findElementsByPartialLinkText = function(document, locator) {
+const findElementsByPartialLinkText = (document, locator) => {
   const els = Array.prototype.slice.call(findElementsByTagName(document, 'A'));
 
   return els.filter(el => el.textContent.indexOf(locator) !== -1);
 };
 
 if (!Element.prototype.scrollIntoViewIfNeeded) {
-  Element.prototype.scrollIntoViewIfNeeded = function(centerIfNeeded) {
-    function makeRange(start, length) {
-      return { start, length, end: start + length };
-    }
+  Element.prototype.scrollIntoViewIfNeeded = centerIfNeeded => {
+    const makeRange = (start, length) => ({ start, length, end: start + length });
 
-    function coverRange(inner, outer) {
+    const coverRange = (inner, outer) => {
       if (centerIfNeeded === false || (outer.start < inner.end && inner.start < outer.end)) {
         return Math.max(inner.end - outer.length, Math.min(outer.start, inner.start));
       }
       return (inner.start + inner.end - outer.length) / 2;
-    }
+    };
 
-    function makePoint(x, y) {
-      return {
-        x,
-        y,
-        translate: function translate(dX, dY) {
-          return makePoint(x + dX, y + dY);
-        },
-      };
-    }
+    const makePoint = (x, y) => ({
+      x,
+      y,
+      translate: function translate(dX, dY) {
+        return makePoint(x + dX, y + dY);
+      },
+    });
 
-    function absolute(element, parent) {
+    const absolute = (element, parent) => {
       let currentElement = element;
       let pt = parent;
       while (currentElement) {
@@ -210,7 +194,7 @@ if (!Element.prototype.scrollIntoViewIfNeeded) {
         currentElement = currentElement.offsetParent;
       }
       return pt;
-    }
+    };
 
     let target = absolute(this, makePoint(0, 0));
 

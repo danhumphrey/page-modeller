@@ -30,6 +30,7 @@ const onClick = evt => {
     return false;
   }
 
+  // eslint-disable-next-line no-use-before-define
   stop();
 
   const b = new ModelBuilder();
