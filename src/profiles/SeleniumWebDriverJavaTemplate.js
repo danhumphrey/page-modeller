@@ -30,14 +30,6 @@ const renderGetElementMethod = entity => {
  public Select get${entity.name}Select() {
      return new Select(get${entity.name}Element());
  }
- 
- public void set${entity.name}ByValue(String value) {
-     return get${entity.name}Select().selectByValue(value);
- }
- 
- public void set${entity.name}ByText(String text) {
-     return get${entity.name}Select().selectByVisibleText(text);
- }
 `;
   }
   return output;
@@ -67,8 +59,18 @@ const renderGetAndSetCheckboxRadio = entity => `
  }`;
 
 const renderGetAndSetSelect = entity => `
- public String get${entity.name}() {
+ public String get${entity.name}Text() {
      return get${entity.name}Select().getFirstSelectedOption().getText();
+ }
+ public String get${entity.name}Value() {
+     return get${entity.name}Select().getFirstSelectedOption().getAttribute("value");
+ }
+ public void set${entity.name}ByValue(String value) {
+     return get${entity.name}Select().selectByValue(value);
+ }
+ 
+ public void set${entity.name}ByText(String text) {
+     return get${entity.name}Select().selectByVisibleText(text);
  }
 `;
 

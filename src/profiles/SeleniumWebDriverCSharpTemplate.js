@@ -28,19 +28,9 @@ const renderGetElementMethod = entity => {
 `;
   if (entity.tagName === 'SELECT') {
     output += `
- public Select Get${entity.name}Select() 
+ public SelectElement Get${entity.name}Select() 
  {
-     return new Select(Get${entity.name}Element());
- }
- 
- public void Set${entity.name}ByValue(String value) 
- {
-     return Get${entity.name}Select().SelectByValue(value);
- }
- 
- public void Set${entity.name}ByText(String text) 
- {
-     return Get${entity.name}Select().SelectByText(text);
+     return new SelectElement(Get${entity.name}Element());
  }
 `;
   }
@@ -75,9 +65,24 @@ const renderGetAndSetCheckboxRadio = entity => `
  }`;
 
 const renderGetAndSetSelect = entity => `
- public String Get${entity.name}() 
+ public String Get${entity.name}Text() 
  {
      return Get${entity.name}Select().SelectedOption.Text;
+ }
+ 
+ public String Get${entity.name}Text() 
+ {
+     return Get${entity.name}Select().SelectedOption.GetAttribute("value");
+ }
+
+ public void Set${entity.name}ByValue(String value) 
+ {
+     return Get${entity.name}Select().SelectByValue(value);
+ }
+ 
+ public void Set${entity.name}ByText(String text) 
+ {
+     return Get${entity.name}Select().SelectByText(text);
  }
 `;
 
