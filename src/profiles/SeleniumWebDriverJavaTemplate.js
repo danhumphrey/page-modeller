@@ -1,5 +1,4 @@
 import { isClickable, isInteractive } from './templates-helpers';
-import upperFirst from 'lodash/upperFirst';
 
 const renderEntityComment = entity => `
 /*
@@ -15,9 +14,7 @@ const transformLocatorName = locatorName => {
   return locatorName;
 };
 
-const renderFindByLocatorStatement = locator => {
-  return `driver.findElement(By.${transformLocatorName(locator.name)}("${locator.locator}"));`;
-};
+const renderFindByLocatorStatement = locator => `driver.findElement(By.${transformLocatorName(locator.name)}("${locator.locator}"));`;
 
 const renderGetElementMethod = entity => {
   let output = `

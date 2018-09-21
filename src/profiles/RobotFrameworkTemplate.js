@@ -21,23 +21,20 @@ const renderLocatorVariable = entity => {
   if (entity.tagName === 'INPUT') {
     if (['checkbox', 'radio'].includes(entity.type)) {
       output += `
-\${${transformLocatorName(entity.name) + 'IsSelected'}}`;
+\${${transformLocatorName(entity.name)}IsSelected}`;
       return output;
     }
   }
   if (!isClickable(entity)) {
     output += `
-\${${transformLocatorName(entity.name) + 'Value'}}`;
+\${${transformLocatorName(entity.name)}Value}`;
   }
   return output;
 };
 
-const renderLocators = entities => {
-  return (
-    `
-*** Variables ***` + entities.map(entity => renderLocatorVariable(entity)).join('')
-  );
-};
+const renderLocators = entities => `
+*** Variables ***${entities.map(entity => renderLocatorVariable(entity)).join('')}`;
+
 const renderKeywordsComment = () => `
 
 *** Keywords ***`;
@@ -52,6 +49,7 @@ Click ${entity.name}
   }
   return '';
 };
+
 const renderGetAndSetCheckboxRadio = entity => `
 Set ${entity.name}
     [Documentation]  Set the ${entity.name} ${entity.tagName} element

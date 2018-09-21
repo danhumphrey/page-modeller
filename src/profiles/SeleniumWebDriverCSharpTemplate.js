@@ -15,9 +15,7 @@ const transformLocatorName = locatorName => {
   return upperFirst(locatorName);
 };
 
-const renderFindByLocatorStatement = locator => {
-  return `driver.FindElement(By.${transformLocatorName(locator.name)}("${locator.locator}"));`;
-};
+const renderFindByLocatorStatement = locator => `driver.FindElement(By.${transformLocatorName(locator.name)}("${locator.locator}"));`;
 
 const renderGetElementMethod = entity => {
   let output = `
