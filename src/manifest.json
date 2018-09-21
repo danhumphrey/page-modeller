@@ -1,6 +1,6 @@
 {
   "name": "page-modeller",
-  "description": "A browser extension for modelling page objects",
+  "description": "Chrome and Firefox DevTools extension for modelling page objects",
   "version": "0.0.1",
   "manifest_version": 2,
   "icons": {
@@ -17,7 +17,8 @@
     }
   },
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["background.js"],
+    "persistent": false
   },
   "devtools_page": "devtools-page.html",
   "permissions": ["activeTab", "tabs", "storage", "clipboardWrite"],

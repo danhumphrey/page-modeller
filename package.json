@@ -16,7 +16,12 @@
     "build:dev": "cross-env NODE_ENV=development webpack --hide-modules",
     "build-zip": "node scripts/build-zip.js",
     "watch": "npm run build -- --watch",
-    "watch:dev": "cross-env HMR=true npm run build:dev -- --watch"
+    "watch:dev": "cross-env HMR=true npm run build:dev -- --watch",
+    "run:firefox": "cd dist && web-ext run -i src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danhumphrey/page-modeller.git"
   },
   "dependencies": {
     "lodash": "^4.17.10",
