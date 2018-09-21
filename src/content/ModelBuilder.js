@@ -57,7 +57,11 @@ export default class ModelBuilder {
     }
 
     if (textContent) {
-      return this.cleanName(textContent);
+      let n = this.cleanName(textContent);
+      if (n.match(/^\d/)) {
+        n = `${tagName}${n}`;
+      }
+      return n;
     }
 
     return this.cleanName(`${tagName}${tagIndex}`);
