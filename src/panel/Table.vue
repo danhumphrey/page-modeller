@@ -120,15 +120,13 @@
 import { validationMixin } from 'vuelidate';
 import { required } from 'vuelidate/lib/validators';
 
-const uniqueName = n => {
-  const res = this.model.entities.filter(e => e.name === n);
-  return res.length === 0 || n === this.editedItem.name;
-};
 export default {
   mixins: [validationMixin],
-  validations: {
-    editedItemName: { required, uniqueName },
-    currentLocator: { required },
+  validations() {
+    return {
+      editedItemName: { required, uniqueName: this.uniqueName },
+      currentLocator: { required },
+    };
   },
   name: 'Table',
   props: ['isInspecting', 'model'],
@@ -199,6 +197,11 @@ export default {
     },
   },
   methods: {
+    uniqueName(n) {
+      console.log('here');
+      const res = this.model.entities.filter(e => e.name === n);
+      return res.length === 0 || n === this.editedItem.name;
+    },
     editItem(item) {
       if (this.isInspecting) {
         return;
