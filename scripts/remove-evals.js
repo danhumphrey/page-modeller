@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 const BUNDLE_DIR = path.join(__dirname, '../dist');
-const bundles = ['background.js', 'popup/popup.js'];
+const bundles = ['background.js', 'popup/popup.js', 'devtools.js', 'content.js', 'options.js', 'panel/panel.js'];
 
 const evalRegexForProduction = /;([a-z])=function\(\){return this}\(\);try{\1=\1\|\|Function\("return this"\)\(\)\|\|\(0,eval\)\("this"\)}catch\(t\){"object"==typeof window&&\(\1=window\)}/g;
 const evalRegexForDevelopment = /;\\r\\n\\r\\n\/\/ This works in non-strict mode(?:.){1,304}/g;
