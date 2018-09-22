@@ -6,5 +6,6 @@
 node_modules
 /*.log
 /dist
-/dist-zip
+/release-chrome
+/release-firefox
 Thumbs.db
