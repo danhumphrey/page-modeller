@@ -1,20 +1,17 @@
 #!/usr/bin/env node
-
+/* eslint-disable import/no-extraneous-dependencies */
 const fs = require('fs');
 const path = require('path');
 const zipFolder = require('zip-folder');
+const extPackageJson = require('../package.json');
 
 const DEST_DIR = path.join(__dirname, '../dist');
-const DEST_ZIP_DIR = path.join(__dirname, '../dist-zip');
+const DEST_ZIP_DIR = path.join(__dirname, '../release-chrome');
 
-const extractExtensionData = () => {
-  const extPackageJson = require('../package.json');
-
-  return {
-    name: extPackageJson.name,
-    version: extPackageJson.version,
-  };
-};
+const extractExtensionData = () => ({
+  name: extPackageJson.name,
+  version: extPackageJson.version,
+});
 
 const makeDestZipDirIfNotExists = () => {
   if (!fs.existsSync(DEST_ZIP_DIR)) {
