@@ -198,7 +198,6 @@ export default {
   },
   methods: {
     uniqueName(n) {
-      console.log('here');
       const res = this.model.entities.filter(e => e.name === n);
       return res.length === 0 || n === this.editedItem.name;
     },
