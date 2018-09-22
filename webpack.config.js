@@ -5,7 +5,6 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const ChromeExtensionReloader = require('webpack-chrome-extension-reloader');
 const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 const { VueLoaderPlugin } = require('vue-loader');
-const { version } = require('./package.json');
 
 const config = {
   mode: process.env.NODE_ENV,
@@ -83,7 +82,6 @@ const config = {
         to: 'manifest.json',
         transform: content => {
           const jsonContent = JSON.parse(content);
-          jsonContent.version = version;
 
           if (config.mode === 'development') {
             jsonContent.content_security_policy = "script-src 'self' 'unsafe-eval'; object-src 'self'";
