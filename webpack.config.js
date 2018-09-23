@@ -59,8 +59,7 @@ const config = {
         test: /\.(svg|ico|eot|woff|ttf|woff2)$/,
         loader: 'file-loader',
         options: {
-          name: '[name].[ext]',
-          outputPath: '../fonts/',
+          name: '/fonts/[name].[ext]',
         },
       },
     ],
@@ -76,7 +75,6 @@ const config = {
       { from: 'devtools/devtools-page.html', to: 'devtools-page.html' },
       { from: 'panel/panel.html', to: 'panel/panel.html' },
       { from: 'options/options.html', to: 'options.html' },
-      { from: 'fonts', to: 'fonts' },
       {
         from: 'manifest.json',
         to: 'manifest.json',
