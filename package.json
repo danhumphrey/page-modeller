@@ -18,7 +18,7 @@
     "zip:firefox": "web-ext build -s dist -a release-firefox --overwrite-dest",
     "watch": "npm run build -- --watch",
     "watch:dev": "cross-env HMR=true npm run build:dev -- --watch",
-    "run:firefox": "cd dist && web-ext run -i src"
+    "watch:firefox": "npm run build:dev && cd dist && web-ext run -i src"
   },
   "repository": {
     "type": "git",
