@@ -207,6 +207,7 @@ export default {
       }
       this.editedIndex = this.model.entities.indexOf(item);
       this.editedItem = Object.assign({}, item);
+      this.editedItem.locators = item.locators.filter(l => !l.hidden);
       this.originalItem = JSON.parse(JSON.stringify(Object.assign({}, item)));
       this.editedItemName = this.editedItem.name;
       this.currentLocator = this.editedItem.locators.find(l => l.selected);

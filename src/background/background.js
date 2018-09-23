@@ -11,7 +11,7 @@ const activateProfile = profileName => {
     }
     activeProfile.active = false;
   }
-  // make profile active and persist to storage sync
+  // make activeProfile active and persist to storage sync
   activeProfile = profiles.find(p => p.name === profileName);
   activeProfile.active = true;
   chrome.storage.sync.set({ activeProfileName: profileName }, () => {});
@@ -57,7 +57,7 @@ chrome.runtime.onMessage.addListener(msg => {
       return;
     case 'generateModel':
       chrome.storage.sync.get('activeProfileName', result => {
-        // get the active profile from storage sync or activate the first profile as default
+        // get the active activeProfile from storage sync or activate the first activeProfile as default
         if (result && result.activeProfileName) {
           activeProfile = profiles.find(p => p.name === result.activeProfileName);
           activeProfile.active = true;

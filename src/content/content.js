@@ -7,11 +7,13 @@ chrome.runtime.onMessage.addListener(msg => {
   console.dir(msg);
 
   if (msg.type === 'startScanning') {
-    inspector.start();
+    console.log('startScanning');
+    inspector.start({ profile: msg.data.profile });
   }
 
   if (msg.type === 'startAdding') {
-    inspector.start(msg.data.model || null);
+    console.log('startAdding');
+    inspector.start({ model: msg.data.model || null, profile: msg.data.profile });
   }
 
   if (msg.type === 'stopInspecting') {

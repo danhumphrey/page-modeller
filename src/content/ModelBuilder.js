@@ -1,6 +1,7 @@
 import upperFirst from 'lodash/upperFirst';
 import camelCase from 'lodash/camelCase';
 import dom from './dom';
+import profiles from '../profiles/profiles';
 
 const INTERACTIVE_ELEMENTS = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
 
@@ -74,10 +75,11 @@ export default class ModelBuilder {
     };
   }
 
-  createModel(element, existingModel = null) {
+  createModel({ element, activeProfile, existingModel = null }) {
     console.log('createModel');
 
     this.model = existingModel || ModelBuilder.createEmptyModel();
+    this.activeProfile = activeProfile;
 
     if (existingModel) {
       this.model.entities.push(this.createEntity(element));
@@ -109,17 +111,17 @@ export default class ModelBuilder {
   createEntity(element) {
     return {
       name: this.generateName(element),
-      locators: ModelBuilder.getLocators(element),
+      locators: this.getLocators(element),
       tagName: dom.getTagName(element),
       type: dom.getTagType(element),
     };
   }
 
-  static getLocators(element) {
+  getLocators(element) {
     const tagName = dom.getTagName(element);
     const tagIndex = dom.getTagIndex(element);
 
-    const locators = [
+    const possibleLocators = [
       {
         name: 'id',
         locator: dom.getId(element),
@@ -156,8 +158,19 @@ export default class ModelBuilder {
         name: 'tagIndex',
         locator: `${tagName}${tagIndex}`,
         selected: true,
+        always: true,
+        hidden: true,
       },
     ];
+    const profile = profiles.find(p => p.name === this.activeProfile);
+
+    const locators = [];
+    possibleLocators.forEach(l => {
+      if (profile.locators.includes(l.name) || l.always) {
+        locators.push(l);
+      }
+    });
+
     for (let selectedLocator = locators[locators.length - 1], currentLocator, i = 0; i < locators.length; i += 1) {
       currentLocator = locators[i];
       if (currentLocator.locator) {

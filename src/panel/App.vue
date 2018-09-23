@@ -56,8 +56,9 @@ export default {
     scan() {
       this.isScanning = !this.isScanning;
 
+      console.log('scan');
       if (this.isScanning) {
-        chrome.runtime.sendMessage({ type: 'appStartScanning', data: {} });
+        chrome.runtime.sendMessage({ type: 'appStartScanning', data: { profile: this.activeProfile } });
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
@@ -66,7 +67,7 @@ export default {
       this.isAdding = !this.isAdding;
 
       if (this.isAdding) {
-        chrome.runtime.sendMessage({ type: 'appStartAdding', data: { model: this.model === null ? ModelBuilder.createEmptyModel() : this.model } });
+        chrome.runtime.sendMessage({ type: 'appStartAdding', data: { model: this.model === null ? ModelBuilder.createEmptyModel() : this.model, profile: this.activeProfile } });
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
@@ -106,7 +107,7 @@ export default {
     this.$root.$profileEditor = this.$refs.profileEditor;
 
     chrome.storage.sync.get('activeProfileName', result => {
-      // get the active profile from storage sync or activate the first profile as default
+      // get the active activeProfile from storage sync or activate the first activeProfile as default
       if (result && result.activeProfileName) {
         this.profiles.find(p => p.name === result.activeProfileName).active = true;
         this.activeProfile = result.activeProfileName;

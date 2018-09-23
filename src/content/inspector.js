@@ -3,6 +3,7 @@ import dom from './dom';
 
 const CLASS_NAME = 'page-modeller-hover';
 let existingModel = null;
+let activeProfile = null;
 
 const onMouseOver = evt => {
   evt.target.classList.add(CLASS_NAME);
@@ -19,11 +20,11 @@ const onFocus = evt => {
 const onClick = evt => {
   evt.preventDefault();
   evt.stopPropagation();
-  const el = evt.target;
-  el.classList.remove(CLASS_NAME);
+  const element = evt.target;
+  element.classList.remove(CLASS_NAME);
 
-  const tagName = dom.getTagName(el);
-  const tagIndex = dom.getTagIndex(el);
+  const tagName = dom.getTagName(element);
+  const tagIndex = dom.getTagIndex(element);
 
   if (existingModel && existingModel.entities.find(entity => undefined !== entity.locators.find(l => l.name === 'tagIndex' && l.locator === `${tagName}${tagIndex}`))) {
     chrome.runtime.sendMessage({ type: 'contentAlertMessage', data: { title: 'Add Element', message: 'That element already exists in the model' } });
@@ -34,12 +35,15 @@ const onClick = evt => {
   stop();
 
   const b = new ModelBuilder();
-  chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel(el, existingModel) } });
+  chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel({ element, activeProfile, existingModel }) } });
   return false;
 };
 
-const start = (currentModel = null) => {
+const start = ({ currentModel = null, profile }) => {
+  console.log('start inspecting');
   existingModel = currentModel;
+  activeProfile = profile;
+
   document.addEventListener('mouseover', onMouseOver, true);
   document.addEventListener('mouseout', onMouseOut, true);
   document.addEventListener('click', onClick, true);
