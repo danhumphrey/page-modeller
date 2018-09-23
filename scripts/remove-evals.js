@@ -22,15 +22,15 @@ const removeEvals = file => {
       const regex = process.env.NODE_ENV === 'production' ? evalRegexForProduction : evalRegexForDevelopment;
 
       if (!regex.test(data)) {
-        reject(`No CSP specific code found in ${file}.`);
+        resolve();
         return;
       }
 
-      data = data.replace(regex, '=window;');
+      const cleanData = data.replace(regex, '=window;');
 
-      fs.writeFile(file, data, err => {
-        if (err) {
-          reject(err);
+      fs.writeFile(file, cleanData, error => {
+        if (error) {
+          reject(error);
           return;
         }
 
