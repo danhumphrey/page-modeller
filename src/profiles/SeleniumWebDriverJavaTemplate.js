@@ -63,11 +63,11 @@ const renderGetAndSetSelect = entity => `
      return get${entity.name}Select().getFirstSelectedOption().getAttribute("value");
  }
  public void set${entity.name}ByValue(String value) {
-     return get${entity.name}Select().selectByValue(value);
+     get${entity.name}Select().selectByValue(value);
  }
  
  public void set${entity.name}ByText(String text) {
-     return get${entity.name}Select().selectByVisibleText(text);
+     get${entity.name}Select().selectByVisibleText(text);
  }
 `;
 

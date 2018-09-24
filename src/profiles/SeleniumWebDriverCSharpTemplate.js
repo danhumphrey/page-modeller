@@ -75,12 +75,12 @@ const renderGetAndSetSelect = entity => `
 
  public void Set${entity.name}ByValue(String value) 
  {
-     return Get${entity.name}Select().SelectByValue(value);
+     Get${entity.name}Select().SelectByValue(value);
  }
  
  public void Set${entity.name}ByText(String text) 
  {
-     return Get${entity.name}Select().SelectByText(text);
+     Get${entity.name}Select().SelectByText(text);
  }
 `;
 
