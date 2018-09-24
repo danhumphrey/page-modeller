@@ -39,9 +39,9 @@ const onClick = evt => {
   return false;
 };
 
-const start = ({ currentModel = null, profile }) => {
+const start = ({ model = null, profile }) => {
   console.log('start inspecting');
-  existingModel = currentModel;
+  existingModel = model;
   activeProfile = profile;
 
   document.addEventListener('mouseover', onMouseOver, true);
