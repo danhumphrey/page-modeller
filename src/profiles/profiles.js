@@ -1,6 +1,7 @@
 import SeleniumWebDriverJavaTemplate from './SeleniumWebDriverJavaTemplate';
 import SeleniumWebDriverCSharpTemplate from './SeleniumWebDriverCSharpTemplate';
 import RobotFrameworkTemplate from './RobotFrameworkTemplate';
+import PuppeteerTemplate from './PuppeteerTemplate';
 
 export default [
   {
@@ -17,5 +18,10 @@ export default [
     name: 'Robot Framework',
     template: RobotFrameworkTemplate,
     locators: ['id', 'linkText', 'name', 'css', 'xpath', 'tagName'],
+  },
+  {
+    name: 'Puppeteer',
+    template: PuppeteerTemplate,
+    locators: ['css', 'xpath'],
   },
 ];
