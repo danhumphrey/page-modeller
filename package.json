@@ -17,7 +17,8 @@
     "zip:chrome": "node scripts/build-zip.js",
     "zip:firefox": "web-ext build -s dist -a release-firefox --overwrite-dest",
     "watch": "npm run build -- --watch",
-    "watch:dev": "cross-env HMR=true npm run build:dev -- --watch",
+    "launch:chrome": "node scripts/launch-chrome.js",
+    "watch:chrome": "cross-env HMR=true npm run build:dev -- --watch | npm run launch:chrome ",
     "watch:firefox": "npm run build:dev && cd dist && web-ext run -i src"
   },
   "repository": {
@@ -39,6 +40,7 @@
     "babel-eslint": "^9.0.0",
     "babel-loader": "^8.0.2",
     "babel-plugin-transform-class-properties": "^6.24.1",
+    "chrome-launch": "^1.1.4",
     "copy-webpack-plugin": "^4.0.1",
     "cross-env": "^5.1.6",
     "css-loader": "^1.0.0",
