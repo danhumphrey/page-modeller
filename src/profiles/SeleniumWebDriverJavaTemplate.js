@@ -99,7 +99,7 @@ const renderGetTextMethod = entity => {
   }
   return ` 
  public String get${entity.name}() {
-     get${entity.name}Element().getText();
+     return get${entity.name}Element().getText();
  }
 `;
 };

@@ -115,7 +115,7 @@ const renderGetTextMethod = entity => {
   return ` 
  public String Get${entity.name}() 
  {
-     Get${entity.name}Element().Text;
+     return Get${entity.name}Element().Text;
  }
 `;
 };
