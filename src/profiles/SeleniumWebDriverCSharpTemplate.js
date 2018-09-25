@@ -68,7 +68,7 @@ const renderGetAndSetSelect = entity => `
      return Get${entity.name}Select().SelectedOption.Text;
  }
  
- public String Get${entity.name}Text() 
+ public String Get${entity.name}Value() 
  {
      return Get${entity.name}Select().SelectedOption.GetAttribute("value");
  }
