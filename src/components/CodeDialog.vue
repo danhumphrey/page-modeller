@@ -37,7 +37,7 @@ export default {
     copy() {
       const copyEl = document.createElement('pre');
       copyEl.setAttribute('style', 'height: 0px');
-      copyEl.contentEditable = true;
+      copyEl.contentEditable = 'true';
       document.body.appendChild(copyEl);
       copyEl.innerHTML = this.code;
       copyEl.unselectable = 'off';
