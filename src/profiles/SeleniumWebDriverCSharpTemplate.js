@@ -50,13 +50,13 @@ const renderClickMethod = entity => {
 const renderGetAndSetCheckboxRadio = entity => `
  public Boolean Get${entity.name}() 
  {
-     return Get${entity.name}Element().Selected();
+     return Get${entity.name}Element().Selected;
  }
  
  public void Set${entity.name}(Boolean onOrOff) 
  {
      IWebElement el = Get${entity.name}Element();
-     if( (onOrOff && !el.Selected()) || (!onOrOff && el.Selected())) 
+     if( (onOrOff && !el.Selected) || (!onOrOff && el.Selected)) 
      {
          el.Click(); 
      }
