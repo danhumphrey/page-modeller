@@ -23,43 +23,46 @@ const renderClickMethod = entity => {
   }
   return `
  async click${entity.name}() {
-   this.get${entity.name}Element().click();
+   const element = await this.get${entity.name}Element(); 
+   element.click();
  }
 `;
 };
 
 const renderGetAndSetCheckboxRadio = entity => `
  async get${entity.name}() {
-   return await (await this.get${entity.name}Element().getProperty('checked')).jsonValue();
+   const element = this.get${entity.name}Element();
+   return await (await element.getProperty('checked')).jsonValue();
  }
  
  async set${entity.name}(onOrOff) {
-   if( (onOrOff && !this.get${entity.name}()) || (!onOrOff && get${entity.name}())) {
-     this.click${entity.name}(); 
+   const val = await this.get${entity.name}();
+   if( (onOrOff && !val) || (!onOrOff && val)) {
+     await this.click${entity.name}(); 
    }
  }
 `;
 
 const renderGetAndSetSelect = entity => `
  async get${entity.name}Text() {
-   const element = this.get${entity.name}Element();
+   const element = await this.get${entity.name}Element();
    return await (await this.page.evaluate(el => el.options[el.selectedIndex].text, element));
  }
  
  async get${entity.name}Value() {
-   const element = this.get${entity.name}Element();
+   const element = await this.get${entity.name}Element();
    return await (await page.evaluate(el => el.options[el.selectedIndex].value, element));
  }
  
  async set${entity.name}ByValue(value) {
-   const element = this.get${entity.name}Element();  
+   const element = await this.get${entity.name}Element();  
    await (await page.evaluate(el => {
      Array.from(el.options).find(o => o.value === value).selected = 'selected';
    }, element));
  }
  
  async set${entity.name}ByText(text) {
-   const element = this.get${entity.name}Element();  
+   const element = await this.get${entity.name}Element();  
    await (await page.evaluate(el => {
      Array.from(el.options).find(o => o.text === text).selected = 'selected';
    }, element));
@@ -74,11 +77,13 @@ const renderGetAndSetMethods = entity => {
     // regular input
     return `
  async get${entity.name}() {
-   return await (await this.get${entity.name}Element().getProperty('value')).jsonValue();
+   const element = await this.get${entity.name}Element();
+   return await (await element.getProperty('value')).jsonValue();
  }
  
  async set${entity.name}(value) {
-   get${entity.name}Element().type(value);
+   const element = await this.get${entity.name}Element();
+   element.type(value);
  }
  `;
   }
@@ -95,7 +100,7 @@ const renderGetTextMethod = entity => {
   return `
  async get${entity.name}() {
    const element = await this.get${entity.name}Element();
-   return await this.page.evaluate(el => el.textContent, el);
+   return await this.page.evaluate(el => el.textContent, element);
  }
 `;
 };
