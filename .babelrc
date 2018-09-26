@@ -8,6 +8,7 @@
       "@babel/preset-env",
       {
         "useBuiltIns": "usage",
+        "forceAllTransforms": true,
         "targets": {
           "chrome" : "52",
           "firefox": "48"
