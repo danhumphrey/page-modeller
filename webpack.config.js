@@ -117,16 +117,16 @@ if (config.mode === 'production') {
   ]);
 }
 
-if (process.env.HMR === 'true') {
-  config.plugins = (config.plugins || []).concat([new ChromeExtensionReloader()]);
-}
-
 if (process.env.LAUNCH === 'true') {
   config.plugins = (config.plugins || []).concat([
     new WebpackShellPlugin({
       onBuildEnd: ['node scripts/launch-chrome.js'],
     }),
   ]);
+}
+
+if (process.env.HMR === 'true') {
+  config.plugins = (config.plugins || []).concat([new ChromeExtensionReloader()]);
 }
 
 module.exports = config;

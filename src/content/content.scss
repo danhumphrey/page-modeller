@@ -1,7 +1,7 @@
 @import '../styles/colours';
 
 .page-modeller-hover {
-  border: $hover solid 2px !important;
+  border: $inspector-border solid 2px !important;
   background-color: $inspector-bg !important;
   * {
     background-color: transparent !important;

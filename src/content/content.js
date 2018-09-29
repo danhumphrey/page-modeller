@@ -1,6 +1,9 @@
 import inspector from './inspector';
 import './content.scss';
 import dom from './dom';
+import colours from '../styles/colours.scss';
+
+let currentStyle = '';
 
 chrome.runtime.onMessage.addListener(msg => {
   console.log('content message: ');
@@ -74,8 +77,16 @@ chrome.runtime.onMessage.addListener(msg => {
 
     matches.forEach(el => {
       el.classList.add('page-modeller-highlight');
+      currentStyle = el.getAttribute('style');
+      el.setAttribute(
+        'style',
+        `${currentStyle}; border: ${colours.highlightBorder} solid 2px !important; background-color: ${colours.highlightBg} !important; background: ${
+          colours.highlighBg
+        } !important;`
+      );
       setTimeout(() => {
         el.classList.remove('page-modeller-highlight');
+        el.setAttribute('style', currentStyle);
       }, 3000);
     });
   }

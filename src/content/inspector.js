@@ -1,14 +1,22 @@
 import ModelBuilder from './ModelBuilder';
 import dom from './dom';
+import colours from '../styles/colours.scss';
 
+let currentStyle = '';
 const CLASS_NAME = 'page-modeller-hover';
 let existingModel = null;
 let activeProfile = null;
 
 const onMouseOver = evt => {
+  currentStyle = evt.target.getAttribute('style');
   evt.target.classList.add(CLASS_NAME);
+  evt.target.setAttribute(
+    'style',
+    `${currentStyle}; border: ${colours.inspectorBorder} solid 2px !important; background-color: ${colours.inspectorBg} !important; background: ${colours.inspectorBg} !important;`
+  );
 };
 const onMouseOut = evt => {
+  evt.target.setAttribute('style', currentStyle);
   evt.target.classList.remove(CLASS_NAME);
 };
 const onFocus = evt => {
@@ -20,9 +28,9 @@ const onFocus = evt => {
 const onClick = evt => {
   evt.preventDefault();
   evt.stopPropagation();
-  const element = evt.target;
-  element.classList.remove(CLASS_NAME);
+  onMouseOut(evt);
 
+  const element = evt.target;
   const tagName = dom.getTagName(element);
   const tagIndex = dom.getTagIndex(element);
 

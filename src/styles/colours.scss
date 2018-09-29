@@ -2,6 +2,7 @@ $yellow: rgba(255, 255, 0, 0.5);
 $red: red;
 $blue: #03a9f4;
 $white: #fff;
+$inspector-border: $blue;
 $inspector-bg: rgba(70, 142, 212, 0.5);
 
 $hover: $blue;
@@ -12,4 +13,8 @@ $highlight-bg: $yellow;
 
 :export {
   active: $blue;
+  inspectorBg: $inspector-bg;
+  inspectorBorder: $inspector-border;
+  highlightBg: $highlight-bg;
+  highlightBorder: $highlight-border;
 }
