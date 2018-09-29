@@ -1,3 +1,4 @@
+import lowerFirst from 'lodash/lowerFirst';
 import { isClickable, isInteractive } from './templates-helpers';
 
 const transformLocatorName = locatorName => {
@@ -10,27 +11,14 @@ const transformLocatorName = locatorName => {
       return locatorName;
   }
 };
+
 const renderLocator = entity => {
   const locator = entity.locators.find(l => l.selected);
   return `${transformLocatorName(locator.name)}=${locator.locator.replace(/"/g, "'")}`;
 };
 
-const renderLocatorVariable = entity => {
-  let output = `
-\${${entity.name}}\t${renderLocator(entity)}`;
-  if (entity.tagName === 'INPUT') {
-    if (['checkbox', 'radio'].includes(entity.type)) {
-      output += `
-\${${transformLocatorName(entity.name)}IsSelected}`;
-      return output;
-    }
-  }
-  if (!isClickable(entity)) {
-    output += `
-\${${transformLocatorName(entity.name)}Value}`;
-  }
-  return output;
-};
+const renderLocatorVariable = entity => `
+\${${lowerFirst(entity.name)}}\t${renderLocator(entity)}`;
 
 const renderLocators = entities => `
 *** Variables ***${entities.map(entity => renderLocatorVariable(entity)).join('')}`;
@@ -44,7 +32,7 @@ const renderClickMethod = entity => {
     return ` 
 Click ${entity.name}
     [Documentation]  Click on the ${entity.name} ${entity.tagName} element
-    Click  Element  \${${entity.name}}  
+    Click  Element  \${${lowerFirst(entity.name)}}  
 `;
   }
   return '';
@@ -53,36 +41,34 @@ Click ${entity.name}
 const renderGetAndSetCheckboxRadio = entity => `
 Set ${entity.name}
     [Documentation]  Set the ${entity.name} ${entity.tagName} element
-    Click  Element  \${${entity.name}}
+    Click  Element  \${${lowerFirst(entity.name)}}
 
 Get ${entity.name}
     [Documentation]  Returns the state of the ${entity.name} ${entity.tagName} element
-    \${${entity.name}IsSelected}= Run Keyword And Return Status  Checkbox Should Be Selected  \${${entity.name}}
-    [Return]  \${${entity.name}IsSelected}
+    \${${lowerFirst(entity.name)}IsSelected}=  Run Keyword And Return Status  Checkbox Should Be Selected  \${${lowerFirst(entity.name)}}
+    [Return]  \${${lowerFirst(entity.name)}IsSelected}
 `;
 
 const renderGetAndSetSelect = entity => `
 Set ${entity.name}
-    [Arguments]  \${${entity.name}Value}=\${DATA['${entity.name}']}
+    [Arguments]  \${${lowerFirst(entity.name)}Value}
     [Documentation]  Set ${entity.name} ${entity.tagName} element by value
-    Select From List \${${entity.name}}  \${${entity.name}Value}
+    Select From List  \${${lowerFirst(entity.name)}}  \${${lowerFirst(entity.name)}Value}
     
 Set ${entity.name} By Label
-    [Arguments]  \${${entity.name}Value}=\${DATA['${entity.name}']}
+    [Arguments]  \${${lowerFirst(entity.name)}Label}
     [Documentation]  Set ${entity.name} ${entity.tagName} element by label
-    Select From List By Label  \${${entity.name}}  \${${entity.name}Value}
+    Select From List By Label  \${${lowerFirst(entity.name)}}  \${${lowerFirst(entity.name)}Label}
 
 Get ${entity.name} Value
-    [Arguments]  \${${entity.name}Value}=\${DATA['${entity.name}']}
     [Documentation]  Get ${entity.name} ${entity.tagName} element value
-    \${${entity.name}Value}=  Get Selected List Value  \${${entity.name}}
-    [Return]  \${${entity.name}Value}
+    \${${lowerFirst(entity.name)}Value}=  Get Selected List Value  \${${lowerFirst(entity.name)}}
+    [Return]  \${${lowerFirst(entity.name)}Value}
 
 Get ${entity.name} Label
-    [Arguments]  \${${entity.name}Value}=\${DATA['${entity.name}']}
     [Documentation]  Get ${entity.name} ${entity.tagName} element label
-    \${${entity.name}Value}=  Get Selected List Label  \${${entity.name}}
-    [Return]  \${${entity.name}Value}    
+    \${${lowerFirst(entity.name)}Label}=  Get Selected List Label  \${${lowerFirst(entity.name)}}
+    [Return]  \${${entity.name}Label}    
 `;
 
 const renderGetAndSetMethods = entity => {
@@ -94,13 +80,13 @@ const renderGetAndSetMethods = entity => {
     return `
 Get ${entity.name}
     [Documentation]  Get ${entity.name} ${entity.tagName} element value
-    \${${entity.name}Value}=  Get Value  \${${entity.name}}
-    [Return] \${${entity.name}Value}
+    \${${lowerFirst(entity.name)}Value}=  Get Value  \${${lowerFirst(entity.name)}}
+    [Return]  \${${lowerFirst(entity.name)}Value}
  
 Set ${entity.name}
-    [Arguments]  \${${entity.name}Value}=\${DATA['${entity.name}']}
+    [Arguments]  \${${lowerFirst(entity.name)}Value}
     [Documentation]  Set ${entity.name} ${entity.tagName} element value
-    Input Text \${${entity.name}} \${${entity.name}Value}
+    Input Text  \${${lowerFirst(entity.name)}}  \${${lowerFirst(entity.name)}Value}
 `;
   }
   if (entity.tagName === 'SELECT') {
@@ -115,8 +101,8 @@ const renderGetTextMethod = entity => {
   return ` 
 Get ${entity.name}
     [Documentation]  Get ${entity.name} ${entity.tagName} element value
-    \${${entity.name}Value}=  Get Text  \${${entity.name}}
-    [Return] \${${entity.name}Value} 
+    \${${lowerFirst(entity.name)}Value}=  Get Text  \${${lowerFirst(entity.name)}}
+    [Return]  \${${lowerFirst(entity.name)}Value} 
 `;
 };
 export default model =>
