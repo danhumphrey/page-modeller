@@ -1,6 +1,6 @@
 {
   "name": "page-modeller",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.0",
   "description": "A browser extension for modelling page objects",
   "main": "gulpfile.js",
   "author": "Dan Humphrey - danh2000@gmail.com",
@@ -18,7 +18,8 @@
     "zip:firefox": "web-ext build -s dist -a release-firefox --overwrite-dest",
     "watch": "npm run build -- --watch",
     "watch:chrome": "cross-env HMR=true LAUNCH=true npm run build:dev -- --watch",
-    "watch:firefox": "npm run build:dev && cd dist && web-ext run -i src"
+    "watch:firefox": "npm run build:dev && cd dist && web-ext run -i src",
+    "release": "npm run build && npm run zip:chrome && npm run zip:firefox && cd scripts && node release.js"
   },
   "repository": {
     "type": "git",
