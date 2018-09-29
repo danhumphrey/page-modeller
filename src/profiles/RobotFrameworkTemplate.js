@@ -1,6 +1,15 @@
 import lowerFirst from 'lodash/lowerFirst';
 import { isClickable, isInteractive } from './templates-helpers';
 
+let minWidth = 0;
+
+const getMinWidth = entities => {
+  const longest = entities.reduce((p, c) => (p.name.length > c.name.length ? p : c))
+  return longest.name.length + '  '.length;
+}
+
+const nameSpaces = name => ''.padEnd(minWidth - name.length, ' ');
+
 const transformLocatorName = locatorName => {
   switch (locatorName) {
     case 'linkText':
@@ -18,10 +27,14 @@ const renderLocator = entity => {
 };
 
 const renderLocatorVariable = entity => `
-\${${lowerFirst(entity.name)}}\t${renderLocator(entity)}`;
+\${${lowerFirst(entity.name)}}${nameSpaces(entity.name)}${renderLocator(entity)}`;
 
-const renderLocators = entities => `
+const renderLocators = entities => {
+  minWidth = getMinWidth(entities);
+  console.log(minWidth);
+  return `
 *** Variables ***${entities.map(entity => renderLocatorVariable(entity)).join('')}`;
+};
 
 const renderKeywordsComment = () => `
 
@@ -72,6 +85,10 @@ Get ${entity.name} Label
 `;
 
 const renderGetAndSetMethods = entity => {
+  if (isClickable(entity)) {
+    return '';
+  }
+
   if (['INPUT', 'TEXTAREA'].includes(entity.tagName)) {
     if (['checkbox', 'radio'].includes(entity.type)) {
       return renderGetAndSetCheckboxRadio(entity);

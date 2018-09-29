@@ -72,6 +72,10 @@ const renderGetAndSetSelect = entity => `
 `;
 
 const renderGetAndSetMethods = entity => {
+  if (isClickable(entity)) {
+    return '';
+  }
+
   if (['INPUT', 'TEXTAREA'].includes(entity.tagName)) {
     if (['checkbox', 'radio'].includes(entity.type)) {
       return renderGetAndSetCheckboxRadio(entity);
