@@ -3,6 +3,9 @@ import './content.scss';
 import dom from './dom';
 import colours from '../styles/colours.scss';
 
+const bg = colours.highlightBg;
+const bo = colours.highlightBorder;
+
 let currentStyle = '';
 
 chrome.runtime.onMessage.addListener(msg => {
@@ -78,12 +81,7 @@ chrome.runtime.onMessage.addListener(msg => {
     matches.forEach(el => {
       el.classList.add('page-modeller-highlight');
       currentStyle = el.getAttribute('style');
-      el.setAttribute(
-        'style',
-        `${currentStyle}; border: ${colours.highlightBorder} solid 2px !important; background-color: ${colours.highlightBg} !important; background: ${
-          colours.highlighBg
-        } !important;`
-      );
+      el.setAttribute('style', `${currentStyle}; border: ${bo} solid 2px !important; background-color: ${bg} !important; background: ${bg} !important;`);
       setTimeout(() => {
         el.classList.remove('page-modeller-highlight');
         el.setAttribute('style', currentStyle);
