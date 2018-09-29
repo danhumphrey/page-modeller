@@ -39,7 +39,8 @@ export default {
       copyEl.setAttribute('style', 'height: 0px');
       copyEl.contentEditable = 'true';
       document.body.appendChild(copyEl);
-      copyEl.innerHTML = this.code;
+      copyEl.removeChild(copyEl.firstChild);
+      copyEl.appendChild(document.createTextNode(this.code));
       copyEl.unselectable = 'off';
       copyEl.focus();
       document.execCommand('SelectAll');
