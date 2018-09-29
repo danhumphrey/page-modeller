@@ -32,7 +32,7 @@ const renderClickMethod = entity => {
     return ` 
 Click ${entity.name}
     [Documentation]  Click on the ${entity.name} ${entity.tagName} element
-    Click  Element  \${${lowerFirst(entity.name)}}  
+    Click Element  \${${lowerFirst(entity.name)}}  
 `;
   }
   return '';
@@ -41,7 +41,7 @@ Click ${entity.name}
 const renderGetAndSetCheckboxRadio = entity => `
 Set ${entity.name}
     [Documentation]  Set the ${entity.name} ${entity.tagName} element
-    Click  Element  \${${lowerFirst(entity.name)}}
+    Click Element  \${${lowerFirst(entity.name)}}
 
 Get ${entity.name}
     [Documentation]  Returns the state of the ${entity.name} ${entity.tagName} element
