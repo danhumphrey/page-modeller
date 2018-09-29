@@ -117,6 +117,7 @@
   </div>
 </template>
 <script>
+import upperFirst from 'lodash/upperFirst';
 import { validationMixin } from 'vuelidate';
 import { required } from 'vuelidate/lib/validators';
 
@@ -244,7 +245,7 @@ export default {
       if (!this.$v.$invalid) {
         delete this.editedItem.locators.find(l => l.selected).selected;
         this.editedItem.locators.find(l => l.name === this.currentLocator.name).selected = true;
-        this.editedItem.name = this.editedItemName;
+        this.editedItem.name = upperFirst(this.editedItemName);
         Object.assign(this.model.entities[this.editedIndex], this.editedItem);
         this.close(true);
       }
