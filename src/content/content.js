@@ -1,6 +1,7 @@
 import inspector from './inspector';
 import './content.scss';
 import dom from './dom';
+import scrollIntoView from 'scroll-into-view-if-needed';
 import colours from '../styles/colours.scss';
 
 const bg = colours.highlightBg;
@@ -76,7 +77,7 @@ chrome.runtime.onMessage.addListener(msg => {
       chrome.runtime.sendMessage({ type: 'contentPopupWarning', data: { message: `${matches.length} elements match that locator` } });
     }
 
-    matches[0].scrollIntoViewIfNeeded();
+    scrollIntoView(matches[0], { behavior: 'smooth', scrollMode: 'if-needed' });
 
     matches.forEach(el => {
       el.classList.add('page-modeller-highlight');

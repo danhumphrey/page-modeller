@@ -167,54 +167,6 @@ const findElementsByPartialLinkText = (document, locator) => {
   return els.filter(el => el.textContent.indexOf(locator) !== -1);
 };
 
-if (!Element.prototype.scrollIntoViewIfNeeded) {
-  Element.prototype.scrollIntoViewIfNeeded = centerIfNeeded => {
-    const makeRange = (start, length) => ({ start, length, end: start + length });
-
-    const coverRange = (inner, outer) => {
-      if (centerIfNeeded === false || (outer.start < inner.end && inner.start < outer.end)) {
-        return Math.max(inner.end - outer.length, Math.min(outer.start, inner.start));
-      }
-      return (inner.start + inner.end - outer.length) / 2;
-    };
-
-    const makePoint = (x, y) => ({
-      x,
-      y,
-      translate: function translate(dX, dY) {
-        return makePoint(x + dX, y + dY);
-      },
-    });
-
-    const absolute = (element, parent) => {
-      let currentElement = element;
-      let pt = parent;
-      while (currentElement) {
-        pt = pt.translate(element.offsetLeft, element.offsetTop);
-        currentElement = currentElement.offsetParent;
-      }
-      return pt;
-    };
-
-    let target = absolute(this, makePoint(0, 0));
-
-    const extent = makePoint(this.offsetWidth, this.offsetHeight);
-
-    let elem = this.parentNode;
-
-    while (elem instanceof HTMLElement) {
-      // Apply desired scroll amount.
-      const origin = absolute(elem, makePoint(elem.clientLeft, elem.clientTop));
-      elem.scrollLeft = coverRange(makeRange(target.x - origin.x, extent.x), makeRange(elem.scrollLeft, elem.clientWidth));
-      elem.scrollTop = coverRange(makeRange(target.y - origin.y, extent.y), makeRange(elem.scrollTop, elem.clientHeight));
-
-      // Determine actual scroll amount by reading back scroll properties.
-      target = target.translate(-elem.scrollLeft, -elem.scrollTop);
-      elem = elem.parentNode;
-    }
-  };
-}
-
 export default {
   isVisible,
   getTagName,
