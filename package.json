@@ -1,6 +1,6 @@
 {
   "name": "page-modeller",
-  "version": "0.0.1-beta.0",
+  "version": "0.0.2-beta.2",
   "description": "A browser extension for modelling page objects",
   "main": "gulpfile.js",
   "author": "Dan Humphrey - danh2000@gmail.com",
@@ -14,13 +14,15 @@
     "prettier:write": "npm run prettier -- --write",
     "build": "cross-env NODE_ENV=production webpack --hide-modules",
     "build:dev": "cross-env NODE_ENV=development webpack --hide-modules",
-    "zip:chrome": "node scripts/build-zip.js",
+    "zip:chrome": "node scripts/build-chrome.js",
     "zip:firefox": "web-ext build -s dist -a release-firefox --overwrite-dest",
+    "manifest:firefox": "rm -rf dist-firefox && cp -R dist dist-firefox && cd scripts && node firefox-manifest.js && cd ../",
+    "sign:firefox": "source .appenv && npm run manifest:firefox && web-ext sign --api-key $AMO_KEY --api-secret $AMO_SECRET -s dist-firefox -a release-firefox",
     "zip": "npm run zip:chrome && npm run zip:firefox",
     "watch": "npm run build -- --watch",
     "watch:chrome": "cross-env HMR=true LAUNCH=true npm run build:dev -- --watch",
     "watch:firefox": "npm run build:dev && cd dist && web-ext run -i src",
-    "release": "npm run build && npm run zip && cd scripts && node release.js"
+    "release": "cd scripts && node release.js && cd ./ && npm run build && npm run zip:chrome && npm run sign:firefox"
   },
   "repository": {
     "type": "git",

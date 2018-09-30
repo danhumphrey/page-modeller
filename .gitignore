@@ -5,7 +5,8 @@
 *.build.js
 node_modules
 /*.log
-/dist
+/dist*
 /release-chrome
 /release-firefox
 Thumbs.db
+.appenv
