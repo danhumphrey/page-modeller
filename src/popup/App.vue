@@ -1,6 +1,6 @@
 <template>
   <div>
-    <p>Please open the developer tools to use the Page Modeller extension.</p>
+    <p>Please open DevTools to use the Page Modeller extension.</p>
   </div>
 </template>
 
