@@ -16,11 +16,11 @@
    sodipodi:version="0.32"
    inkscape:version="0.92.3 (2405546, 2018-03-11)"
    version="1.0"
-   sodipodi:docname="icon_bw.svg"
+   sodipodi:docname="icon_grey.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
-   inkscape:export-filename="\\Mac\Home\projects\page-modeller\src\icons\icon_32-dark.png"
-   inkscape:export-xdpi="12.29"
-   inkscape:export-ydpi="12.29">
+   inkscape:export-filename="\\Mac\Home\projects\page-modeller\src\icons\icon_16_grey.png"
+   inkscape:export-xdpi="6.1399999"
+   inkscape:export-ydpi="6.1399999">
   <defs
      id="defs2836">
     <linearGradient
@@ -115,7 +115,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
