@@ -1,5 +1,6 @@
 {
   "name": "Page Modeller",
+  "short_name": "PageModeller",
   "description": "Chrome and Firefox DevTools extension for modelling page objects.",
   "version": "0.0.2.2",
   "version_name": "0.0.2 beta 2",
