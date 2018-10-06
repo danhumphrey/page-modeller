@@ -53,4 +53,7 @@ export default {
 </script>
 
 <style scoped>
+pre {
+  font-size: 11px;
+}
 </style>
