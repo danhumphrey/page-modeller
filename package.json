@@ -1,6 +1,6 @@
 {
   "name": "page-modeller",
-  "version": "0.0.4-beta.1",
+  "version": "0.5.1-beta.1",
   "description": "A browser extension for modelling page objects",
   "main": "gulpfile.js",
   "author": "Dan Humphrey - danh2000@gmail.com",
@@ -22,20 +22,20 @@
     "watch": "npm run build -- --watch",
     "watch:chrome": "cross-env HMR=true LAUNCH=true npm run build:dev -- --watch",
     "watch:firefox": "npm run build:dev && npm run zip:firefox && npm run manifest:firefox && cd dist-firefox && web-ext run",
-    "release": "cd scripts && node release.js && cd ./ && npm run build && npm run zip:chrome && npm run sign:firefox"
+    "version": "cd scripts && node release.js && cd ./",
+    "release": "npm run version && npm run build && npm run zip:chrome && npm run sign:firefox"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/danhumphrey/page-modeller.git"
   },
   "dependencies": {
-    "chrome-launch": "^1.1.4",
     "lodash": "^4.17.10",
-    "scroll-into-view-if-needed": "^2.2.16",
+    "scroll-into-view-if-needed": "^2.2.17",
     "simmerjs": "^0.5.6",
     "vue": "^2.5.17",
     "vuelidate": "^0.7.4",
-    "vuetify": "^1.2.4"
+    "vuetify": "^1.2.6"
   },
   "devDependencies": {
     "@babel/core": "^7.1.0",
@@ -45,6 +45,7 @@
     "babel-eslint": "^9.0.0",
     "babel-loader": "^8.0.2",
     "babel-plugin-transform-class-properties": "^6.24.1",
+    "chrome-launch": "^1.1.4",
     "copy-webpack-plugin": "^4.0.1",
     "cross-env": "^5.1.6",
     "css-loader": "^1.0.0",
