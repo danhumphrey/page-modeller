@@ -16,6 +16,7 @@ Currently supported tools and languages are:
 Install for Chrome and Firefox from the links below:
 
 https://chrome.google.com/webstore/detail/page-modeller/ejgkdhekcepfgdghejpkmbfjgnioejak
+
 https://addons.mozilla.org/en-US/firefox/addon/page-modeller/
 
 ## Screenshots
