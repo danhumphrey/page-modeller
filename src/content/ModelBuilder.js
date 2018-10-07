@@ -18,13 +18,13 @@ export default class ModelBuilder {
     return returnName;
   }
 
-  maxLength(name) {
+  static maxNameLength(name) {
     return name.substring(0, 20);
   }
 
   cleanName(name) {
     const cc = camelCase(name) || name; // accommodate for weird bug which results in empty string for single character!
-    return this.deDupeName(upperFirst(this.maxLength(cc)));
+    return this.deDupeName(upperFirst(ModelBuilder.maxNameLength(cc)));
   }
 
   generateName(element) {
