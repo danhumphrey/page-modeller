@@ -12,9 +12,10 @@
         :has-model="hasModel"
         :profile-list="profiles"
         :active-profile="activeProfile"
+        :show-tooltips="options.showTooltips"
 
     />
-    <Table  :model="model" :is-inspecting="isInspecting" @emptyModel="emptyModel" />
+    <Table  :model="model" :is-inspecting="isInspecting" :show-tooltips="options.showTooltips" @emptyModel="emptyModel" />
     <Alert ref="alert"></Alert>
     <Popup ref="popup"></Popup>
     <Confirm ref="confirm"></Confirm>
@@ -31,6 +32,7 @@ import Popup from '../components/Popup';
 import Confirm from '../components/Confirm';
 import profiles from '../profiles/profiles';
 import CodeDialog from '../components/CodeDialog';
+import defaultOptions from '../options/defaultOptions';
 
 export default {
   name: 'app',
@@ -48,6 +50,7 @@ export default {
       isScanning: false,
       isAdding: false,
       model: null,
+      options: defaultOptions,
       profiles,
       activeProfile: '',
     };
@@ -106,13 +109,24 @@ export default {
     this.$root.$popupSuccess = this.$refs.popup.success;
     this.$root.$profileEditor = this.$refs.profileEditor;
 
-    chrome.storage.sync.get('activeProfileName', result => {
-      // get the active activeProfile from storage sync or activate the first activeProfile as default
-      if (result && result.activeProfileName) {
-        this.profiles.find(p => p.name === result.activeProfileName).active = true;
-        this.activeProfile = result.activeProfileName;
-      } else {
-        this.activateProfile(profiles[0].name);
+    chrome.storage.sync.get(['activeProfileName', 'options'], result => {
+      if (result) {
+        console.log('got storage');
+        console.log(result);
+        if (result.options) {
+          this.options = result.options;
+        } else {
+          // no options saved, so save defaults
+          chrome.runtime.sendMessage({ type: 'saveOptions', data: { options: this.options } });
+        }
+
+        // get the active activeProfile from storage sync or activate the first activeProfile as default
+        if (result.activeProfileName) {
+          this.profiles.find(p => p.name === result.activeProfileName).active = true;
+          this.activeProfile = result.activeProfileName;
+        } else {
+          this.activateProfile(profiles[0].name);
+        }
       }
     });
 

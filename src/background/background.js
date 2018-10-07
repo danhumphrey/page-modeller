@@ -55,6 +55,9 @@ chrome.runtime.onMessage.addListener(msg => {
     case 'activateProfile':
       activateProfile(msg.data.profileName);
       return;
+    case 'saveOptions':
+      chrome.storage.sync.set({ options: msg.data.options }, () => {});
+      return;
     case 'generateModel':
       chrome.storage.sync.get('activeProfileName', result => {
         // get the active activeProfile from storage sync or activate the first activeProfile as default

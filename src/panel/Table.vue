@@ -36,7 +36,7 @@
                 <v-flex>
                   <v-text-field
                     v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
-                    <v-tooltip left open-delay="1000" slot="append">
+                    <v-tooltip left open-delay="1000" slot="append" :disabled="!showTooltips">
                       <v-icon
                         slot="activator"
                         small
@@ -71,7 +71,7 @@
           <td class="unselectable" v-bind:class="{disabled: isInspecting}">{{ props.item.name }}</td>
           <td class="unselectable" v-bind:class="{disabled: isInspecting}">{{ itemLocator(props.item) }}</td>
           <td class="text-xs-right px-0 unselectable">
-            <v-tooltip left open-delay="1000" :disabled="isInspecting">
+            <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
               <v-icon
                 slot="activator"
                 small
@@ -83,7 +83,7 @@
               </v-icon>
               <span>View Matched Elements</span>
             </v-tooltip>
-            <v-tooltip left open-delay="1000" :disabled="isInspecting">
+            <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
               <v-icon
                 slot="activator"
                 small
@@ -95,7 +95,7 @@
               </v-icon>
               <span>Edit</span>
             </v-tooltip>
-            <v-tooltip left open-delay="1000" :disabled="isInspecting">
+            <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
               <v-icon
                 slot="activator"
                 small
@@ -130,7 +130,7 @@ export default {
     };
   },
   name: 'Table',
-  props: ['isInspecting', 'model'],
+  props: ['isInspecting', 'model', 'showTooltips'],
   data() {
     return {
       dialog: false,
