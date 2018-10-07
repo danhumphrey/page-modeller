@@ -117,10 +117,19 @@ if (config.mode === 'production') {
   ]);
 }
 
-if (process.env.LAUNCH === 'true') {
+if (process.env.LAUNCH_CHROME === 'true') {
   config.plugins = (config.plugins || []).concat([
     new WebpackShellPlugin({
       onBuildEnd: ['node scripts/launch-chrome.js'],
+    }),
+  ]);
+}
+
+if (process.env.LAUNCH_FIREFOX === 'true') {
+  config.plugins = (config.plugins || []).concat([
+    new WebpackShellPlugin({
+      onBuildExit: ['npm run manifest:firefox'],
+      onBuildEnd: ['npm run manifest:firefox && cd dist-firefox && web-ext run'],
     }),
   ]);
 }
