@@ -4,9 +4,9 @@ import { isClickable, isInteractive } from './templates-helpers';
 let minWidth = 0;
 
 const getMinWidth = entities => {
-  const longest = entities.reduce((p, c) => (p.name.length > c.name.length ? p : c))
+  const longest = entities.reduce((p, c) => (p.name.length > c.name.length ? p : c));
   return longest.name.length + '  '.length;
-}
+};
 
 const nameSpaces = name => ''.padEnd(minWidth - name.length, ' ');
 
