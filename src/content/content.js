@@ -1,7 +1,7 @@
+import scrollIntoView from 'scroll-into-view-if-needed';
 import inspector from './inspector';
 import './content.scss';
 import dom from './dom';
-import scrollIntoView from 'scroll-into-view-if-needed';
 import colours from '../styles/colours.scss';
 
 const bg = colours.highlightBg;
@@ -15,12 +15,12 @@ chrome.runtime.onMessage.addListener(msg => {
 
   if (msg.type === 'startScanning') {
     console.log('startScanning');
-    inspector.start({ profile: msg.data.profile });
+    inspector.start({ profile: msg.data.profile, options: msg.data.options });
   }
 
   if (msg.type === 'startAdding') {
     console.log('startAdding');
-    inspector.start({ model: msg.data.model || null, profile: msg.data.profile });
+    inspector.start({ model: msg.data.model || null, profile: msg.data.profile, options: msg.data.options });
   }
 
   if (msg.type === 'stopInspecting') {

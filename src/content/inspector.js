@@ -6,6 +6,7 @@ let currentStyle = '';
 const CLASS_NAME = 'page-modeller-hover';
 let existingModel = null;
 let activeProfile = null;
+let appOptions = {};
 
 const onMouseOver = evt => {
   currentStyle = evt.target.getAttribute('style');
@@ -41,16 +42,17 @@ const onClick = evt => {
 
   // eslint-disable-next-line no-use-before-define
   stop();
-
   const b = new ModelBuilder();
-  chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel({ element, activeProfile, existingModel }) } });
+  console.log('about to create model');
+  chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel({ element, activeProfile, appOptions, existingModel }) } });
   return false;
 };
 
-const start = ({ model = null, profile }) => {
+const start = ({ model = null, profile, options }) => {
   console.log('start inspecting');
   existingModel = model;
   activeProfile = profile;
+  appOptions = options;
 
   document.addEventListener('mouseover', onMouseOver, true);
   document.addEventListener('mouseout', onMouseOut, true);

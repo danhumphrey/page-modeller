@@ -1,19 +1,29 @@
 import Simmer from 'simmerjs';
 
-const getStyle = (element, style) => element.ownerDocument.defaultView.getComputedStyle(element, null)[style];
-
 const isVisible = element => {
-  const w = element.offsetWidth;
-  const h = element.offsetHeight;
-  const force = element.tagName === 'TR';
-
-  if (w === 0 && h === 0 && !force) {
+  const style = element.ownerDocument.defaultView.getComputedStyle(element);
+  if (style.display === 'none') return false;
+  if (style.visibility !== 'visible') return false;
+  if (style.opacity < 0.1) return false;
+  if (element.offsetWidth + element.offsetHeight + element.getBoundingClientRect().height + element.getBoundingClientRect().width === 0) {
     return false;
   }
-  if (w !== 0 && h !== 0 && !force) {
-    return true;
+  const elemCenter = {
+    x: element.getBoundingClientRect().left + element.offsetWidth / 2,
+    y: element.getBoundingClientRect().top + element.offsetHeight / 2,
+  };
+  if (elemCenter.x < 0) return false;
+  if (elemCenter.x > (document.documentElement.clientWidth || window.innerWidth)) return false;
+  if (elemCenter.y < 0) return false;
+  if (elemCenter.y > (document.documentElement.clientHeight || window.innerHeight)) return false;
+  let pointContainer = document.elementFromPoint(elemCenter.x, elemCenter.y);
+  while (pointContainer !== null) {
+    if (pointContainer === element) {
+      return true;
+    }
+    pointContainer = pointContainer.parentNode;
   }
-  return getStyle(element, 'display') !== 'none';
+  return false;
 };
 
 const getTagName = element => element.tagName;

@@ -79,12 +79,11 @@ export default class ModelBuilder {
     };
   }
 
-  createModel({ element, activeProfile, existingModel = null }) {
+  createModel({ element, activeProfile, appOptions, existingModel = null }) {
     console.log('createModel');
 
     this.model = existingModel || ModelBuilder.createEmptyModel();
     this.activeProfile = activeProfile;
-
     if (existingModel) {
       this.model.entities.push(this.createEntity(element));
       return this.model;
@@ -95,7 +94,7 @@ export default class ModelBuilder {
       NodeFilter.SHOW_ELEMENT,
       {
         acceptNode(node) {
-          if (dom.isVisible(node)) {
+          if (dom.isVisible(node) || appOptions.modelHiddenElements) {
             return NodeFilter.FILTER_ACCEPT;
           }
           return NodeFilter.FILTER_REJECT; // node and children

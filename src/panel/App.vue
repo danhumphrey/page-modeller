@@ -61,7 +61,7 @@ export default {
 
       console.log('scan');
       if (this.isScanning) {
-        chrome.runtime.sendMessage({ type: 'appStartScanning', data: { profile: this.activeProfile } });
+        chrome.runtime.sendMessage({ type: 'appStartScanning', data: { profile: this.activeProfile, options: this.options } });
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
@@ -70,7 +70,10 @@ export default {
       this.isAdding = !this.isAdding;
 
       if (this.isAdding) {
-        chrome.runtime.sendMessage({ type: 'appStartAdding', data: { model: this.model === null ? ModelBuilder.createEmptyModel() : this.model, profile: this.activeProfile } });
+        chrome.runtime.sendMessage({
+          type: 'appStartAdding',
+          data: { model: this.model === null ? ModelBuilder.createEmptyModel() : this.model, profile: this.activeProfile, options: this.options },
+        });
       } else {
         chrome.runtime.sendMessage({ type: 'appStopInspecting', data: {} });
       }
@@ -111,8 +114,6 @@ export default {
 
     chrome.storage.sync.get(['activeProfileName', 'options'], result => {
       if (result) {
-        console.log('got storage');
-        console.log(result);
         if (result.options) {
           this.options = result.options;
         } else {

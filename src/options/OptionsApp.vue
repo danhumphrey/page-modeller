@@ -8,6 +8,9 @@
               <v-switch label="Show Tooltips"
                         v-model="showTooltips">
               </v-switch>
+              <v-switch label="Model Hidden Elements"
+                        v-model="modelHiddenElements">
+              </v-switch>
             </v-flex>
           </v-layout>
         </v-form>
@@ -29,6 +32,7 @@ export default {
     return {
       unchanged: true,
       showTooltips: defaultOptions.showTooltips,
+      modelHiddenElements: defaultOptions.modelHiddenElements,
       originalOptions: defaultOptions,
     };
   },
@@ -39,6 +43,7 @@ export default {
         data: {
           options: {
             showTooltips: this.showTooltips,
+            modelHiddenElements: this.modelHiddenElements,
           },
         },
       });
@@ -51,6 +56,7 @@ export default {
         if (result.options) {
           this.originalOptions = JSON.parse(JSON.stringify(result.options));
           this.showTooltips = this.originalOptions.showTooltips;
+          this.modelHiddenElements = this.originalOptions.modelHiddenElements;
           this.options = result.options;
         } else {
           // no options saved, so save defaults
@@ -63,6 +69,11 @@ export default {
   watch: {
     showTooltips(val) {
       if (this.originalOptions.showTooltips !== val) {
+        this.unchanged = false;
+      }
+    },
+    modelHiddenElements(val) {
+      if (this.originalOptions.modelHiddenElements !== val) {
         this.unchanged = false;
       }
     },
