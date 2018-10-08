@@ -12,20 +12,38 @@ const isElementOffScreen = element => {
   return false;
 };
 
-const isElementCovered = element => {
-  const elemCenter = {
+const getElementCoordinates = element => {
+  return {
     x: element.getBoundingClientRect().left + element.offsetWidth / 2,
     y: element.getBoundingClientRect().top + element.offsetHeight / 2,
   };
+};
+const isElementHidden = element => {
+  console.log('isElementHidden');
+  let coords = getElementCoordinates(element);
 
-  let pointContainer = document.elementFromPoint(elemCenter.x, elemCenter.y);
-  while (pointContainer !== null) {
-    if (pointContainer === element) {
-      return false;
+  /* Stash current Window Scroll */
+  const scrollX = window.pageXOffset;
+  const scrollY = window.pageYOffset;
+  /* Scroll to element */
+  window.scrollTo(coords.x, coords.y);
+  /* Calculate new relative element coordinates */
+  const newX = coords.x - window.pageXOffset;
+  const newY = coords.y - window.pageYOffset;
+
+  coords = getElementCoordinates(element);
+
+  let hidden = true;
+  let elementsAtPoint = document.elementsFromPoint(coords.x, coords.y);
+  elementsAtPoint.some(e => {
+    if (e === element) {
+      hidden = false;
+      return true;
     }
-    pointContainer = pointContainer.parentNode;
-  }
-  return true;
+  });
+  /* revert to the previous scroll location */
+  window.scrollTo(scrollX, scrollY);
+  return hidden;
 };
 
 const isVisible = element => {
@@ -37,7 +55,8 @@ const isVisible = element => {
   if (element.offsetWidth + element.offsetHeight + element.getBoundingClientRect().height + element.getBoundingClientRect().width === 0) {
     return false;
   }
-  if (element.offsetHeight === 0) {
+
+  if (element.offsetHeight > 0 && isElementHidden(element)) {
     return false;
   }
   return true;
@@ -195,7 +214,7 @@ const findElementsByPartialLinkText = (document, locator) => {
 };
 
 export default {
-  isElementCovered,
+  isElementHidden,
   isElementOffScreen,
   isVisible,
   getTagName,
