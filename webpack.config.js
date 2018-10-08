@@ -129,7 +129,8 @@ if (process.env.LAUNCH_FIREFOX === 'true') {
   config.plugins = (config.plugins || []).concat([
     new WebpackShellPlugin({
       onBuildExit: ['npm run manifest:firefox'],
-      onBuildEnd: ['npm run manifest:firefox && cd dist-firefox && web-ext run'],
+      onBuildEnd: ['npm run manifest:firefox && web-ext run -s dist-firefox'],
+      safe: true,
     }),
   ]);
 }
