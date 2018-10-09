@@ -5,7 +5,7 @@ const path = require('path');
 const zipFolder = require('zip-folder');
 const extPackageJson = require('../package.json');
 
-const DEST_DIR = path.join(__dirname, '../dist');
+const DEST_DIR = path.join(__dirname, '../build');
 const DEST_ZIP_DIR = path.join(__dirname, '../release-chrome');
 
 const extractExtensionData = () => ({
@@ -19,11 +19,11 @@ const makeDestZipDirIfNotExists = () => {
   }
 };
 
-const buildZip = (src, dist, zipFilename) => {
+const buildZip = (src, dest, zipFilename) => {
   console.info(`Building ${zipFilename}...`);
 
   return new Promise((resolve, reject) => {
-    zipFolder(src, path.join(dist, zipFilename), err => {
+    zipFolder(src, path.join(dest, zipFilename), err => {
       if (err) {
         reject(err);
       } else {

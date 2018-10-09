@@ -1,6 +1,6 @@
 /* eslint-disable import/no-extraneous-dependencies */
 const fs = require('fs');
-const manifest = require('../dist-firefox/manifest.json');
+const manifest = require('../build-firefox/manifest.json');
 
 (async () => {
   manifest.applications = {
@@ -9,5 +9,5 @@ const manifest = require('../dist-firefox/manifest.json');
       strict_min_version: '57.0',
     },
   };
-  fs.writeFileSync('../dist-firefox/manifest.json', JSON.stringify(manifest, null, 2));
+  fs.writeFileSync('../build-firefox/manifest.json', JSON.stringify(manifest, null, 2));
 })();

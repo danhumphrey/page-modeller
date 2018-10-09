@@ -5,7 +5,8 @@
 *.build.js
 node_modules
 /*.log
-/dist*
+/build
+/build-firefox
 /release-chrome
 /release-firefox
 Thumbs.db

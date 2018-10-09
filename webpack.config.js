@@ -18,7 +18,7 @@ const config = {
     'popup/popup': './popup/popup.js',
   },
   output: {
-    path: `${__dirname}/dist`,
+    path: `${__dirname}/build`,
     filename: '[name].js',
   },
   resolve: {
@@ -129,7 +129,7 @@ if (process.env.LAUNCH_FIREFOX === 'true') {
   config.plugins = (config.plugins || []).concat([
     new WebpackShellPlugin({
       onBuildExit: ['npm run manifest:firefox'],
-      onBuildEnd: ['npm run manifest:firefox && web-ext run -s dist-firefox'],
+      onBuildEnd: ['npm run manifest:firefox && web-ext run -s build-firefox'],
       safe: true,
     }),
   ]);
