@@ -1,6 +1,6 @@
 # ![Page Modeller](src/icons/icon_32.png) Page Modeller
 
-> Chrome and Firefox DevTools extension for modelling page objects.
+> Chrome and Firefox DevTools extension for modelling web pages for automation.
 
 The Page Modeller extension enables developers to scan a web page and generate page object style code for various tools, languages and frameworks and test the UI locators in the browser.
 
