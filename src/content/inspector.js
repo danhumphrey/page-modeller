@@ -36,7 +36,7 @@ const onClick = evt => {
   const tagIndex = dom.getTagIndex(element);
 
   if (existingModel && existingModel.entities.find(entity => undefined !== entity.locators.find(l => l.name === 'tagIndex' && l.locator === `${tagName}${tagIndex}`))) {
-    chrome.runtime.sendMessage({ type: 'contentAlertMessage', data: { title: 'Add Element', message: 'That element already exists in the model' } });
+    chrome.runtime.sendMessage({ type: 'contentPopupError', data: { message: 'That element already exists in the model' } });
     return false;
   }
 
