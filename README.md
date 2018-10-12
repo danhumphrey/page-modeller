@@ -11,10 +11,12 @@ Currently supported tools and languages are:
 - Puppeteer
 - Robot Framework
 
-* [Installation](https://github.com/danhumphrey/page-modeller#installation)
-* [Screenshots](https://github.com/danhumphrey/page-modeller#screenshots)
-* [Contribute](https://github.com/danhumphrey/page-modeller#contribute)
-* [License](https://github.com/danhumphrey/page-modeller#license)
+## Contents
+
+- [Installation](https://github.com/danhumphrey/page-modeller#installation)
+- [Screenshots](https://github.com/danhumphrey/page-modeller#screenshots)
+- [Contribute](https://github.com/danhumphrey/page-modeller#contribute)
+- [License](https://github.com/danhumphrey/page-modeller#license)
 
 ## Installation
 
@@ -61,4 +63,4 @@ This extension is being actively developed and is considered a beta release.
 
 This library is distributed under the MIT license. Please see the [LICENSE](https://github.com/danhumphrey/page-modeller/blob/master/LICENSE) file.
 
-:point_up_2: I should call this licence as I don't live in the US, but I'm adopting the MIT spelling :wink:
+:point_up_2: I really should call this "licence" as I don't live in the US, but I'm adopting the MIT spelling :wink:
