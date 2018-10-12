@@ -31,6 +31,7 @@ export default class ModelBuilder {
     const replacements = {
       '-': '_dash',
       '!': '_exclamation',
+      // eslint-disable-next-line prettier/prettier
       $: '_dollar',
       '%': '_percent',
       '^': '_caret',
