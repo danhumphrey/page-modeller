@@ -22,8 +22,52 @@ export default class ModelBuilder {
     return name.substring(0, 20);
   }
 
+  replaceSymbols(name) {
+    let ret = name;
+    const matches = name.match(/[-!$%^&*()+|~=`{}\[\]:";'<>?,.\/\\]/g);
+    if (matches === null) {
+      return name;
+    }
+    const replacements = {
+      '-': '_dash',
+      '!': '_exclamation',
+      $: '_dollar',
+      '%': '_percent',
+      '^': '_caret',
+      '&': '_ampersand',
+      '*': '_asterisk',
+      '(': '_lBracket',
+      ')': '_rBracket',
+      '+': '_plus',
+      '|': '_pipe',
+      '~': '_tilde',
+      '=': '_equals',
+      '`': '_backtick',
+      '{': '_lbrace',
+      '}': '_rbrace',
+      '[': '_lSquareBracket',
+      ']': '_rSquareBracket',
+      ':': '_colon',
+      '"': '_quote',
+      ';': '_semicolon',
+      "'": '_singleQuote',
+      '<': '_lt',
+      '>': '_gt',
+      '?': '_questionMark',
+      ',': '_comma',
+      '.': '_dot',
+      '/': '_forwardSlash',
+      '\\': '_backSlash',
+    };
+    matches.forEach(m => {
+      ret = ret.split(m).join(replacements[m]);
+    });
+    return ret;
+  }
+
   cleanName(name) {
-    const cc = camelCase(name) || name; // accommodate for weird bug which results in empty string for single character!
+    const ret = this.replaceSymbols(name);
+    const cc = camelCase(ret) || ret; // accommodate for weird bug which results in empty string for single character!
     return this.deDupeName(upperFirst(ModelBuilder.maxNameLength(cc)));
   }
 
@@ -63,7 +107,7 @@ export default class ModelBuilder {
 
     if (textContent) {
       let n = this.cleanName(textContent);
-      if (n.match(/^\d/)) {
+      if (!n.match(/^\w+$/)) {
         n = `${tagName}${n}`;
       }
       return n;
@@ -146,16 +190,16 @@ export default class ModelBuilder {
         locator: dom.getCssSelector(element),
       },
       {
+        name: 'xpath',
+        locator: dom.getXPath(element),
+      },
+      {
         name: 'className',
         locator: dom.getClassName(element),
       },
       {
         name: 'tagName',
         locator: tagName,
-      },
-      {
-        name: 'xpath',
-        locator: dom.getXPath(element),
       },
       {
         name: 'tagIndex',
@@ -173,12 +217,14 @@ export default class ModelBuilder {
         locators.push(l);
       }
     });
-
+    console.log('locators');
     for (let selectedLocator = locators[locators.length - 1], currentLocator, i = 0; i < locators.length; i += 1) {
       currentLocator = locators[i];
+      console.log(`current: ${currentLocator.name} : ${currentLocator.locator}`);
       if (currentLocator.locator) {
         delete selectedLocator.selected;
         currentLocator.selected = true;
+        console.log(`selected: ${currentLocator.name} : ${currentLocator.locator}`);
         break;
       }
     }

@@ -12,12 +12,10 @@ const isElementOffScreen = element => {
   return false;
 };
 
-const getElementCoordinates = element => {
-  return {
-    x: element.getBoundingClientRect().left + element.offsetWidth / 2,
-    y: element.getBoundingClientRect().top + element.offsetHeight / 2,
-  };
-};
+const getElementCoordinates = element => ({
+  x: element.getBoundingClientRect().left + element.offsetWidth / 2,
+  y: element.getBoundingClientRect().top + element.offsetHeight / 2,
+});
 const isElementHidden = element => {
   console.log('isElementHidden');
   let coords = getElementCoordinates(element);
@@ -34,7 +32,7 @@ const isElementHidden = element => {
   coords = getElementCoordinates(element);
 
   let hidden = true;
-  let elementsAtPoint = document.elementsFromPoint(coords.x, coords.y);
+  const elementsAtPoint = document.elementsFromPoint(coords.x, coords.y);
   elementsAtPoint.some(e => {
     if (e === element) {
       hidden = false;
@@ -116,7 +114,11 @@ const getLinkText = element => {
 
 const getCssSelector = element => {
   const simmer = new Simmer(element.ownerDocument);
-  return simmer(element);
+  const ret = simmer(element);
+  if (ret === false) {
+    return null;
+  }
+  return ret;
 };
 
 const getElementTreeXPath = (element, strict) => {
