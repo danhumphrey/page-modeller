@@ -45,9 +45,6 @@ const sendMessageToActiveTab = (msgType, data = {}) => {
 };
 
 chrome.runtime.onMessage.addListener(msg => {
-  console.log('background message: ');
-  console.dir(msg);
-
   switch (msg.type) {
     case 'showOptions':
       chrome.runtime.openOptionsPage();
@@ -69,7 +66,6 @@ chrome.runtime.onMessage.addListener(msg => {
         }
         const code = activeProfile.template(msg.data.model);
         sendMessage('showCode', { code });
-        console.log(code);
       });
       return;
     default:
@@ -87,6 +83,5 @@ chrome.runtime.onMessage.addListener(msg => {
       sendMessage(msgType, msg.data);
       break;
     default:
-      console.log(`Message received: '${msg.type}'`);
   }
 });

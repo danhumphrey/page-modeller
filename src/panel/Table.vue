@@ -258,7 +258,6 @@ export default {
       chrome.runtime.sendMessage({ type: 'appShowMatches', data: { locator } });
     },
     showMatchesForEntity(entity) {
-      console.log(entity);
       const locator = entity.locators.find(l => l.selected);
       this.showMatchesForLocator(locator);
     },

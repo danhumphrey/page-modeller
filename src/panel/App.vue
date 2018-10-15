@@ -59,7 +59,6 @@ export default {
     scan() {
       this.isScanning = !this.isScanning;
 
-      console.log('scan');
       if (this.isScanning) {
         chrome.runtime.sendMessage({ type: 'appStartScanning', data: { profile: this.activeProfile, options: this.options } });
       } else {
@@ -89,8 +88,6 @@ export default {
       });
     },
     generateModel() {
-      console.log('Generate Model:');
-      console.dir(this.model);
       chrome.runtime.sendMessage({ type: 'generateModel', data: { model: this.model } });
     },
     activateProfile(profileName) {
@@ -150,9 +147,6 @@ export default {
             this.$root.$popupSuccess(msg.data.message);
             return;
           case 'elementInspected':
-            console.log('elementInspected message received');
-            console.log(msg.data.model);
-
             this.model = msg.data.model;
 
             if (this.isAdding) {
@@ -164,7 +158,6 @@ export default {
             this.isAdding = false;
             return;
           case 'showCode':
-            console.log('show code');
             this.$refs.code.show(this.activeProfile, msg.data.code);
             break;
           default:

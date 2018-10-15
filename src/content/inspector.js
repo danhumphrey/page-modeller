@@ -43,13 +43,11 @@ const onClick = evt => {
   // eslint-disable-next-line no-use-before-define
   stop();
   const b = new ModelBuilder();
-  console.log('about to create model');
   chrome.runtime.sendMessage({ type: 'contentElementInspected', data: { model: b.createModel({ element, activeProfile, appOptions, existingModel }) } });
   return false;
 };
 
 const start = ({ model = null, profile, options }) => {
-  console.log('start inspecting');
   existingModel = model;
   activeProfile = profile;
   appOptions = options;

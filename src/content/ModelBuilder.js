@@ -24,6 +24,7 @@ export default class ModelBuilder {
 
   replaceSymbols(name) {
     let ret = name;
+    // eslint-disable-next-line no-useless-escape
     const matches = name.match(/[-!$%^&*()+|~=`{}\[\]:";'<>?,.\/\\]/g);
     if (matches === null) {
       return name;
@@ -125,8 +126,6 @@ export default class ModelBuilder {
   }
 
   createModel({ element, activeProfile, appOptions, existingModel = null }) {
-    console.log('createModel');
-
     this.model = existingModel || ModelBuilder.createEmptyModel();
     this.activeProfile = activeProfile;
     if (existingModel) {
@@ -218,14 +217,12 @@ export default class ModelBuilder {
         locators.push(l);
       }
     });
-    console.log('locators');
+
     for (let selectedLocator = locators[locators.length - 1], currentLocator, i = 0; i < locators.length; i += 1) {
       currentLocator = locators[i];
-      console.log(`current: ${currentLocator.name} : ${currentLocator.locator}`);
       if (currentLocator.locator) {
         delete selectedLocator.selected;
         currentLocator.selected = true;
-        console.log(`selected: ${currentLocator.name} : ${currentLocator.locator}`);
         break;
       }
     }

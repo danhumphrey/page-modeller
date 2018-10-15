@@ -11,21 +11,16 @@ let styleTimeout = null;
 
 const removeStyle = el => {
   const style = el.getAttribute('style');
-  el.setAttribute('style', style.replace(`border: ${bo} solid 2px !important; background-color: ${bg} !important; background: ${bg} !important;`, ''));
+  el.setAttribute('style', style.replace(styleString, ''));
   el.classList.remove('page-modeller-highlight');
 };
 
 chrome.runtime.onMessage.addListener(msg => {
-  console.log('content message: ');
-  console.dir(msg);
-
   if (msg.type === 'startScanning') {
-    console.log('startScanning');
     inspector.start({ profile: msg.data.profile, options: msg.data.options });
   }
 
   if (msg.type === 'startAdding') {
-    console.log('startAdding');
     inspector.start({ model: msg.data.model || null, profile: msg.data.profile, options: msg.data.options });
   }
 

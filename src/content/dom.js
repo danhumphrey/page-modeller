@@ -17,7 +17,6 @@ const getElementCoordinates = element => ({
   y: element.getBoundingClientRect().top + element.offsetHeight / 2,
 });
 const isElementHidden = element => {
-  console.log('isElementHidden');
   let coords = getElementCoordinates(element);
 
   /* Stash current Window Scroll */
@@ -25,9 +24,6 @@ const isElementHidden = element => {
   const scrollY = window.pageYOffset;
   /* Scroll to element */
   window.scrollTo(coords.x, coords.y);
-  /* Calculate new relative element coordinates */
-  const newX = coords.x - window.pageXOffset;
-  const newY = coords.y - window.pageYOffset;
 
   coords = getElementCoordinates(element);
 
@@ -38,6 +34,7 @@ const isElementHidden = element => {
       hidden = false;
       return true;
     }
+    return false;
   });
   /* revert to the previous scroll location */
   window.scrollTo(scrollX, scrollY);
@@ -45,7 +42,6 @@ const isElementHidden = element => {
 };
 
 const isVisible = element => {
-  console.log('isVisible');
   const style = element.ownerDocument.defaultView.getComputedStyle(element);
   if (style.display === 'none') return false;
   if (style.visibility !== 'visible') return false;

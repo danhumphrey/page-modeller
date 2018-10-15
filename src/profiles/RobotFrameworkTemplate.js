@@ -31,7 +31,6 @@ const renderLocatorVariable = entity => `
 
 const renderLocators = entities => {
   minWidth = getMinWidth(entities);
-  console.log(minWidth);
   return `
 *** Variables ***${entities.map(entity => renderLocatorVariable(entity)).join('')}`;
 };
