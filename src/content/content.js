@@ -6,8 +6,14 @@ import colours from '../styles/colours.scss';
 
 const bg = colours.highlightBg;
 const bo = colours.highlightBorder;
+const styleString = `border: ${bo} solid 2px !important; background-color: ${bg} !important; background: ${bg} !important;`;
+let styleTimeout = null;
 
-let currentStyle = '';
+const removeStyle = el => {
+  const style = el.getAttribute('style');
+  el.setAttribute('style', style.replace(`border: ${bo} solid 2px !important; background-color: ${bg} !important; background: ${bg} !important;`, ''));
+  el.classList.remove('page-modeller-highlight');
+};
 
 chrome.runtime.onMessage.addListener(msg => {
   console.log('content message: ');
@@ -77,15 +83,19 @@ chrome.runtime.onMessage.addListener(msg => {
       chrome.runtime.sendMessage({ type: 'contentPopupWarning', data: { message: `${matches.length} elements match that locator` } });
     }
 
+    // remove existing matches
+    clearTimeout(styleTimeout);
+    [...dom.findElementsByClassName(document, 'page-modeller-highlight')].forEach(el => {
+      removeStyle(el);
+    });
+
     scrollIntoView(matches[0], { behavior: 'smooth', scrollMode: 'if-needed' });
 
     matches.forEach(el => {
       el.classList.add('page-modeller-highlight');
-      currentStyle = el.getAttribute('style');
-      el.setAttribute('style', `${currentStyle}; border: ${bo} solid 2px !important; background-color: ${bg} !important; background: ${bg} !important;`);
-      setTimeout(() => {
-        el.classList.remove('page-modeller-highlight');
-        el.setAttribute('style', currentStyle);
+      el.setAttribute('style', styleString);
+      styleTimeout = setTimeout(() => {
+        removeStyle(el);
       }, 3000);
     });
   }
