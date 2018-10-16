@@ -22,7 +22,7 @@ export default class ModelBuilder {
     return name.substring(0, 20);
   }
 
-  replaceSymbols(name) {
+  static replaceSymbols(name) {
     let ret = name;
     // eslint-disable-next-line no-useless-escape
     const matches = name.match(/[-!$%^&*()+|~=`{}\[\]:";'<>?,.\/\\]/g);
@@ -32,7 +32,6 @@ export default class ModelBuilder {
     const replacements = {
       '-': '_dash',
       '!': '_exclamation',
-      // eslint-disable-next-line prettier/prettier
       $: '_dollar',
       '%': '_percent',
       '^': '_caret',
@@ -61,6 +60,7 @@ export default class ModelBuilder {
       '/': '_forwardSlash',
       '\\': '_backSlash',
     };
+
     matches.forEach(m => {
       ret = ret.split(m).join(replacements[m]);
     });
@@ -68,7 +68,7 @@ export default class ModelBuilder {
   }
 
   cleanName(name) {
-    const ret = this.replaceSymbols(name);
+    const ret = ModelBuilder.replaceSymbols(name);
     const cc = camelCase(ret) || ret; // accommodate for weird bug which results in empty string for single character!
     return this.deDupeName(upperFirst(ModelBuilder.maxNameLength(cc)));
   }
