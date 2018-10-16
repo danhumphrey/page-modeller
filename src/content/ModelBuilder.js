@@ -30,35 +30,35 @@ export default class ModelBuilder {
       return name;
     }
     const replacements = {
-      '-': '_dash',
-      '!': '_exclamation',
-      $: '_dollar',
-      '%': '_percent',
-      '^': '_caret',
-      '&': '_ampersand',
-      '*': '_asterisk',
-      '(': '_lBracket',
-      ')': '_rBracket',
-      '+': '_plus',
-      '|': '_pipe',
-      '~': '_tilde',
-      '=': '_equals',
-      '`': '_backtick',
-      '{': '_lbrace',
-      '}': '_rbrace',
-      '[': '_lSquareBracket',
-      ']': '_rSquareBracket',
-      ':': '_colon',
-      '"': '_quote',
-      ';': '_semicolon',
-      "'": '_singleQuote',
-      '<': '_lt',
-      '>': '_gt',
-      '?': '_questionMark',
-      ',': '_comma',
-      '.': '_dot',
-      '/': '_forwardSlash',
-      '\\': '_backSlash',
+      '-': 'dash',
+      '!': 'exclamation',
+      $: 'dollar',
+      '%': 'percent',
+      '^': 'caret',
+      '&': 'ampersand',
+      '*': 'asterisk',
+      '(': 'lBracket',
+      ')': 'rBracket',
+      '+': 'plus',
+      '|': 'pipe',
+      '~': 'tilde',
+      '=': 'equals',
+      '`': 'backtick',
+      '{': 'lbrace',
+      '}': 'rbrace',
+      '[': 'lSquareBracket',
+      ']': 'rSquareBracket',
+      ':': 'colon',
+      '"': 'quote',
+      ';': 'semicolon',
+      "'": 'singleQuote',
+      '<': 'lt',
+      '>': 'gt',
+      '?': 'questionMark',
+      ',': 'comma',
+      '.': 'dot',
+      '/': 'forwardSlash',
+      '\\': 'backSlash',
     };
 
     matches.forEach(m => {
@@ -68,7 +68,24 @@ export default class ModelBuilder {
   }
 
   cleanName(name) {
-    const ret = ModelBuilder.replaceSymbols(name);
+    let ret = name;
+    const matches = ret.substr(0, 1).match(/^[0-9]/g);
+    if (matches) {
+      const replacements = {
+        '0': 'zero',
+        '1': 'one',
+        '2': 'two',
+        '3': 'three',
+        '4': 'four',
+        '5': 'five',
+        '6': 'six',
+        '7': 'seven',
+        '8': 'eight',
+        '9': 'nine',
+      };
+      ret = ret.replace(matches[0], replacements[matches[0]]);
+    }
+    ret = ModelBuilder.replaceSymbols(ret);
     const cc = camelCase(ret) || ret; // accommodate for weird bug which results in empty string for single character!
     return this.deDupeName(upperFirst(ModelBuilder.maxNameLength(cc)));
   }
