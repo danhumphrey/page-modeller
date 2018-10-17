@@ -1,6 +1,6 @@
 # ![Page Modeller](src/icons/icon_32.png) Page Modeller
 
-> Chrome and Firefox DevTools extension for modelling web pages for automation.
+> Chrome, Firefox and Opera DevTools extension for modelling web pages for automation.
 
 The Page Modeller extension enables developers to scan a web page and generate page object style code for various tools, languages and frameworks and test the UI locators in the browser.
 
@@ -20,11 +20,13 @@ Currently supported tools and languages are:
 
 ## Installation
 
-Install for Chrome and Firefox from the links below:
+Install the browser extension from the links below:
 
 https://chrome.google.com/webstore/detail/page-modeller/ejgkdhekcepfgdghejpkmbfjgnioejak
 
 https://addons.mozilla.org/en-US/firefox/addon/page-modeller/
+
+https://addons.opera.com/en/extensions/details/page-modeller/
 
 ## Screenshots
 
@@ -32,7 +34,7 @@ https://addons.mozilla.org/en-US/firefox/addon/page-modeller/
   <img src="media/screen1_chrome.jpg" width="600" alt="Chrome Selenium WebDriver Java" /> 
 </p>
 <p align="center">
-  <img src="media/screen2_firefox.png" width="600" alt="Firefox testing locators" /> 
+  <img src="media/screen2_firefox.png" width="600" alt="Firefox Testing Locators" /> 
 </p>
 <p align="center">
   <img src="media/screen3_chrome.png" width="600" alt="Chrome Model Entities" /> 
@@ -40,7 +42,9 @@ https://addons.mozilla.org/en-US/firefox/addon/page-modeller/
 <p align="center">
   <img src="media/screen4_firefox.png" width="600" alt="Firefox Robot Framework" /> 
 </p>
-
+<p align="center">
+  <img src="media/screen3_opera.png" width="600" alt="Opera Edit Entity Locator" /> 
+</p>
 ## Contribute
 
 ### Bugs and Suggestions
