@@ -85,7 +85,9 @@ export default class ModelBuilder {
       };
       ret = ret.replace(matches[0], replacements[matches[0]]);
     }
-    ret = ModelBuilder.replaceSymbols(ret);
+    if (ret.length === 1) {
+      ret = ModelBuilder.replaceSymbols(ret);
+    }
     const cc = camelCase(ret) || ret; // accommodate for weird bug which results in empty string for single character!
     return this.deDupeName(upperFirst(ModelBuilder.maxNameLength(cc)));
   }
