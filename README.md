@@ -45,6 +45,7 @@ https://addons.opera.com/en/extensions/details/page-modeller/
 <p align="center">
   <img src="media/screen3_opera.png" width="600" alt="Opera Edit Entity Locator" /> 
 </p>
+
 ## Contribute
 
 ### Bugs and Suggestions
