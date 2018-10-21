@@ -1,5 +1,5 @@
-import upperFirst from 'lodash/upperFirst';
-import camelCase from 'lodash/camelCase';
+import generateName from './elementNamingPipeline';
+
 import dom from './dom';
 import profiles from '../profiles/profiles';
 
@@ -16,125 +16,6 @@ export default class ModelBuilder {
       this.model.usedNames[name] = 1;
     }
     return returnName;
-  }
-
-  static maxNameLength(name) {
-    return name.substring(0, 20);
-  }
-
-  static replaceSymbols(name) {
-    let ret = name;
-    // eslint-disable-next-line no-useless-escape
-    const matches = name.match(/[-!$%^&*()+|~=`{}\[\]:";'<>?,.\/\\]/g);
-    if (matches === null) {
-      return name;
-    }
-    const replacements = {
-      '-': 'dash',
-      '!': 'exclamation',
-      $: 'dollar',
-      '%': 'percent',
-      '^': 'caret',
-      '&': 'ampersand',
-      '*': 'asterisk',
-      '(': 'lBracket',
-      ')': 'rBracket',
-      '+': 'plus',
-      '|': 'pipe',
-      '~': 'tilde',
-      '=': 'equals',
-      '`': 'backtick',
-      '{': 'lbrace',
-      '}': 'rbrace',
-      '[': 'lSquareBracket',
-      ']': 'rSquareBracket',
-      ':': 'colon',
-      '"': 'quote',
-      ';': 'semicolon',
-      "'": 'singleQuote',
-      '<': 'lt',
-      '>': 'gt',
-      '?': 'questionMark',
-      ',': 'comma',
-      '.': 'dot',
-      '/': 'forwardSlash',
-      '\\': 'backSlash',
-    };
-
-    matches.forEach(m => {
-      ret = ret.split(m).join(replacements[m]);
-    });
-    return ret;
-  }
-
-  cleanName(name) {
-    let ret = name;
-    const matches = ret.substr(0, 1).match(/^[0-9]/g);
-    if (matches) {
-      const replacements = {
-        '0': 'zero',
-        '1': 'one',
-        '2': 'two',
-        '3': 'three',
-        '4': 'four',
-        '5': 'five',
-        '6': 'six',
-        '7': 'seven',
-        '8': 'eight',
-        '9': 'nine',
-      };
-      ret = ret.replace(matches[0], replacements[matches[0]]);
-    }
-    if (ret.length === 1) {
-      ret = ModelBuilder.replaceSymbols(ret);
-    }
-    const cc = camelCase(ret) || ret; // accommodate for weird bug which results in empty string for single character!
-    return this.deDupeName(upperFirst(ModelBuilder.maxNameLength(cc)));
-  }
-
-  generateName(element) {
-    const id = dom.getId(element);
-    const name = dom.getName(element);
-    const textContent = dom.getTextContent(element);
-    const tagName = dom.getTagName(element);
-    const tagIndex = dom.getTagIndex(element);
-
-    if (['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'PROGRESS', 'METER'].includes(tagName)) {
-      const label = dom.getLabel(element);
-      const labelName = label ? label.textContent.trim() : '';
-
-      if (labelName) {
-        return this.cleanName(labelName);
-      }
-
-      if (tagName === 'BUTTON' || ['submit', 'reset'].includes(element.type)) {
-        const val = element.value.trim();
-        if (val) {
-          return this.cleanName(val);
-        }
-      }
-    }
-
-    if (name) {
-      return this.cleanName(name);
-    }
-    if (id) {
-      return this.cleanName(id);
-    }
-
-    if (tagName === 'A' && element.href && element.href.startsWith('mailto:')) {
-      return this.cleanName(`${element.href.replace('mailto:', '').split('@')[0]}EmailLink`);
-    }
-
-    if (textContent) {
-      let n = this.cleanName(textContent);
-      if (!n.match(/^\w+$/)) {
-        n = `${tagName}${n}`;
-      }
-      return n;
-    }
-
-    return this.cleanName(`${tagName}${tagIndex}`);
   }
 
   static createEmptyModel() {
@@ -176,7 +57,7 @@ export default class ModelBuilder {
 
   createEntity(element) {
     return {
-      name: this.generateName(element),
+      name: this.deDupeName(generateName(element)),
       locators: this.getLocators(element),
       tagName: dom.getTagName(element),
       type: dom.getTagType(element),
