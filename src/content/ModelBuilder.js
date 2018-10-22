@@ -64,6 +64,24 @@ export default class ModelBuilder {
     };
   }
 
+  generateLinkTextLocator(element, partial = false) {
+    const newLineRegex = /(\r\n|\r|\n)/;
+    const linkText = dom.getLinkText(element);
+    if (!linkText) {
+      return null;
+    }
+    const newLineMatches = linkText.match(newLineRegex);
+    if (newLineMatches) {
+      // handle links containing new lines
+      console.log(newLineMatches);
+      if (partial) {
+        return linkText.split(newLineRegex)[0];
+      }
+      return null;
+    }
+    return linkText;
+  }
+
   getLocators(element) {
     const tagName = dom.getTagName(element);
     const tagIndex = dom.getTagIndex(element);
@@ -75,11 +93,11 @@ export default class ModelBuilder {
       },
       {
         name: 'linkText',
-        locator: dom.getLinkText(element),
+        locator: this.generateLinkTextLocator(element),
       },
       {
         name: 'partialLinkText',
-        locator: dom.getLinkText(element),
+        locator: this.generateLinkTextLocator(element, true),
       },
       {
         name: 'name',
