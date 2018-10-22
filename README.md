@@ -34,6 +34,9 @@ https://addons.opera.com/en/extensions/details/page-modeller/
 <p align="center">
   <a href="https://www.youtube.com/watch?v=h14zWscnloI" target="_blank"><img src="media/youtube.jpg" width="600" alt="YouTube" /></a> 
 </p>
+<p align="center">
+  Click to watch demonstration video on YouTube.
+</p>
 
 ## Screenshots
 
