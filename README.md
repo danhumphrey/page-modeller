@@ -14,6 +14,7 @@ Currently supported tools and languages are:
 ## Contents
 
 - [Installation](https://github.com/danhumphrey/page-modeller#installation)
+- [Usage](https://github.com/danhumphrey/page-modeller#usage)
 - [Screenshots](https://github.com/danhumphrey/page-modeller#screenshots)
 - [Contribute](https://github.com/danhumphrey/page-modeller#contribute)
 - [License](https://github.com/danhumphrey/page-modeller#license)
@@ -27,6 +28,12 @@ https://chrome.google.com/webstore/detail/page-modeller/ejgkdhekcepfgdghejpkmbfj
 https://addons.mozilla.org/en-US/firefox/addon/page-modeller/
 
 https://addons.opera.com/en/extensions/details/page-modeller/
+
+## Usage
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=h14zWscnloI" target="_blank"><img src="media/youtube.jpg" width="600" alt="YouTube" /></a> 
+</p>
 
 ## Screenshots
 
