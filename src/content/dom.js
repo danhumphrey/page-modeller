@@ -117,7 +117,7 @@ const getCssSelector = element => {
   return ret;
 };
 
-const getElementTreeXPath = (element, strict) => {
+const getXPath = (element, strict) => {
   const paths = [];
   let currentElement = element;
 
@@ -137,13 +137,6 @@ const getElementTreeXPath = (element, strict) => {
   }
 
   return paths.length ? `/${paths.join('/')}` : null;
-};
-
-const getXPath = element => {
-  if (element && element.id) {
-    return `//*[@id="${element.id.trim()}"]`;
-  }
-  return getElementTreeXPath(element);
 };
 
 const getLabel = element => {

@@ -1,6 +1,8 @@
 import generateName from './elementNamingPipeline';
 
 import dom from './dom';
+import getXPath from './xpath';
+
 import profiles from '../profiles/profiles';
 
 const INTERACTIVE_ELEMENTS = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
@@ -109,7 +111,7 @@ export default class ModelBuilder {
       },
       {
         name: 'xpath',
-        locator: dom.getXPath(element),
+        locator: getXPath(element),
       },
       {
         name: 'className',
