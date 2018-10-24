@@ -8,107 +8,50 @@ const labelNameRule = element => {
   const tagName = dom.getTagName(element);
 
   if (!['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'PROGRESS', 'METER', 'OUTPUT'].includes(tagName)) {
-    return {
-      handled: false,
-    };
+    false;
   }
 
   const label = dom.getLabel(element);
   const labelName = label ? label.textContent.trim() : '';
-
-  if (labelName) {
-    return {
-      name: labelName,
-      handled: true,
-    };
-  }
-
-  return {
-    handled: false,
-  };
+  return labelName || false;
 };
 
 const buttonValueRule = element => {
   const tagName = dom.getTagName(element);
   if (tagName === 'BUTTON' || ['submit', 'reset'].includes(element.type)) {
     const val = element.value.trim();
-    if (val) {
-      return {
-        name: val,
-        handled: true,
-      };
-    }
+    return val || false;
   }
-
-  return {
-    handled: false,
-  };
+  return false;
 };
 
 const nameAttributeRule = element => {
   const name = dom.getName(element);
-  if (name) {
-    return {
-      name,
-      handled: true,
-    };
-  }
-
-  return {
-    handled: false,
-  };
+  return name || false;
 };
 
 const idAttributeRule = element => {
   const id = dom.getId(element);
-  if (id) {
-    return {
-      name: id,
-      handled: true,
-    };
-  }
-
-  return {
-    handled: false,
-  };
+  return id || false;
 };
 
 const textContentRule = element => {
   const textContent = dom.getTextContent(element);
-  if (textContent) {
-    return {
-      name: textContent,
-      handled: true,
-    };
-  }
-
-  return {
-    handled: false,
-  };
+  return textContent || false;
 };
 
 const specialElementTypeRule = element => {
   const tagName = dom.getTagName(element);
   if (tagName === 'INPUT' && ['password', 'email', 'tel', 'url', 'search', 'color', 'date', 'month', 'week', 'time'].includes(element.type)) {
-    return {
-      name: `${element.type}Element`,
-      handled: true,
-    };
+    return `${element.type}Element`;
   }
-
-  return {
-    handled: false,
-  };
+  return false;
 };
 
 const defaultNameRule = element => {
   const tagName = dom.getTagName(element);
   const tagIndex = dom.getTagIndex(element);
-
-  return {
-    name: `${tagName}${tagIndex}`,
-    handled: true,
-  };
+  return `${tagName}${tagIndex}`;
 };
 
 const limitNameLength = name => name.substring(0, MAX_NAME_LENGTH);
@@ -190,9 +133,10 @@ const cleanName = (name, element) => {
   let ret = name.replace(/\s/g, '');
   ret = replaceNumbers(ret);
   ret = replaceSymbols(ret);
+  ret = ret.replace(/[^\w]+$/, '');
 
   if (!ret.match(/^\w+$/)) {
-    ret = defaultNameRule(element).name;
+    ret = defaultNameRule(element);
   }
   ret = camelCase(ret) || ret; // accommodate for weird bug which results in empty string for single character!
   return upperFirst(limitNameLength(ret));
@@ -205,9 +149,8 @@ const generateName = element => {
   let ret;
   for (let i = 0, j = rules.length; i < j; i += 1) {
     const rule = rules[i];
-    const output = rule(element);
-    if (output.handled) {
-      ret = output.name;
+    ret = rule(element);
+    if (ret) {
       break;
     }
   }
