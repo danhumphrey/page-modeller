@@ -4,8 +4,8 @@
   "description": "A browser extension for modelling web pages for automation",
   "main": "gulpfile.js",
   "author": "Dan Humphrey - danh2000@gmail.com",
-  "homepage": "https://github.com/danhumphrey/page-modeller#page-modeller",
-  "license": "",
+  "homepage": "https://github.com/danhumphrey/page-modeller",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "lint": "eslint --ext .js,.vue src",
