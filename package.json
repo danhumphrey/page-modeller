@@ -9,7 +9,6 @@
   "private": true,
   "scripts": {
     "lint": "eslint --ext .js,.vue src",
-    "precommit": "pretty-quick --staged",
     "prettier": "prettier \"src/**/*.{js,vue}\"",
     "prettier:write": "npm run prettier -- --write",
     "build": "cross-env NODE_ENV=production webpack --hide-modules",
@@ -76,5 +75,10 @@
     "webpack-cli": "^3.1.2",
     "webpack-shell-plugin": "^0.5.0",
     "zip-folder": "^1.0.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged"
+    }
   }
 }
