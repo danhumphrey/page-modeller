@@ -61,28 +61,28 @@ const getElementNodeName = element => {
 };
 
 const getSameSiblingCount = element => {
-  const childNodes = element.parentNode.childNodes;
+  const { childNodes } = element.parentNode;
   let total = 0;
-  for (let i = 0; i < childNodes.length; i++) {
+  for (let i = 0; i < childNodes.length; i += 1) {
     const child = childNodes[i];
     if (child.nodeName === element.nodeName) {
-      total++;
+      total += 1;
     }
   }
   return total - 1;
 };
 
 const getIndexOfElement = element => {
-  const childNodes = element.parentNode.childNodes;
+  const { childNodes } = element.parentNode;
   let total = 0;
   let index = -1;
-  for (let i = 0; i < childNodes.length; i++) {
+  for (let i = 0; i < childNodes.length; i += 1) {
     const child = childNodes[i];
     if (child.nodeName === element.nodeName) {
       if (child === element) {
         index = total;
       }
-      total++;
+      total += 1;
     }
   }
   return index;
