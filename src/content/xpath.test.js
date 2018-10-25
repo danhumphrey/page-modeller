@@ -227,7 +227,7 @@ describe('absoluteXPathBuilder', () => {
   });
 
   test('multiple siblings returns correct xpath', () => {
-    document.body.innerHTML = '<div><p>Span 1</p><<p class="second">Paragraph</p></div>';
+    document.body.innerHTML = '<div><p>Span 1</p><p class="second">Paragraph</p></div>';
     const element = document.querySelector('p.second');
     expect(absoluteXPathBuilder(element)).toBe('/html/body/div/p[2]');
   });
