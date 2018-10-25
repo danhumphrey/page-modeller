@@ -61,10 +61,10 @@ const getElementNodeName = element => {
 };
 
 const getSameSiblingCount = element => {
-  let childNodes = element.parentNode.childNodes;
+  const childNodes = element.parentNode.childNodes;
   let total = 0;
   for (let i = 0; i < childNodes.length; i++) {
-    let child = childNodes[i];
+    const child = childNodes[i];
     if (child.nodeName === element.nodeName) {
       total++;
     }
@@ -73,11 +73,11 @@ const getSameSiblingCount = element => {
 };
 
 const getIndexOfElement = element => {
-  let childNodes = element.parentNode.childNodes;
+  const childNodes = element.parentNode.childNodes;
   let total = 0;
   let index = -1;
   for (let i = 0; i < childNodes.length; i++) {
-    let child = childNodes[i];
+    const child = childNodes[i];
     if (child.nodeName === element.nodeName) {
       if (child === element) {
         index = total;
@@ -89,11 +89,11 @@ const getIndexOfElement = element => {
 };
 
 const getRelativeXPathFromParent = element => {
-  let index = getIndexOfElement(element);
-  let sameSiblingCount = getSameSiblingCount(element);
-  let currentPath = '/' + getElementNodeName(element);
+  const index = getIndexOfElement(element);
+  const sameSiblingCount = getSameSiblingCount(element);
+  let currentPath = `/${getElementNodeName(element)}`;
   if (index > 0 || sameSiblingCount > 0) {
-    currentPath += '[' + (index + 1) + ']';
+    currentPath += `[${index + 1}]`;
   }
   return currentPath;
 };
@@ -125,9 +125,9 @@ const ariaLabelBuilder = element => {
 
 const linkTextBuilder = element => {
   if (element.nodeName === 'A') {
-    let text = element.textContent;
+    const text = element.textContent;
     if (!text.match(/^\s*$/)) {
-      return uniqueXPath(element, `//${getElementNodeName(element)}[contains(text(),'${text.replace(/^\s+/, '').replace(/\s+$/, '')}')]`);
+      return uniqueXPath(element, `//${getElementNodeName(element)}[contains(text(),'${text.trim()}')]`);
     }
   }
   return false;
@@ -137,18 +137,20 @@ const imageBuilder = element => {
   if (element.nodeName === 'IMG') {
     if (element.alt !== '') {
       return uniqueXPath(element, `//${getElementNodeName(element)}[@alt=${attributeValue(element.alt)}]`);
-    } else if (element.title !== '') {
+    }
+    if (element.title !== '') {
       return uniqueXPath(element, `//${getElementNodeName(element)}[@title=${attributeValue(element.title)}]`);
-    } else if (element.src !== '') {
-      return uniqueXPath(element, `//${getElementNodeName(element)}[@src=${attributeValue(element.src)}]`);
+    }
+    if (element.src !== '') {
+      const url = new URL(element.src);
+      const path = url.pathname.substr(1, url.pathname.length - 1);
+      return uniqueXPath(element, `//${getElementNodeName(element)}[contains(@src,${attributeValue(path)})]`);
     }
   }
   return false;
 };
 
-const absoluteXPathBuilder = element => ({
-  xpath: dom.getXPath(element),
-});
+const absoluteXPathBuilder = element => dom.getXPath(element);
 
 const builders = [idBuilder, nameBuilder, ariaLabelBuilder, linkTextBuilder, imageBuilder];
 
@@ -169,7 +171,7 @@ const relativeXPathBuilder = element => {
   while (current != null) {
     if (current.parentNode != null) {
       path = getRelativeXPathFromParent(current) + path;
-      if (1 === current.parentNode.nodeType) {
+      if (current.parentNode.nodeType === 1) {
         const preferredParentXPath = getPreferredXPath(current.parentNode);
         if (preferredParentXPath) {
           return uniqueXPath(current.parentNode, `${preferredParentXPath}${path}`);
