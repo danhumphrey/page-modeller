@@ -232,3 +232,13 @@ describe('absoluteXPathBuilder', () => {
     expect(absoluteXPathBuilder(element)).toBe('/html/body/div/p[2]');
   });
 });
+
+describe('relativeXPathBuilder', () => {
+  const relativeXPathBuilder = xpath.__get__('relativeXPathBuilder');
+
+  test('parent element with id returns correct xpath', () => {
+    document.body.innerHTML = '<div id="parent"><p>Paragraph</p></div>';
+    const element = document.querySelector('p');
+    expect(relativeXPathBuilder(element)).toBe(`//div[@id='parent']/p`);
+  });
+});
