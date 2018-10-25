@@ -43,12 +43,11 @@ const uniqueXPath = (element, xpath) => {
     return xpath;
   }
   for (let i = 0; i < matchingElements.length; i += 1) {
-    const newXPath = `(${xpath})[${i + 1}]`;
+    const newXPath = `${xpath}[${i + 1}]`;
     if ([...dom.findElementsByXPath(element.ownerDocument, newXPath)][0] === element) {
       return newXPath;
     }
   }
-
   return xpath;
 };
 
