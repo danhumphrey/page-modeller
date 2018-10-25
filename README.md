@@ -1,6 +1,6 @@
 # ![Page Modeller](src/icons/icon_32.png) Page Modeller
 
-> Chrome, Firefox and Opera DevTools extension for modelling web pages for automation.
+> Browser DevTools extension for modelling web pages for automation.
 
 The Page Modeller extension enables developers to scan a web page and generate page object style code for various tools, languages and frameworks and test the UI locators in the browser.
 
@@ -21,13 +21,13 @@ Currently supported tools and languages are:
 
 ## Installation
 
-Install the browser extension from the links below:
+Install the extension using the links below:
 
 https://chrome.google.com/webstore/detail/page-modeller/ejgkdhekcepfgdghejpkmbfjgnioejak
 
 https://addons.mozilla.org/en-US/firefox/addon/page-modeller/
 
-https://addons.opera.com/en/extensions/details/page-modeller/
+https://addons.opera.com/en/extensions/details/install-chrome-extensions/
 
 ## Usage
 

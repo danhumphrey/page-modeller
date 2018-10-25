@@ -1,7 +1,7 @@
 {
   "name": "Page Modeller",
   "short_name": "PageModeller",
-  "description": "Chrome, Firefox and Opera DevTools extension for modelling web pages for automation.",
+  "description": "Browser DevTools extension for modelling web pages for automation.",
   "version": "0.8.1.1",
   "version_name": "0.8.1 beta 1",
   "manifest_version": 2,
