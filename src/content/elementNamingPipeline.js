@@ -8,7 +8,7 @@ const labelNameRule = element => {
   const tagName = dom.getTagName(element);
 
   if (!['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'PROGRESS', 'METER', 'OUTPUT'].includes(tagName)) {
-    false;
+    return false;
   }
 
   const label = dom.getLabel(element);
