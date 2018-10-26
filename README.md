@@ -13,11 +13,18 @@ Currently supported tools and languages are:
 
 ## Contents
 
+- [Browser Support](https://github.com/danhumphrey/page-modeller#browser-support)
 - [Installation](https://github.com/danhumphrey/page-modeller#installation)
 - [Usage](https://github.com/danhumphrey/page-modeller#usage)
 - [Screenshots](https://github.com/danhumphrey/page-modeller#screenshots)
 - [Contribute](https://github.com/danhumphrey/page-modeller#contribute)
 - [License](https://github.com/danhumphrey/page-modeller#license)
+
+## Browser Support
+
+<p align="center">
+  <img src="media/browsers.png" width="504" alt="Chrome, Firefox, Brave, Opera, Vivaldi" /> 
+</p>
 
 ## Installation
 
