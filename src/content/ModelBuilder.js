@@ -75,7 +75,6 @@ export default class ModelBuilder {
     const newLineMatches = linkText.match(newLineRegex);
     if (newLineMatches) {
       // handle links containing new lines
-      console.log(newLineMatches);
       if (partial) {
         return linkText.split(newLineRegex)[0];
       }
