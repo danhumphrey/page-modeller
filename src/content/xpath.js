@@ -51,9 +51,15 @@ const uniqueXPath = (element, xpath) => {
   return xpath;
 };
 
+const isXhtmlDocument = doc => {
+  if (doc.doctype.publicId.includes('XHTML') || doc.contentType === 'application/xhtml+xml') {
+    return true;
+  }
+  return false;
+};
 const getElementNodeName = element => {
   const name = element.nodeName.toLowerCase();
-  if (element.ownerDocument.contentType === 'application/xhtml+xml') {
+  if (isXhtmlDocument(element.ownerDocument)) {
     // "x:" prefix is required for XHTML pages
     return `x:${name}`;
   }
@@ -174,7 +180,7 @@ const relativeXPathBuilder = element => {
       if (current.parentNode.nodeType === 1) {
         const preferredParentXPath = getPreferredXPath(current.parentNode);
         if (preferredParentXPath) {
-          return uniqueXPath(current.parentNode, `${preferredParentXPath}${path}`);
+          return uniqueXPath(element, `${preferredParentXPath}${path}`);
         }
       }
     } else {

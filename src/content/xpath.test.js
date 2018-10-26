@@ -3,10 +3,20 @@ import xpath from './xpath';
 
 describe('getElementNodeName', () => {
   const getElementNodeName = xpath.__get__('getElementNodeName');
+  afterEach(() => {
+    document.write(`<!DOCTYPE html><html lang="en"></html>`);
+  });
   test('element node name in HTML document', () => {
     document.body.innerHTML = `<input id="test" />`;
     const element = document.getElementById('test');
     expect(getElementNodeName(element)).toBe('input');
+  });
+  test('element node name in XHTML document', () => {
+    document.write(
+      `<?xml version='1.0' encoding='utf-8'?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns='http://www.w3.org/1999/xhtml'> <head><title>T</title></head><body><p>paragraph</p></body></html>`
+    );
+    const element = document.querySelector('p');
+    expect(getElementNodeName(element)).toBe('x:p');
   });
 });
 
@@ -236,9 +246,62 @@ describe('absoluteXPathBuilder', () => {
 describe('relativeXPathBuilder', () => {
   const relativeXPathBuilder = xpath.__get__('relativeXPathBuilder');
 
+  test('null element returns false', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    expect(relativeXPathBuilder(null)).toBe(false);
+  });
+
+  test('unmatched element returns false', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    const element = document.querySelector('p');
+    expect(relativeXPathBuilder(element)).toBe(false);
+  });
+
   test('parent element with id returns correct xpath', () => {
     document.body.innerHTML = '<div id="parent"><p>Paragraph</p></div>';
     const element = document.querySelector('p');
     expect(relativeXPathBuilder(element)).toBe(`//div[@id='parent']/p`);
+  });
+
+  test('ancestor element with id returns correct xpath', () => {
+    document.body.innerHTML = '<div id="ancestor"><div><p>Paragraph</p></div></div>';
+    const element = document.querySelector('p');
+    expect(relativeXPathBuilder(element)).toBe(`//div[@id='ancestor']/div/p`);
+  });
+
+  test('ancestor element with multiple children returns correct xpath', () => {
+    document.body.innerHTML = '<div id="ancestor"><div><span>Span</span></div><div><p>Paragraph</p></div></div>';
+    const element = document.querySelector('p');
+    expect(relativeXPathBuilder(element)).toBe(`//div[@id='ancestor']/div[2]/p`);
+  });
+
+  test('relative xpath from parent with multiple siblings returns correct xpath', () => {
+    document.body.innerHTML = '<div id="parent"><p>Paragraph</p><p class="second">Paragraph</p></div>';
+    const element1 = document.querySelector('p');
+    const element2 = document.querySelector('p.second');
+    expect(relativeXPathBuilder(element1)).toBe(`//div[@id='parent']/p[1]`);
+    expect(relativeXPathBuilder(element2)).toBe(`//div[@id='parent']/p[2]`);
+  });
+});
+
+describe('getXPath', () => {
+  const getXPath = xpath.__get__('getXPath');
+
+  test('element which matches preferred xpath', () => {
+    document.body.innerHTML = '<a>Contact</a>';
+    const element = document.querySelector('a');
+    expect(getXPath(element)).toBe(`//a[contains(text(),'Contact')]`);
+  });
+
+  test('element chich matches relative xpath', () => {
+    document.body.innerHTML = '<div id="parent"><p>Paragraph</p></div>';
+    const element = document.querySelector('p');
+    expect(getXPath(element)).toBe(`//div[@id='parent']/p`);
+  });
+
+  test('element which matches absolute xpath', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    const element = document.querySelector('p');
+    expect(getXPath(element)).toBe('/html/body/p');
   });
 });
