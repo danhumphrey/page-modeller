@@ -92,6 +92,42 @@ describe('ariaLabelBuilder', () => {
   });
 });
 
+describe('linkHrefBuilder', () => {
+  const linkHrefBuilder = css.__get__('linkHrefBuilder');
+
+  test('non A element returns false', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    const element = document.querySelector('p');
+    expect(linkHrefBuilder(element)).toBe(false);
+  });
+
+  test('A element without href attribute returns false', () => {
+    document.body.innerHTML = '<a>One></a>';
+    const element = document.querySelector('a');
+    expect(linkHrefBuilder(element)).toBe(false);
+  });
+
+  test('A element with relative href attribute returns correct css locator', () => {
+    document.body.innerHTML = '<a href="section/page.html"/>';
+    const element = document.querySelector(`a`);
+    expect(linkHrefBuilder(element)).toBe(`a[href*='section/page.html']`);
+  });
+
+  test('A element with absolute href attribute returns correct css locator', () => {
+    document.body.innerHTML = '<a href="https://photos.google.com/images/kittens.html"/>';
+    const element = document.querySelector(`a`);
+    expect(linkHrefBuilder(element)).toBe(`a[href*='images/kittens.html']`);
+  });
+
+  test('css selector for multiple elements with matching href attribute', () => {
+    document.body.innerHTML = '<a href="contact.html"/>Contact<a href="contact.html" class="second"/>';
+    const element1 = document.querySelector(`a`);
+    const element2 = document.getElementsByClassName('second')[0];
+    expect(linkHrefBuilder(element1)).toBe(`a[href*='contact.html']:nth-of-type(1)`);
+    expect(linkHrefBuilder(element2)).toBe(`a[href*='contact.html']:nth-of-type(2)`);
+  });
+});
+
 describe('imageBuilder', () => {
   const imageBuilder = css.__get__('imageBuilder');
 

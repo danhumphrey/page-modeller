@@ -38,6 +38,17 @@ const ariaLabelBuilder = element => {
   return false;
 };
 
+const linkHrefBuilder = element => {
+  if (element.nodeName === 'A') {
+    if (element.href !== '') {
+      const url = new URL(element.href);
+      const path = url.pathname.substr(1, url.pathname.length - 1);
+      return uniqueCss(element, `a[href*='${path}']`);
+    }
+  }
+  return false;
+};
+
 const imageBuilder = element => {
   if (element.nodeName === 'IMG') {
     if (element.alt !== '') {
@@ -54,7 +65,7 @@ const imageBuilder = element => {
   }
   return false;
 };
-const builders = [idBuilder, nameBuilder, ariaLabelBuilder, imageBuilder];
+const builders = [idBuilder, nameBuilder, ariaLabelBuilder, linkHrefBuilder, imageBuilder];
 
 const getPreferredLocator = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {
