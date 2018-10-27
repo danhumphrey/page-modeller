@@ -184,13 +184,13 @@ describe('linkHrefBuilder', () => {
     expect(linkHrefBuilder(element)).toBe(`//a[contains(@href,'section/page.html')]`);
   });
 
-  test('A element with absolute src attribute returns correct xpath', () => {
+  test('A element with absolute href attribute returns correct xpath', () => {
     document.body.innerHTML = '<a href="https://photos.google.com/images/kittens.html"/>';
     const element = document.querySelector(`a`);
     expect(linkHrefBuilder(element)).toBe(`//a[contains(@href,'images/kittens.html')]`);
   });
 
-  test('xpath for multiple elements with matching src attribute', () => {
+  test('xpath for multiple elements with matching href attribute', () => {
     document.body.innerHTML = '<a href="contact.html"/>Contact<a href="contact.html" class="second"/>';
     const element1 = document.querySelector(`a`);
     const element2 = document.getElementsByClassName('second')[0];
