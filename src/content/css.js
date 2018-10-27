@@ -17,7 +17,7 @@ const uniqueCss = (element, cssSelector) => {
 const idBuilder = element => {
   const id = dom.getId(element);
   if (id) {
-    return uniqueCss(element, `[id='${id}']`);
+    return uniqueCss(element, `${element.nodeName.toLowerCase()}[id='${id}']`);
   }
   return false;
 };
@@ -25,7 +25,7 @@ const idBuilder = element => {
 const nameBuilder = element => {
   const name = dom.getName(element);
   if (name) {
-    return uniqueCss(element, `[name='${name}']`);
+    return uniqueCss(element, `${element.nodeName.toLowerCase()}[name='${name}']`);
   }
   return false;
 };
@@ -33,7 +33,7 @@ const nameBuilder = element => {
 const ariaLabelBuilder = element => {
   const label = element.getAttribute('aria-label');
   if (label) {
-    return uniqueCss(element, `[aria-label='${label}']`);
+    return uniqueCss(element, `${element.nodeName.toLowerCase()}[aria-label='${label}']`);
   }
   return false;
 };
@@ -41,15 +41,15 @@ const ariaLabelBuilder = element => {
 const imageBuilder = element => {
   if (element.nodeName === 'IMG') {
     if (element.alt !== '') {
-      return uniqueCss(element, `[alt='${element.alt}']`);
+      return uniqueCss(element, `img[alt='${element.alt}']`);
     }
     if (element.title !== '') {
-      return uniqueCss(element, `[title='${element.title}']`);
+      return uniqueCss(element, `img[title='${element.title}']`);
     }
     if (element.src !== '') {
       const url = new URL(element.src);
       const path = url.pathname.substr(1, url.pathname.length - 1);
-      return uniqueCss(element, `[src*='${path}']`);
+      return uniqueCss(element, `img[src*='${path}']`);
     }
   }
   return false;
