@@ -3,6 +3,7 @@ import inspector from './inspector';
 import './content.scss';
 import dom from './dom';
 import colours from '../styles/colours.scss';
+import locatorMatches from './locatorMatches';
 
 const bg = colours.highlightBg;
 const bo = colours.highlightBorder;
@@ -31,41 +32,7 @@ chrome.runtime.onMessage.addListener(msg => {
   if (msg.type === 'showMatches') {
     const { locator } = msg.data;
 
-    let matches;
-
-    switch (locator.name) {
-      case 'xpath':
-        matches = dom.findElementsByXPath(document, locator.locator);
-        break;
-      case 'css':
-        matches = dom.findElementsByCssSelector(document, locator.locator);
-        break;
-      case 'name':
-        matches = dom.findElementsByName(document, locator.locator);
-        break;
-      case 'tagName':
-        matches = dom.findElementsByTagName(document, locator.locator);
-        break;
-      case 'tagIndex':
-        matches = dom.findElementsByTagIndex(document, locator.locator);
-        break;
-      case 'className':
-        matches = dom.findElementsByClassName(document, locator.locator);
-        break;
-      case 'id':
-        matches = dom.findElementsById(document, locator.locator);
-        break;
-      case 'linkText':
-        matches = dom.findElementsByLinkText(document, locator.locator);
-        break;
-      case 'partialLinkText':
-        matches = dom.findElementsByPartialLinkText(document, locator.locator);
-        break;
-      default:
-        console.error(`Unexpected locator ${locator}`);
-    }
-
-    matches = [...matches];
+    const matches = locatorMatches(locator);
 
     if (matches.length === 0) {
       chrome.runtime.sendMessage({ type: 'contentPopupError', data: { message: `0 elements match that locator` } });

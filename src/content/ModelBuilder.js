@@ -3,6 +3,7 @@ import generateName from './elementNamingPipeline';
 import dom from './dom';
 import getCssSelector from './css';
 import getXPath from './xpath';
+import locatorMatches from './locatorMatches';
 
 import profiles from '../profiles/profiles';
 
@@ -140,7 +141,8 @@ export default class ModelBuilder {
 
     for (let selectedLocator = locators[locators.length - 1], currentLocator, i = 0; i < locators.length; i += 1) {
       currentLocator = locators[i];
-      if (currentLocator.locator) {
+      const matches = locatorMatches(currentLocator);
+      if (currentLocator.locator && matches.length === 1) {
         delete selectedLocator.selected;
         currentLocator.selected = true;
         break;
