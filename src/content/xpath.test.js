@@ -163,6 +163,42 @@ describe('linkTextBuilder', () => {
   });
 });
 
+describe('linkHrefBuilder', () => {
+  const linkHrefBuilder = xpath.__get__('linkHrefBuilder');
+
+  test('non A element returns false', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    const element = document.querySelector('p');
+    expect(linkHrefBuilder(element)).toBe(false);
+  });
+
+  test('A element without href attribute returns false', () => {
+    document.body.innerHTML = '<a>One></a>';
+    const element = document.querySelector('a');
+    expect(linkHrefBuilder(element)).toBe(false);
+  });
+
+  test('A element with relative href attribute returns correct xpath', () => {
+    document.body.innerHTML = '<a href="section/page.html"/>';
+    const element = document.querySelector(`a`);
+    expect(linkHrefBuilder(element)).toBe(`//a[contains(@href,'section/page.html')]`);
+  });
+
+  test('A element with absolute src attribute returns correct xpath', () => {
+    document.body.innerHTML = '<a href="https://photos.google.com/images/kittens.html"/>';
+    const element = document.querySelector(`a`);
+    expect(linkHrefBuilder(element)).toBe(`//a[contains(@href,'images/kittens.html')]`);
+  });
+
+  test('xpath for multiple elements with matching src attribute', () => {
+    document.body.innerHTML = '<a href="contact.html"/>Contact<a href="contact.html" class="second"/>';
+    const element1 = document.querySelector(`a`);
+    const element2 = document.getElementsByClassName('second')[0];
+    expect(linkHrefBuilder(element1)).toBe(`//a[contains(@href,'contact.html')][1]`);
+    expect(linkHrefBuilder(element2)).toBe(`//a[contains(@href,'contact.html')][2]`);
+  });
+});
+
 describe('imageBuilder', () => {
   const imageBuilder = xpath.__get__('imageBuilder');
 

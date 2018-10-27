@@ -111,6 +111,17 @@ const linkTextBuilder = element => {
   return false;
 };
 
+const linkHrefBuilder = element => {
+  if (element.nodeName === 'A') {
+    if (element.href !== '') {
+      const url = new URL(element.href);
+      const path = url.pathname.substr(1, url.pathname.length - 1);
+      return uniqueXPath(element, `//${getElementNodeName(element)}[contains(@href,${attributeValue(path)})]`);
+    }
+  }
+  return false;
+};
+
 const imageBuilder = element => {
   if (element.nodeName === 'IMG') {
     if (element.alt !== '') {
@@ -130,7 +141,7 @@ const imageBuilder = element => {
 
 const absoluteXPathBuilder = element => dom.getXPath(element);
 
-const builders = [idBuilder, nameBuilder, ariaLabelBuilder, linkTextBuilder, imageBuilder];
+const builders = [idBuilder, nameBuilder, ariaLabelBuilder, linkTextBuilder, linkHrefBuilder, imageBuilder];
 
 const getPreferredXPath = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {
