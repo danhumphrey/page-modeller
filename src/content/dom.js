@@ -1,5 +1,33 @@
 import Simmer from 'simmerjs';
 
+const getSameSiblingCount = element => {
+  const { childNodes } = element.parentNode;
+  let total = 0;
+  for (let i = 0; i < childNodes.length; i += 1) {
+    const child = childNodes[i];
+    if (child.nodeName === element.nodeName) {
+      total += 1;
+    }
+  }
+  return total - 1;
+};
+
+const getIndexOfElement = element => {
+  const { childNodes } = element.parentNode;
+  let total = 0;
+  let index = -1;
+  for (let i = 0; i < childNodes.length; i += 1) {
+    const child = childNodes[i];
+    if (child.nodeName === element.nodeName) {
+      if (child === element) {
+        index = total;
+      }
+      total += 1;
+    }
+  }
+  return index;
+};
+
 const isElementOffScreen = element => {
   const elemCenter = {
     x: element.getBoundingClientRect().left + element.offsetWidth / 2,
@@ -208,6 +236,8 @@ export default {
   isElementHidden,
   isElementOffScreen,
   isVisible,
+  getSameSiblingCount,
+  getIndexOfElement,
   getTagName,
   getTagType,
   getTagIndex,

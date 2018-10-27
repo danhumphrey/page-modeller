@@ -293,7 +293,7 @@ describe('getXPath', () => {
     expect(getXPath(element)).toBe(`//a[contains(text(),'Contact')]`);
   });
 
-  test('element chich matches relative xpath', () => {
+  test('element which matches relative xpath', () => {
     document.body.innerHTML = '<div id="parent"><p>Paragraph</p></div>';
     const element = document.querySelector('p');
     expect(getXPath(element)).toBe(`//div[@id='parent']/p`);

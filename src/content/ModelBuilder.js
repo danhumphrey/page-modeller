@@ -1,6 +1,7 @@
 import generateName from './elementNamingPipeline';
 
 import dom from './dom';
+import getCssSelector from './css';
 import getXPath from './xpath';
 
 import profiles from '../profiles/profiles';
@@ -106,7 +107,7 @@ export default class ModelBuilder {
       },
       {
         name: 'css',
-        locator: dom.getCssSelector(element),
+        locator: getCssSelector(element),
       },
       {
         name: 'xpath',

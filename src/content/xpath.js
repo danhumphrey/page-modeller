@@ -66,37 +66,9 @@ const getElementNodeName = element => {
   return name;
 };
 
-const getSameSiblingCount = element => {
-  const { childNodes } = element.parentNode;
-  let total = 0;
-  for (let i = 0; i < childNodes.length; i += 1) {
-    const child = childNodes[i];
-    if (child.nodeName === element.nodeName) {
-      total += 1;
-    }
-  }
-  return total - 1;
-};
-
-const getIndexOfElement = element => {
-  const { childNodes } = element.parentNode;
-  let total = 0;
-  let index = -1;
-  for (let i = 0; i < childNodes.length; i += 1) {
-    const child = childNodes[i];
-    if (child.nodeName === element.nodeName) {
-      if (child === element) {
-        index = total;
-      }
-      total += 1;
-    }
-  }
-  return index;
-};
-
 const getRelativeXPathFromParent = element => {
-  const index = getIndexOfElement(element);
-  const sameSiblingCount = getSameSiblingCount(element);
+  const index = dom.getIndexOfElement(element);
+  const sameSiblingCount = dom.getSameSiblingCount(element);
   let currentPath = `/${getElementNodeName(element)}`;
   if (index > 0 || sameSiblingCount > 0) {
     currentPath += `[${index + 1}]`;
