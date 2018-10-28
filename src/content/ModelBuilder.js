@@ -42,7 +42,8 @@ export default class ModelBuilder {
       NodeFilter.SHOW_ELEMENT,
       {
         acceptNode(node) {
-          if (dom.isVisible(node) || appOptions.modelHiddenElements) {
+          const isVisible = dom.isVisible(node) || dom.IGNORE_ELEMENT_VISIBILITY.includes(node.nodeName);
+          if (isVisible || appOptions.modelHiddenElements) {
             return NodeFilter.FILTER_ACCEPT;
           }
           return NodeFilter.FILTER_REJECT; // node and children

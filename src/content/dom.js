@@ -232,6 +232,8 @@ const findElementsByPartialLinkText = (document, locator) => {
   return els.filter(el => el.textContent.indexOf(locator) !== -1);
 };
 
+const IGNORE_ELEMENT_VISIBILITY = ['THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD'];
+
 export default {
   isElementHidden,
   isElementOffScreen,
@@ -258,4 +260,5 @@ export default {
   findElementsByCssSelector,
   findElementsByXPath,
   findElementsByTagIndex,
+  IGNORE_ELEMENT_VISIBILITY,
 };

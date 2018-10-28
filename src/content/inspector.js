@@ -48,6 +48,7 @@ const onClick = evt => {
 };
 
 const start = ({ model = null, profile, options }) => {
+  console.log('inspector:start');
   existingModel = model;
   activeProfile = profile;
   appOptions = options;
