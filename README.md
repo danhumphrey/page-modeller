@@ -18,6 +18,7 @@ Supported tools and languages are:
 - [Browser Support](https://github.com/danhumphrey/page-modeller#browser-support)
 - [Installation](https://github.com/danhumphrey/page-modeller#installation)
 - [Usage](https://github.com/danhumphrey/page-modeller#usage)
+- [Options](https://github.com/danhumphrey/page-modeller#options)
 - [Screenshots](https://github.com/danhumphrey/page-modeller#screenshots)
 - [Contribute](https://github.com/danhumphrey/page-modeller#contribute)
 - [License](https://github.com/danhumphrey/page-modeller#license)
@@ -46,6 +47,15 @@ https://addons.opera.com/en/extensions/details/install-chrome-extensions/
 <p align="center">
   Click to watch demonstration video on YouTube.
 </p>
+
+## Options
+
+<p align="center">
+  <img src="media/options.png" width="402" alt="Options" /> 
+</p>
+
+- Show Tooltips
+- Model Hidden Elements
 
 ## Screenshots
 
