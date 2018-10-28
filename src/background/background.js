@@ -33,7 +33,6 @@ const sendMessage = (msgType, data) => {
 const sendMessageToActiveTab = (msgType, data = {}) => {
   chrome.tabs.query(
     {
-      currentWindow: false,
       active: true,
     },
     tabs => {
