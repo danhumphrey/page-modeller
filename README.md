@@ -50,9 +50,7 @@ https://addons.opera.com/en/extensions/details/install-chrome-extensions/
 
 ## Options
 
-<p align="center">
-  <img src="media/options.png" width="402" alt="Options" /> 
-</p>
+Options can be configured via the browser extension options.
 
 - Show Tooltips
 - Model Hidden Elements
