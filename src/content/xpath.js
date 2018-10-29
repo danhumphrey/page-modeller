@@ -139,7 +139,29 @@ const imageBuilder = element => {
   return false;
 };
 
-const absoluteXPathBuilder = element => dom.getXPath(element);
+const getIndexBasedXPath = element => {
+  let path = '';
+  let current = element;
+  while (current != null) {
+    let currentPath;
+    if (current.parentNode != null) {
+      currentPath = getRelativeXPathFromParent(current);
+    } else {
+      currentPath = `/${getElementNodeName(current.nodeName.toLowerCase())}`;
+    }
+    path = currentPath + path;
+    let locator = `/${path}`;
+
+    const matchingElements = [...dom.findElementsByXPath(element.ownerDocument, locator)];
+    if (matchingElements.length === 1 && matchingElements[0] === element) {
+      return locator;
+    }
+    current = current.parentNode;
+  }
+  return null;
+};
+
+const indexedXPathBuilder = element => uniqueXPath(element, getIndexBasedXPath(element));
 
 const builders = [idBuilder, nameBuilder, ariaLabelBuilder, linkTextBuilder, linkHrefBuilder, imageBuilder];
 
@@ -185,7 +207,10 @@ const getXPath = element => {
   if (ret) {
     return ret;
   }
-  // final fallback to absolute xpath
-  return absoluteXPathBuilder(element);
+  // fallback
+  return indexedXPathBuilder(element);
 };
-export default getXPath;
+export default {
+  getIndexBasedXPath,
+  getXPath,
+};

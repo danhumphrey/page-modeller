@@ -263,19 +263,40 @@ describe('imageBuilder', () => {
   });
 });
 
-describe('absoluteXPathBuilder', () => {
-  const absoluteXPathBuilder = xpath.__get__('absoluteXPathBuilder');
+describe('indexedXPathBuilder', () => {
+  const indexedXPathBuilder = xpath.__get__('indexedXPathBuilder');
 
   test('top level element returns correct xpath', () => {
     document.body.innerHTML = '<p>Paragraph</p>';
     const element = document.querySelector('p');
-    expect(absoluteXPathBuilder(element)).toBe('/html/body/p');
+    expect(indexedXPathBuilder(element)).toBe('//p');
   });
 
   test('multiple siblings returns correct xpath', () => {
     document.body.innerHTML = '<div><p>Span 1</p><p class="second">Paragraph</p></div>';
     const element = document.querySelector('p.second');
-    expect(absoluteXPathBuilder(element)).toBe('/html/body/div/p[2]');
+    expect(indexedXPathBuilder(element)).toBe('//p[2]');
+  });
+
+  test('multiple matching ancestors and siblings returns correct xpath', () => {
+    document.body.innerHTML = `
+                                <table>
+                                  <tbody>
+                                    <tr>
+                                      <td><p>Uno</p><p class="first">Paragraph</p></td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                                <table>
+                                  <tbody>
+                                    <tr>
+                                      <td><p>Uno</p><p class="second">Paragraph</p></td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+    `;
+    const element = document.querySelector('p.second');
+    expect(indexedXPathBuilder(element)).toBe('//table[2]/tbody/tr/td/p[2]');
   });
 });
 
@@ -335,9 +356,9 @@ describe('getXPath', () => {
     expect(getXPath(element)).toBe(`//div[@id='parent']/p`);
   });
 
-  test('element which matches absolute xpath', () => {
+  test('element which matches index based xpath', () => {
     document.body.innerHTML = '<p>Paragraph</p>';
     const element = document.querySelector('p');
-    expect(getXPath(element)).toBe('/html/body/p');
+    expect(getXPath(element)).toBe('//p');
   });
 });

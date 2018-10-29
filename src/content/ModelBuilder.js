@@ -2,7 +2,7 @@ import generateName from './elementNamingPipeline';
 
 import dom from './dom';
 import getCssSelector from './css';
-import getXPath from './xpath';
+import xpath from './xpath';
 import locatorMatches from './locatorMatches';
 
 import profiles from '../profiles/profiles';
@@ -113,7 +113,7 @@ export default class ModelBuilder {
       },
       {
         name: 'xpath',
-        locator: getXPath(element),
+        locator: xpath.getXPath(element),
       },
       {
         name: 'className',
@@ -126,7 +126,6 @@ export default class ModelBuilder {
       {
         name: 'tagIndex',
         locator: `${tagName}${tagIndex}`,
-        selected: true,
         always: true,
         hidden: true,
       },
@@ -142,12 +141,23 @@ export default class ModelBuilder {
 
     for (let selectedLocator = locators[locators.length - 1], currentLocator, i = 0; i < locators.length; i += 1) {
       currentLocator = locators[i];
+      if (currentLocator.hidden) {
+        continue;
+      }
       const matches = locatorMatches(currentLocator);
       if (currentLocator.locator && matches.length === 1) {
         delete selectedLocator.selected;
         currentLocator.selected = true;
         break;
       }
+    }
+
+    // force an index based xpath locator if we don't have a better one
+    let selectedLocator = locators.find(l => l.selected === true);
+    if (!selectedLocator) {
+      selectedLocator = locators.find(l => l.name === 'xpath');
+      selectedLocator.selected = true;
+      selectedLocator.locator = xpath.getIndexBasedXPath(element);
     }
 
     return locators;

@@ -145,28 +145,6 @@ const getCssSelector = element => {
   return ret;
 };
 
-const getXPath = (element, strict) => {
-  const paths = [];
-  let currentElement = element;
-
-  for (; currentElement && currentElement.nodeType === Node.ELEMENT_NODE; currentElement = currentElement.parentNode) {
-    let index = 0;
-    for (let sibling = element.previousSibling; sibling; sibling = sibling.previousSibling) {
-      if (sibling.nodeType !== Node.DOCUMENT_TYPE_NODE) {
-        if (sibling.nodeName === currentElement.nodeName) {
-          index += 1;
-        }
-      }
-    }
-
-    const tagName = currentElement.nodeName.toLowerCase();
-    const pathIndex = strict || index ? `[${index + 1}]` : '';
-    paths.splice(0, 0, tagName + pathIndex);
-  }
-
-  return paths.length ? `/${paths.join('/')}` : null;
-};
-
 const getLabel = element => {
   // use 'for' attribute to find label
   const id = getId(element);
@@ -208,9 +186,9 @@ const findElementsByName = (document, locator) => document.getElementsByName(loc
 
 const findElementsByTagName = (document, locator) => document.getElementsByTagName(locator);
 
-const findElementsByClassName = (document, locator) => findElementsByCssSelector(document, `.${locator}`);
+const findElementsByClassName = (document, locator) => document.getElementsByClassName(locator);
 
-const findElementsById = (document, locator) => findElementsByCssSelector(document, `#${locator}`);
+const findElementsById = (document, locator) => findElementsByCssSelector(document, `[id='${locator}']`);
 
 const findElementsByLinkText = (document, locator) => {
   const els = Array.prototype.slice.call(findElementsByTagName(document, 'A'));
@@ -250,7 +228,6 @@ export default {
   getCssSelector,
   getLinkText,
   getLabel,
-  getXPath,
   findElementsById,
   findElementsByName,
   findElementsByLinkText,
