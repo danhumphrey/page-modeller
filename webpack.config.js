@@ -70,7 +70,7 @@ const config = {
       filename: '[name].css',
     }),
     new CopyWebpackPlugin([
-      { from: 'icons', to: 'icons', ignore: ['icon.svg', 'icon_grey.svg', 'icon_128.svg', 'icon_32.png'] },
+      { from: 'icons', to: 'icons', ignore: ['icon.svg', 'icon_grey.svg', 'icon_128.svg'] },
       { from: 'popup/popup.html', to: 'popup/popup.html' },
       { from: 'devtools/devtools-page.html', to: 'devtools-page.html' },
       { from: 'panel/panel.html', to: 'panel/panel.html' },
