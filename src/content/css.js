@@ -22,6 +22,18 @@ const idBuilder = element => {
   return false;
 };
 
+const ngModelBuilder = element => {
+  const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', `ng:`];
+  for (let i = 0, j = prefixes.length; i < j; i += 1) {
+    const attr = `${prefixes[i]}model`;
+    const model = element.getAttribute(attr);
+    if (model) {
+      return uniqueCss(element, `${element.nodeName.toLowerCase()}[${attr}='${model}']`);
+    }
+  }
+  return false;
+};
+
 const nameBuilder = element => {
   const name = dom.getName(element);
   if (name) {
@@ -65,7 +77,7 @@ const imageBuilder = element => {
   }
   return false;
 };
-const builders = [idBuilder, nameBuilder, ariaLabelBuilder, linkHrefBuilder, imageBuilder];
+const builders = [idBuilder, nameBuilder, ngModelBuilder, ariaLabelBuilder, linkHrefBuilder, imageBuilder];
 
 const getPreferredLocator = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {
