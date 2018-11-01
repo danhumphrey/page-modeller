@@ -141,14 +141,13 @@ export default class ModelBuilder {
 
     for (let selectedLocator = locators[locators.length - 1], currentLocator, i = 0; i < locators.length; i += 1) {
       currentLocator = locators[i];
-      if (currentLocator.hidden) {
-        continue;
-      }
-      const matches = locatorMatches(currentLocator);
-      if (currentLocator.locator && matches.length === 1) {
-        delete selectedLocator.selected;
-        currentLocator.selected = true;
-        break;
+      if (!currentLocator.hidden) {
+        const matches = locatorMatches(currentLocator);
+        if (currentLocator.locator && matches.length === 1) {
+          delete selectedLocator.selected;
+          currentLocator.selected = true;
+          break;
+        }
       }
     }
 

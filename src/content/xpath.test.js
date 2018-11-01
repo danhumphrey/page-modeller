@@ -1,6 +1,5 @@
 /* eslint-disable no-underscore-dangle */
 import xpath from './xpath';
-import css from './css';
 
 describe('getElementNodeName', () => {
   const getElementNodeName = xpath.__get__('getElementNodeName');
