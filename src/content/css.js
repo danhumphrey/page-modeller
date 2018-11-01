@@ -77,7 +77,7 @@ const imageBuilder = element => {
   }
   return false;
 };
-const builders = [idBuilder, nameBuilder, ngModelBuilder, ariaLabelBuilder, linkHrefBuilder, imageBuilder];
+const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, linkHrefBuilder, imageBuilder];
 
 const getPreferredLocator = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {
