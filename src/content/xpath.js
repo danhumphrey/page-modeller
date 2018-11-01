@@ -85,6 +85,18 @@ const idBuilder = element => {
   return false;
 };
 
+const ngModelBuilder = element => {
+  const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', `ng:`];
+  for (let i = 0, j = prefixes.length; i < j; i += 1) {
+    const attr = `${prefixes[i]}model`;
+    const model = element.getAttribute(attr);
+    if (model) {
+      return uniqueXPath(element, `//${element.nodeName.toLowerCase()}[@${attr}=${attributeValue(model)}]`);
+    }
+  }
+  return false;
+};
+
 const nameBuilder = element => {
   const name = dom.getName(element);
   if (name) {
@@ -150,7 +162,7 @@ const getIndexBasedXPath = element => {
       currentPath = `/${getElementNodeName(current.nodeName.toLowerCase())}`;
     }
     path = currentPath + path;
-    let locator = `/${path}`;
+    const locator = `/${path}`;
 
     const matchingElements = [...dom.findElementsByXPath(element.ownerDocument, locator)];
     if (matchingElements.length === 1 && matchingElements[0] === element) {
@@ -163,7 +175,7 @@ const getIndexBasedXPath = element => {
 
 const indexedXPathBuilder = element => uniqueXPath(element, getIndexBasedXPath(element));
 
-const builders = [idBuilder, nameBuilder, ariaLabelBuilder, linkTextBuilder, linkHrefBuilder, imageBuilder];
+const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, linkTextBuilder, linkHrefBuilder, imageBuilder];
 
 const getPreferredXPath = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {

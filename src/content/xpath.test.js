@@ -1,5 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 import xpath from './xpath';
+import css from './css';
 
 describe('getElementNodeName', () => {
   const getElementNodeName = xpath.__get__('getElementNodeName');
@@ -76,6 +77,54 @@ describe('idBuilder', () => {
     const element2 = document.getElementsByClassName('second')[0];
     expect(idBuilder(element1)).toBe(`//input[@id='surname'][1]`);
     expect(idBuilder(element2)).toBe(`//input[@id='surname'][2]`);
+  });
+});
+
+describe('ngModelBuilder', () => {
+  const ngModelBuilder = xpath.__get__('ngModelBuilder');
+
+  test('element without model returns false', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    const element = document.querySelector('p');
+    expect(ngModelBuilder(element)).toBe(false);
+  });
+
+  test('css selector for element with ng-model', () => {
+    document.body.innerHTML = '<input ng-model="forename" />';
+    const element = document.querySelector(`input`);
+    expect(ngModelBuilder(element)).toBe(`//input[@ng-model='forename']`);
+  });
+
+  test('css selector for element with ng_model', () => {
+    document.body.innerHTML = '<input ng_model="forename" />';
+    const element = document.querySelector(`input`);
+    expect(ngModelBuilder(element)).toBe(`//input[@ng_model='forename']`);
+  });
+
+  test('css selector for element with data-ng-model', () => {
+    document.body.innerHTML = '<input data-ng-model="forename" />';
+    const element = document.querySelector(`input`);
+    expect(ngModelBuilder(element)).toBe(`//input[@data-ng-model='forename']`);
+  });
+
+  test('css selector for element with x-ng-model', () => {
+    document.body.innerHTML = '<input x-ng-model="forename" />';
+    const element = document.querySelector(`input`);
+    expect(ngModelBuilder(element)).toBe(`//input[@x-ng-model='forename']`);
+  });
+
+  test('css selector for element with ng:model', () => {
+    document.body.innerHTML = '<input ng:model="forename" />';
+    const element = document.querySelector(`input`);
+    expect(ngModelBuilder(element)).toBe(`//input[@ng:model='forename']`);
+  });
+
+  test('css selector for multiple elements with duplicate name', () => {
+    document.body.innerHTML = '<input ng-model="something" /><input ng-model="something" class="second" />';
+    const element1 = document.querySelector(`input`);
+    const element2 = document.getElementsByClassName('second')[0];
+    expect(ngModelBuilder(element1)).toBe(`//input[@ng-model='something'][1]`);
+    expect(ngModelBuilder(element2)).toBe(`//input[@ng-model='something'][2]`);
   });
 });
 
