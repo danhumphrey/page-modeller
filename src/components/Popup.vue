@@ -2,7 +2,7 @@
     <v-snackbar
             v-model="snackbar"
             :timeout="timeout"
-            :color="'#ffffff'"
+
     >
             <v-layout justify-start row>
                 <v-icon v-if="warningIcon" color="yellow darken-2">warning</v-icon>
@@ -13,7 +13,6 @@
             </v-layout>
         <v-btn
                 flat
-                color="rgba(0,0,0,0.87)"
                 @click="close"
         >
             Close
@@ -23,6 +22,7 @@
 
 <script>
 export default {
+  props: ['darkMode'],
   data: () => ({
     snackbar: false,
     timeout: 3000,
@@ -73,7 +73,6 @@ export default {
 
 <style scoped lang="scss">
 .message {
-  color: rgba(0, 0, 0, 0.87);
   margin-left: 1em;
 }
 </style>

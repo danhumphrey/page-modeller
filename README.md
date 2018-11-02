@@ -4,7 +4,7 @@
 
 The Page Modeller extension enables developers to scan a web page and generate page object style code for various tools, languages and frameworks and test the UI locators in the browser.
 
-Current release: **0.8.9.1**
+Current release: **0.8.10.1**
 
 Supported tools and languages are:
 
@@ -53,6 +53,7 @@ https://addons.opera.com/en/extensions/details/install-chrome-extensions/
 Options can be configured via the browser extension options.
 
 - Show Tooltips
+- Dark Mode
 - Model Hidden Elements
 
 ## Screenshots

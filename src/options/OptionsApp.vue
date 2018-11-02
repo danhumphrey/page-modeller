@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <v-app :dark="darkMode">
     <v-card >
       <v-card-text>
         <v-form>
@@ -7,6 +7,9 @@
             <v-flex xs12>
               <v-switch label="Show Tooltips"
                         v-model="showTooltips">
+              </v-switch>
+              <v-switch label="Dark Mode"
+                        v-model="darkMode">
               </v-switch>
               <v-switch label="Model Hidden Elements"
                         v-model="modelHiddenElements">
@@ -33,21 +36,25 @@ export default {
       unchanged: true,
       showTooltips: defaultOptions.showTooltips,
       modelHiddenElements: defaultOptions.modelHiddenElements,
+      darkMode: defaultOptions.darkMode,
       originalOptions: defaultOptions,
     };
   },
   methods: {
     save() {
+      const o = {
+        showTooltips: this.showTooltips,
+        modelHiddenElements: this.modelHiddenElements,
+        darkMode: this.darkMode,
+      };
       chrome.runtime.sendMessage({
         type: 'saveOptions',
         data: {
-          options: {
-            showTooltips: this.showTooltips,
-            modelHiddenElements: this.modelHiddenElements,
-          },
+          options: o,
         },
       });
       this.unchanged = true;
+      this.originalOptions = o;
     },
   },
   mounted() {
@@ -57,6 +64,7 @@ export default {
           this.originalOptions = JSON.parse(JSON.stringify(result.options));
           this.showTooltips = this.originalOptions.showTooltips;
           this.modelHiddenElements = this.originalOptions.modelHiddenElements;
+          this.darkMode = this.originalOptions.darkMode || defaultOptions.darkMode; //default re
           this.options = result.options;
         } else {
           // no options saved, so save defaults
@@ -74,6 +82,11 @@ export default {
     },
     modelHiddenElements(val) {
       if (this.originalOptions.modelHiddenElements !== val) {
+        this.unchanged = false;
+      }
+    },
+    darkMode(val) {
+      if (this.originalOptions.darkMode !== val) {
         this.unchanged = false;
       }
     },

@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <v-app :dark="options.darkMode">
     <Toolbar
         @scan="scan"
         @add="add"
@@ -17,7 +17,7 @@
     />
     <Table :model="model" :is-inspecting="isInspecting" :show-tooltips="options.showTooltips" @emptyModel="emptyModel" />
     <Alert ref="alert"></Alert>
-    <Popup ref="popup"></Popup>
+    <Popup ref="popup" :dark-mode="options.darkMode"></Popup>
     <Confirm ref="confirm"></Confirm>
     <CodeDialog ref="code"></CodeDialog>
   </v-app>

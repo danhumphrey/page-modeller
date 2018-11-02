@@ -7,7 +7,11 @@ import '../styles/material.scss';
 import 'vuetify/dist/vuetify.css';
 
 Vue.config.devtools = true;
-Vue.use(Vuetify);
+Vue.use(Vuetify, {
+  options: {
+    customProperties: true,
+  },
+});
 
 (() =>
   new Vue({
