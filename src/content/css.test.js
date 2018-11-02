@@ -176,6 +176,54 @@ describe('linkHrefBuilder', () => {
   });
 });
 
+describe('inputButtonValueBuilder', () => {
+  const inputButtonValueBuilder = css.__get__('inputButtonValueBuilder');
+
+  test('non INPUT element returns false', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    const element = document.querySelector('p');
+    expect(inputButtonValueBuilder(element)).toBe(false);
+  });
+
+  test('INPUT element without type "button" or "submit" returns false', () => {
+    document.body.innerHTML = '<input type="text" value="test" />';
+    const element = document.querySelector('input');
+    expect(inputButtonValueBuilder(element)).toBe(false);
+  });
+
+  test('INPUT type="button" element without value returns false', () => {
+    document.body.innerHTML = '<input type="button" />';
+    const element = document.querySelector('input');
+    expect(inputButtonValueBuilder(element)).toBe(false);
+  });
+
+  test('INPUT type="button" element with value returns correct selector', () => {
+    document.body.innerHTML = '<input type="button" value="Test" />';
+    const element = document.querySelector(`input`);
+    expect(inputButtonValueBuilder(element)).toBe(`input[value*='Test']`);
+  });
+
+  test('INPUT type="submit" element with value returns correct selector', () => {
+    document.body.innerHTML = '<input type="submit" value="Test" />';
+    const element = document.querySelector(`input`);
+    expect(inputButtonValueBuilder(element)).toBe(`input[value*='Test']`);
+  });
+
+  test('INPUT type="button" element with text and whitespace in value returns correct selector', () => {
+    document.body.innerHTML = '<input type="submit" value="  Test   " />';
+    const element = document.querySelector(`input`);
+    expect(inputButtonValueBuilder(element)).toBe(`input[value*='Test']`);
+  });
+
+  test('css selector for multiple elements with duplicate value', () => {
+    document.body.innerHTML = '<input type="submit" value="Test" /> <input type="submit" value="Test" class="second" />';
+    const element1 = document.querySelector(`input`);
+    const element2 = document.getElementsByClassName('second')[0];
+    expect(inputButtonValueBuilder(element1)).toBe(`input[value*='Test']:nth-of-type(1)`);
+    expect(inputButtonValueBuilder(element2)).toBe(`input[value*='Test']:nth-of-type(2)`);
+  });
+});
+
 describe('imageBuilder', () => {
   const imageBuilder = css.__get__('imageBuilder');
 

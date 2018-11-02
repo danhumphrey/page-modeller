@@ -115,9 +115,9 @@ const ariaLabelBuilder = element => {
 
 const linkTextBuilder = element => {
   if (element.nodeName === 'A') {
-    const text = element.textContent;
+    const text = element.textContent.trim();
     if (!text.match(/^\s*$/)) {
-      return uniqueXPath(element, `//${getElementNodeName(element)}[contains(text(),'${text.trim()}')]`);
+      return uniqueXPath(element, `//${getElementNodeName(element)}[contains(text(),'${text}')]`);
     }
   }
   return false;
@@ -129,6 +129,26 @@ const linkHrefBuilder = element => {
       const url = new URL(element.href);
       const path = url.pathname.substr(1, url.pathname.length - 1);
       return uniqueXPath(element, `//${getElementNodeName(element)}[contains(@href,${attributeValue(path)})]`);
+    }
+  }
+  return false;
+};
+
+const buttonTextBuilder = element => {
+  if (element.nodeName === 'BUTTON') {
+    const text = element.textContent.trim();
+    if (!text.match(/^\s*$/)) {
+      return uniqueXPath(element, `//${getElementNodeName(element)}[contains(text(),'${text}')]`);
+    }
+  }
+  return false;
+};
+
+const inputButtonValueBuilder = element => {
+  if (element.nodeName === 'INPUT' && ['button', 'submit'].includes(element.type)) {
+    const text = element.value.trim();
+    if (!text.match(/^\s*$/)) {
+      return uniqueXPath(element, `//${getElementNodeName(element)}[contains(@value,${attributeValue(text)})]`);
     }
   }
   return false;
@@ -175,7 +195,7 @@ const getIndexBasedXPath = element => {
 
 const indexedXPathBuilder = element => uniqueXPath(element, getIndexBasedXPath(element));
 
-const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, linkTextBuilder, linkHrefBuilder, imageBuilder];
+const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, linkTextBuilder, linkHrefBuilder, buttonTextBuilder, inputButtonValueBuilder, imageBuilder];
 
 const getPreferredXPath = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {

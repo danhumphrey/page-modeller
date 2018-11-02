@@ -211,6 +211,90 @@ describe('linkTextBuilder', () => {
   });
 });
 
+describe('buttonTextBuilder', () => {
+  const buttonTextBuilder = xpath.__get__('buttonTextBuilder');
+
+  test('non BUTTON element returns false', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    const element = document.querySelector('p');
+    expect(buttonTextBuilder(element)).toBe(false);
+  });
+
+  test('BUTTON element without text returns false', () => {
+    document.body.innerHTML = '<button><img src="dummy" /></button>';
+    const element = document.querySelector('button');
+    expect(buttonTextBuilder(element)).toBe(false);
+  });
+
+  test('BUTTON element with text returns correct xpath', () => {
+    document.body.innerHTML = '<button>Test</button>';
+    const element = document.querySelector(`button`);
+    expect(buttonTextBuilder(element)).toBe(`//button[contains(text(),'Test')]`);
+  });
+
+  test('Button element with text and whitespace returns correct xpath', () => {
+    document.body.innerHTML = '<button>     Test  </button>';
+    const element = document.querySelector(`button`);
+    expect(buttonTextBuilder(element)).toBe(`//button[contains(text(),'Test')]`);
+  });
+
+  test('xpath for multiple elements with duplicate text', () => {
+    document.body.innerHTML = '<button>Test</button><button class="second">Test</button>';
+    const element1 = document.querySelector(`button`);
+    const element2 = document.getElementsByClassName('second')[0];
+    expect(buttonTextBuilder(element1)).toBe(`//button[contains(text(),'Test')][1]`);
+    expect(buttonTextBuilder(element2)).toBe(`//button[contains(text(),'Test')][2]`);
+  });
+});
+
+describe('inputButtonValueBuilder', () => {
+  const inputButtonValueBuilder = xpath.__get__('inputButtonValueBuilder');
+
+  test('non INPUT element returns false', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    const element = document.querySelector('p');
+    expect(inputButtonValueBuilder(element)).toBe(false);
+  });
+
+  test('INPUT element without type "button" or "submit" returns false', () => {
+    document.body.innerHTML = '<input type="text" value="test" />';
+    const element = document.querySelector('input');
+    expect(inputButtonValueBuilder(element)).toBe(false);
+  });
+
+  test('INPUT type="button" element without value returns false', () => {
+    document.body.innerHTML = '<input type="button" />';
+    const element = document.querySelector('input');
+    expect(inputButtonValueBuilder(element)).toBe(false);
+  });
+
+  test('INPUT type="button" element with value returns correct xpath', () => {
+    document.body.innerHTML = '<input type="button" value="Test" />';
+    const element = document.querySelector(`input`);
+    expect(inputButtonValueBuilder(element)).toBe(`//input[contains(@value,'Test')]`);
+  });
+
+  test('INPUT type="submit" element with value returns correct xpath', () => {
+    document.body.innerHTML = '<input type="submit" value="Test" />';
+    const element = document.querySelector(`input`);
+    expect(inputButtonValueBuilder(element)).toBe(`//input[contains(@value,'Test')]`);
+  });
+
+  test('INPUT type="button" element with text and whitespace in value returns correct xpath', () => {
+    document.body.innerHTML = '<input type="submit" value="  Test   " />';
+    const element = document.querySelector(`input`);
+    expect(inputButtonValueBuilder(element)).toBe(`//input[contains(@value,'Test')]`);
+  });
+
+  test('xpath for multiple elements with duplicate value', () => {
+    document.body.innerHTML = '<input type="submit" value="Test" /> <input type="submit" value="Test" class="second" />';
+    const element1 = document.querySelector(`input`);
+    const element2 = document.getElementsByClassName('second')[0];
+    expect(inputButtonValueBuilder(element1)).toBe(`//input[contains(@value,'Test')][1]`);
+    expect(inputButtonValueBuilder(element2)).toBe(`//input[contains(@value,'Test')][2]`);
+  });
+});
+
 describe('linkHrefBuilder', () => {
   const linkHrefBuilder = xpath.__get__('linkHrefBuilder');
 

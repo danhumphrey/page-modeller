@@ -61,6 +61,16 @@ const linkHrefBuilder = element => {
   return false;
 };
 
+const inputButtonValueBuilder = element => {
+  if (element.nodeName === 'INPUT' && ['button', 'submit'].includes(element.type)) {
+    const text = element.value.trim();
+    if (!text.match(/^\s*$/)) {
+      return uniqueCss(element, `input[value*='${text}']`);
+    }
+  }
+  return false;
+};
+
 const imageBuilder = element => {
   if (element.nodeName === 'IMG') {
     if (element.alt !== '') {
@@ -77,7 +87,7 @@ const imageBuilder = element => {
   }
   return false;
 };
-const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, linkHrefBuilder, imageBuilder];
+const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, linkHrefBuilder, inputButtonValueBuilder, imageBuilder];
 
 const getPreferredLocator = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {
