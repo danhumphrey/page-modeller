@@ -28,11 +28,13 @@ const getIndexOfElement = element => {
   return index;
 };
 
+const getElementCoordinates = element => ({
+  x: element.getBoundingClientRect().left + element.offsetWidth / 2,
+  y: element.getBoundingClientRect().top + element.offsetHeight / 2,
+});
+
 const isElementOffScreen = element => {
-  const elemCenter = {
-    x: element.getBoundingClientRect().left + element.offsetWidth / 2,
-    y: element.getBoundingClientRect().top + element.offsetHeight / 2,
-  };
+  const elemCenter = getElementCoordinates(element);
   if (elemCenter.x < 0) return true;
   if (elemCenter.x > (document.documentElement.clientWidth || window.innerWidth)) return true;
   if (elemCenter.y < 0) return true;
@@ -40,16 +42,13 @@ const isElementOffScreen = element => {
   return false;
 };
 
-const getElementCoordinates = element => ({
-  x: element.getBoundingClientRect().left + element.offsetWidth / 2,
-  y: element.getBoundingClientRect().top + element.offsetHeight / 2,
-});
 const isElementHidden = element => {
   let coords = getElementCoordinates(element);
 
   /* Stash current Window Scroll */
   const scrollX = window.pageXOffset;
   const scrollY = window.pageYOffset;
+
   /* Scroll to element */
   window.scrollTo(coords.x, coords.y);
 
@@ -86,7 +85,7 @@ const isVisible = element => {
 
 const getTagName = element => element.tagName;
 
-const getTagType = element => element.type;
+const getTagType = element => element.type || null;
 
 const getTagIndex = element => {
   const n = getTagName(element);
@@ -129,9 +128,7 @@ const getClassName = element => {
 
 const getLinkText = element => {
   if (element.nodeName === 'A') {
-    if (element.textContent) {
-      return element.textContent.trim();
-    }
+    return getTextContent(element);
   }
   return null;
 };
@@ -167,16 +164,20 @@ const getLabel = element => {
 
 const findElementsByXPath = (document, locator) => {
   const results = [];
-  const query = document.evaluate(locator, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-  for (let i = 0, length = query.snapshotLength; i < length; i += 1) {
-    results.push(query.snapshotItem(i));
+  try {
+    const query = document.evaluate(locator, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    for (let i = 0, length = query.snapshotLength; i < length; i += 1) {
+      results.push(query.snapshotItem(i));
+    }
+    return results;
+  } catch (e) {
+    return [];
   }
-  return results;
 };
 
 const findElementsByCssSelector = (document, locator) => {
   try {
-    return document.querySelectorAll(locator);
+    return [...document.querySelectorAll(locator)];
   } catch (e) {
     return [];
   }
@@ -210,6 +211,36 @@ const findElementsByPartialLinkText = (document, locator) => {
   return els.filter(el => el.textContent.indexOf(locator) !== -1);
 };
 
+const findElementsByNgBindings = (document, locator) => {
+  const matches = [];
+  if (!document.angular) {
+    return matches;
+  }
+  const bindings = document.getElementsByClassName('ng-binding');
+  for (let i = 0; i < bindings.length; i += 1) {
+    const dataBinding = document.angular.element(bindings[i]).data('$binding');
+    if (dataBinding) {
+      const bindingName = dataBinding.exp || dataBinding[0].exp || dataBinding;
+      if (bindingName.indexOf(locator) !== -1) {
+        matches.push(bindings[i]);
+      }
+    }
+  }
+  return matches;
+};
+
+const findElementsByNgModel = (document, model) => {
+  const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', 'ng\\:'];
+  for (let p = 0; p < prefixes.length; p += 1) {
+    const selector = `[${prefixes[p]}model="${model}"]`;
+    const elements = document.querySelectorAll(selector);
+    if (elements.length) {
+      return elements;
+    }
+  }
+  return null;
+};
+
 const IGNORE_ELEMENT_VISIBILITY = ['THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD'];
 
 export default {
@@ -237,5 +268,7 @@ export default {
   findElementsByCssSelector,
   findElementsByXPath,
   findElementsByTagIndex,
+  findElementsByNgBindings,
+  findElementsByNgModel,
   IGNORE_ELEMENT_VISIBILITY,
 };
