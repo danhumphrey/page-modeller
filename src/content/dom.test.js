@@ -357,3 +357,179 @@ describe('findElementsByCssSelector', () => {
     expect(findElementsByCssSelector(document, locator)).toEqual([element1, element2]);
   });
 });
+
+describe('findElementsByName', () => {
+  const findElementsByName = dom.__get__('findElementsByName');
+
+  test('no matches returns empty array', () => {
+    document.body.innerHTML = '<div><p>Paragraph</p></div>';
+    expect(findElementsByName(document, 'Test')).toEqual([]);
+  });
+
+  test('single match', () => {
+    document.body.innerHTML = '<div><input id="test1" name="forename" /></div>';
+    const element = document.getElementById('test1');
+    expect(findElementsByName(document, 'forename')).toEqual([element]);
+  });
+
+  test('multiple matches', () => {
+    document.body.innerHTML = '<div><input id="test1" name="something" /><input id="test2" name="something" /></div>';
+    const element1 = document.getElementById('test1');
+    const element2 = document.getElementById('test2');
+    expect(findElementsByName(document, 'something')).toEqual([element1, element2]);
+  });
+});
+
+describe('findElementsByTagName', () => {
+  const findElementsByTagName = dom.__get__('findElementsByTagName');
+
+  test('no matches returns empty array', () => {
+    document.body.innerHTML = '<div><p>Paragraph</p></div>';
+    expect(findElementsByTagName(document, 'span')).toEqual([]);
+  });
+
+  test('single match', () => {
+    document.body.innerHTML = '<div><input id="test1" name="forename" /></div>';
+    const element = document.getElementById('test1');
+    expect(findElementsByTagName(document, 'input')).toEqual([element]);
+  });
+
+  test('multiple matches', () => {
+    document.body.innerHTML = '<div><input id="test1" name="something" /><input id="test2" name="something" /></div>';
+    const element1 = document.getElementById('test1');
+    const element2 = document.getElementById('test2');
+    expect(findElementsByTagName(document, 'input')).toEqual([element1, element2]);
+  });
+});
+
+describe('findElementsByClassName', () => {
+  const findElementsByClassName = dom.__get__('findElementsByClassName');
+
+  test('no matches returns empty array', () => {
+    document.body.innerHTML = '<div><p>Paragraph</p></div>';
+    expect(findElementsByClassName(document, 'active')).toEqual([]);
+  });
+
+  test('single match', () => {
+    document.body.innerHTML = '<div><input id="test1" class="active" /></div>';
+    const element = document.getElementById('test1');
+    expect(findElementsByClassName(document, 'active')).toEqual([element]);
+  });
+
+  test('multiple matches', () => {
+    document.body.innerHTML = '<div><input id="test1" class="active" /><input id="test2" class="active" /></div>';
+    const element1 = document.getElementById('test1');
+    const element2 = document.getElementById('test2');
+    expect(findElementsByClassName(document, 'active')).toEqual([element1, element2]);
+  });
+});
+
+describe('findElementsById', () => {
+  const findElementsById = dom.__get__('findElementsById');
+
+  test('no matches returns empty array', () => {
+    document.body.innerHTML = '<div><p>Paragraph</p></div>';
+    expect(findElementsById(document, 'forename')).toEqual([]);
+  });
+
+  test('single match', () => {
+    document.body.innerHTML = '<div><input id="test1" class="active" /></div>';
+    const element = document.getElementById('test1');
+    expect(findElementsById(document, 'test1')).toEqual([element]);
+  });
+
+  test('multiple matches', () => {
+    document.body.innerHTML = '<div><input id="forename" class="test1" /><input id="forename" class="test2" /></div>';
+    const element1 = document.getElementsByClassName('test1')[0];
+    const element2 = document.getElementsByClassName('test2')[0];
+    expect(findElementsById(document, 'forename')).toEqual([element1, element2]);
+  });
+});
+
+describe('findElementsByLinkText', () => {
+  const findElementsByLinkText = dom.__get__('findElementsByLinkText');
+
+  test('no matches returns empty array', () => {
+    document.body.innerHTML = '<div><p>Paragraph</p></div>';
+    expect(findElementsByLinkText(document, 'Paragraph')).toEqual([]);
+  });
+
+  test('A element with no text returns empty array', () => {
+    document.body.innerHTML = '<div><a id="test1"></a></div>';
+    expect(findElementsByLinkText(document, 'Click')).toEqual([]);
+  });
+
+  test('Single match', () => {
+    document.body.innerHTML = '<div><a id="test1">Click</a></div>';
+    const element = document.getElementById('test1');
+    expect(findElementsByLinkText(document, 'Click')).toEqual([element]);
+  });
+
+  test('multiple matches', () => {
+    document.body.innerHTML = '<a id="test1">Click</a><a id="test2">Click</a>';
+    const element1 = document.getElementById('test1');
+    const element2 = document.getElementById('test2');
+    expect(findElementsByLinkText(document, 'Click')).toEqual([element1, element2]);
+  });
+});
+
+describe('findElementsByPartialLinkText', () => {
+  const findElementsByPartialLinkText = dom.__get__('findElementsByPartialLinkText');
+
+  test('no matches returns empty array', () => {
+    document.body.innerHTML = '<div><p>Paragraph</p></div>';
+    expect(findElementsByPartialLinkText(document, 'Paragraph')).toEqual([]);
+  });
+
+  test('A element with no text returns empty array', () => {
+    document.body.innerHTML = '<div><a id="test1"></a></div>';
+    expect(findElementsByPartialLinkText(document, 'Click')).toEqual([]);
+  });
+
+  test('Single match for full text', () => {
+    document.body.innerHTML = '<div><a id="test1">Click</a></div>';
+    const element = document.getElementById('test1');
+    expect(findElementsByPartialLinkText(document, 'Click')).toEqual([element]);
+  });
+
+  test('Single match for partial text', () => {
+    document.body.innerHTML = '<div><a id="test1">Click Me</a></div>';
+    const element = document.getElementById('test1');
+    expect(findElementsByPartialLinkText(document, 'Click')).toEqual([element]);
+  });
+
+  test('multiple matches', () => {
+    document.body.innerHTML = '<a id="test1">Click Me</a><a id="test2">Click Me Too</a>';
+    const element1 = document.getElementById('test1');
+    const element2 = document.getElementById('test2');
+    expect(findElementsByPartialLinkText(document, 'Click')).toEqual([element1, element2]);
+  });
+});
+
+describe('findElementsByTagIndex', () => {
+  const findElementsByTagIndex = dom.__get__('findElementsByTagIndex');
+
+  test('invalid locator returns empty array', () => {
+    document.body.innerHTML = '<div><p>Paragraph</p></div>';
+    expect(findElementsByTagIndex(document, 'a')).toEqual([]);
+  });
+
+  test('no matches returns empty array', () => {
+    document.body.innerHTML = '<div><p>Paragraph</p></div>';
+    expect(findElementsByTagIndex(document, 'a1')).toEqual([]);
+  });
+
+  test('Single match', () => {
+    document.body.innerHTML = '<div><a id="test1">Click</a></div>';
+    const element = document.getElementById('test1');
+    expect(findElementsByTagIndex(document, 'a1')).toEqual([element]);
+  });
+
+  test('Multiple matches', () => {
+    document.body.innerHTML = '<a id="test1">Click</a><a id="test2">Click</a>';
+    const element1 = document.getElementById('test1');
+    const element2 = document.getElementById('test2');
+    expect(findElementsByTagIndex(document, 'a1')).toEqual([element1]);
+    expect(findElementsByTagIndex(document, 'a2')).toEqual([element2]);
+  });
+});

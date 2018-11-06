@@ -183,16 +183,16 @@ const findElementsByCssSelector = (document, locator) => {
   }
 };
 
-const findElementsByName = (document, locator) => document.getElementsByName(locator);
+const findElementsByName = (document, locator) => [...document.getElementsByName(locator)];
 
-const findElementsByTagName = (document, locator) => document.getElementsByTagName(locator);
+const findElementsByTagName = (document, locator) => [...document.getElementsByTagName(locator)];
 
-const findElementsByClassName = (document, locator) => document.getElementsByClassName(locator);
+const findElementsByClassName = (document, locator) => [...document.getElementsByClassName(locator)];
 
 const findElementsById = (document, locator) => findElementsByCssSelector(document, `[id='${locator}']`);
 
 const findElementsByLinkText = (document, locator) => {
-  const els = Array.prototype.slice.call(findElementsByTagName(document, 'A'));
+  const els = findElementsByTagName(document, 'A');
 
   return els.filter(el => {
     const c = el.textContent.replace(/\xA0/g, ' ').replace(/^\s*(.*?)\s*$/, '$1');
@@ -201,13 +201,19 @@ const findElementsByLinkText = (document, locator) => {
 };
 const findElementsByTagIndex = (document, locator) => {
   const matches = /(.*)(\d+)$/.exec(locator);
-  const els = Array.prototype.slice.call(findElementsByTagName(document, matches[1]));
-  return [els[parseInt(matches[2], 10) - 1]];
+  try {
+    const els = findElementsByTagName(document, matches[1]);
+    if (els.length) {
+      return [els[parseInt(matches[2], 10) - 1]];
+    }
+  } catch (e) {
+    return [];
+  }
+  return [];
 };
 
 const findElementsByPartialLinkText = (document, locator) => {
-  const els = Array.prototype.slice.call(findElementsByTagName(document, 'A'));
-
+  const els = findElementsByTagName(document, 'A');
   return els.filter(el => el.textContent.indexOf(locator) !== -1);
 };
 
