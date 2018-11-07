@@ -64,19 +64,19 @@ describe('getIndexOfElement', () => {
 });
 
 describe('getElementCoordinates', () => {
-  // this requires manual testing
+  console.log('getElementCoordinates requires manual testing');
 });
 
 describe('isElementOffScreen', () => {
-  // this requires manual testing
+  console.log('isElementOffScreen requires manual testing');
 });
 
 describe('isElementHidden', () => {
-  // this requires manual testing
+  console.log('isElementHidden requires manual testing');
 });
 
 describe('isVisible', () => {
-  // this requires manual testing
+  console.log('isVisible requires manual testing');
 });
 
 describe('getTagName', () => {
@@ -531,5 +531,62 @@ describe('findElementsByTagIndex', () => {
     const element2 = document.getElementById('test2');
     expect(findElementsByTagIndex(document, 'a1')).toEqual([element1]);
     expect(findElementsByTagIndex(document, 'a2')).toEqual([element2]);
+  });
+});
+
+describe('findElementsByNgBindings', () => {
+  const findElementsByNgBindings = dom.__get__('findElementsByNgBindings');
+
+  test('page without angular framework returns empty array', () => {
+    document.body.innerHTML = '<a id="test1" class="ng-binding">Click</a>';
+    expect(findElementsByNgBindings(document, 'some.binding')).toEqual([]);
+  });
+
+  console.log('findElementsByNgBindings requires manual testing');
+});
+
+describe('findElementsByNgModel', () => {
+  const findElementsByNgModel = dom.__get__('findElementsByNgModel');
+
+  test('test no ng-model attribute returns empty array', () => {
+    document.body.innerHTML = '<p id="model1">Dan Humphrey</p>';
+    expect(findElementsByNgModel(document, 'person')).toEqual([]);
+  });
+
+  test('test ng-model attribute', () => {
+    document.body.innerHTML = '<p id="model1" ng-model="person">Dan Humphrey</p>';
+    const element = document.getElementById('model1');
+    expect(findElementsByNgModel(document, 'person')).toEqual([element]);
+  });
+
+  test('test ng_model attribute', () => {
+    document.body.innerHTML = '<p id="model1" ng_model="person">Dan Humphrey</p>';
+    const element = document.getElementById('model1');
+    expect(findElementsByNgModel(document, 'person')).toEqual([element]);
+  });
+
+  test('test data-ng-model attribute', () => {
+    document.body.innerHTML = '<p id="model1" data-ng-model="person">Dan Humphrey</p>';
+    const element = document.getElementById('model1');
+    expect(findElementsByNgModel(document, 'person')).toEqual([element]);
+  });
+
+  test('test x-ng-model attribute', () => {
+    document.body.innerHTML = '<p id="model1" x-ng-model="person">Dan Humphrey</p>';
+    const element = document.getElementById('model1');
+    expect(findElementsByNgModel(document, 'person')).toEqual([element]);
+  });
+
+  test('test ng:model attribute', () => {
+    document.body.innerHTML = '<p id="model1" ng:model="person">Dan Humphrey</p>';
+    const element = document.getElementById('model1');
+    expect(findElementsByNgModel(document, 'person')).toEqual([element]);
+  });
+
+  test('test multiple matches', () => {
+    document.body.innerHTML = '<p id="model1" ng-model="person">Dan Humphrey</p><p id="model2" ng-model="person">Dan Humphrey</p>';
+    const element1 = document.getElementById('model1');
+    const element2 = document.getElementById('model2');
+    expect(findElementsByNgModel(document, 'person')).toEqual([element1, element2]);
   });
 });

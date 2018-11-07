@@ -236,15 +236,15 @@ const findElementsByNgBindings = (document, locator) => {
 };
 
 const findElementsByNgModel = (document, model) => {
-  const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', 'ng\\:'];
+  const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', 'ng:'];
   for (let p = 0; p < prefixes.length; p += 1) {
     const selector = `[${prefixes[p]}model="${model}"]`;
     const elements = document.querySelectorAll(selector);
     if (elements.length) {
-      return elements;
+      return [...elements];
     }
   }
-  return null;
+  return [];
 };
 
 const IGNORE_ELEMENT_VISIBILITY = ['THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD'];
