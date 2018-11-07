@@ -3,9 +3,7 @@
     <v-dialog v-model="dialog">
       <form>
         <v-card>
-          <v-card-title class="pa-2">
-            <span class="headline">Edit Element</span>
-          </v-card-title>
+          <v-card-title class="pa-2"> <span class="headline">Edit Element</span> </v-card-title>
           <v-card-text class="pb-1">
             <v-container grid-list-md pa-0>
               <v-layout wrap>
@@ -15,8 +13,8 @@
                     label="Name"
                     :error-messages="editedItemNameErrors"
                     required
-                    @input="$v.editedItemName.$touch()"
-                    @blur="$v.editedItemName.$touch()"
+                    @input="$v.editedItemName.$touch();"
+                    @blur="$v.editedItemName.$touch();"
                   ></v-text-field>
                 </v-flex>
               </v-layout>
@@ -34,17 +32,9 @@
                   ></v-select>
                 </v-flex>
                 <v-flex>
-                  <v-text-field
-                    v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
+                  <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
                     <v-tooltip left open-delay="1000" slot="append" :disabled="!showTooltips">
-                      <v-icon
-                        slot="activator"
-                        small
-                        class="mr-2"
-                        @click="showMatchesForLocator(currentLocator)"
-                      >
-                        remove_red_eye
-                      </v-icon>
+                      <v-icon slot="activator" small class="mr-2" @click="showMatchesForLocator(currentLocator);"> remove_red_eye </v-icon>
                       <span>View Matched Elements</span>
                     </v-tooltip>
                   </v-text-field>
@@ -54,57 +44,28 @@
           </v-card-text>
           <v-card-actions class="py-1">
             <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" flat @click.native="dialog = false">Cancel</v-btn>
+            <v-btn color="blue darken-1" flat @click.native="dialog = false;">Cancel</v-btn>
             <v-btn color="blue darken-1" flat @click.native="save">Save</v-btn>
           </v-card-actions>
         </v-card>
       </form>
     </v-dialog>
-    <v-data-table
-      :items="model == null ? [] : model.entities"
-      :headers="headers"
-      hide-actions
-      class="elevation-0"
-    >
+    <v-data-table :items="model == null ? [] : model.entities" :headers="headers" hide-actions class="elevation-0">
       <template slot="items" slot-scope="props">
-        <tr v-on:dblclick="editItem(props.item)">
-          <td class="unselectable" v-bind:class="{disabled: isInspecting}">{{ props.item.name }}</td>
-          <td class="unselectable" v-bind:class="{disabled: isInspecting}">{{ itemLocator(props.item) }}</td>
+        <tr v-on:dblclick="editItem(props.item);">
+          <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ props.item.name }}</td>
+          <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ itemLocator(props.item) }}</td>
           <td class="text-xs-right px-0 unselectable">
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
-              <v-icon
-                slot="activator"
-                small
-                class="mr-2"
-                @click="showMatchesForEntity(props.item)"
-                :disabled="isInspecting"
-              >
-                remove_red_eye
-              </v-icon>
+              <v-icon slot="activator" small class="mr-2" @click="showMatchesForEntity(props.item);" :disabled="isInspecting"> remove_red_eye </v-icon>
               <span>View Matched Elements</span>
             </v-tooltip>
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
-              <v-icon
-                slot="activator"
-                small
-                class="mr-2"
-                @click="editItem(props.item)"
-                :disabled="isInspecting"
-              >
-                edit
-              </v-icon>
+              <v-icon slot="activator" small class="mr-2" @click="editItem(props.item);" :disabled="isInspecting"> edit </v-icon>
               <span>Edit</span>
             </v-tooltip>
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
-              <v-icon
-                slot="activator"
-                small
-                class="mr-4"
-                @click="deleteItem(props.item)"
-                :disabled="isInspecting"
-              >
-                delete
-              </v-icon>
+              <v-icon slot="activator" small class="mr-4" @click="deleteItem(props.item);" :disabled="isInspecting"> delete </v-icon>
               <span>Delete</span>
             </v-tooltip>
           </td>

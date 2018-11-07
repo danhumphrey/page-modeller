@@ -1,32 +1,28 @@
 <template>
   <v-app :dark="options.darkMode">
     <Toolbar
-        @scan="scan"
-        @add="add"
-        @deleteModel="deleteModel"
-        @generateModel="generateModel"
-        @activateProfile="activateProfile"
-        :is-inspecting="isInspecting"
-        :is-adding="isAdding"
-        :is-scanning="isScanning"
-        :has-model="hasModel"
-        :profile-list="profiles"
-        :active-profile="activeProfile"
-        :show-tooltips="options.showTooltips"
-
+      @scan="scan"
+      @add="add"
+      @deleteModel="deleteModel"
+      @generateModel="generateModel"
+      @activateProfile="activateProfile"
+      :is-inspecting="isInspecting"
+      :is-adding="isAdding"
+      :is-scanning="isScanning"
+      :has-model="hasModel"
+      :profile-list="profiles"
+      :active-profile="activeProfile"
+      :show-tooltips="options.showTooltips"
     />
-    <Table :model="model" :is-inspecting="isInspecting" :show-tooltips="options.showTooltips" @emptyModel="emptyModel" />
-    <Alert ref="alert"></Alert>
-    <Popup ref="popup" :dark-mode="options.darkMode"></Popup>
-    <Confirm ref="confirm"></Confirm>
-    <CodeDialog ref="code"></CodeDialog>
+    <EntityTable :model="model" :is-inspecting="isInspecting" :show-tooltips="options.showTooltips" @emptyModel="emptyModel" /> <Alert ref="alert"></Alert>
+    <Popup ref="popup" :dark-mode="options.darkMode"></Popup> <Confirm ref="confirm"></Confirm> <CodeDialog ref="code"></CodeDialog>
   </v-app>
 </template>
 
 <script>
 import Alert from '../components/Alert';
 import Toolbar from './Toolbar';
-import Table from './Table';
+import EntityTable from './Table';
 import ModelBuilder from '../content/ModelBuilder';
 import Popup from '../components/Popup';
 import Confirm from '../components/Confirm';
@@ -36,7 +32,7 @@ import defaultOptions from '../options/defaultOptions';
 
 export default {
   name: 'app',
-  components: { Table, Toolbar, Alert, Popup, Confirm, CodeDialog },
+  components: { EntityTable, Toolbar, Alert, Popup, Confirm, CodeDialog },
   computed: {
     isInspecting() {
       return this.isAdding || this.isScanning;
@@ -167,5 +163,4 @@ export default {
   },
 };
 </script>
-<style scoped lang="scss">
-</style>
+<style scoped lang="scss"></style>

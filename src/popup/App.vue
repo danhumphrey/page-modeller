@@ -1,7 +1,5 @@
 <template>
-  <div>
-    <p>Please open DevTools to use the Page Modeller extension.</p>
-  </div>
+  <div><p>Please open DevTools to use the Page Modeller extension.</p></div>
 </template>
 
 <script>
@@ -12,7 +10,7 @@ export default {
 };
 </script>
 
-<style lang="scss" >
+<style lang="scss">
 body {
   width: 200px;
 }
