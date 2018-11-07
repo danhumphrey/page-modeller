@@ -2,7 +2,7 @@
 /* eslint-disable import/no-extraneous-dependencies */
 const fs = require('fs');
 const path = require('path');
-const zipFolder = require('zip-folder');
+const archiver = require('archiver');
 const extPackageJson = require('../package.json');
 
 const DEST_DIR = path.join(__dirname, '../build');
@@ -22,14 +22,17 @@ const makeDestZipDirIfNotExists = () => {
 const buildZip = (src, dest, zipFilename) => {
   console.info(`Building ${zipFilename}...`);
 
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  const stream = fs.createWriteStream(path.join(dest, zipFilename));
+
   return new Promise((resolve, reject) => {
-    zipFolder(src, path.join(dest, zipFilename), err => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
+    archive
+      .directory(src, false)
+      .on('error', err => reject(err))
+      .pipe(stream);
+
+    stream.on('close', () => resolve());
+    archive.finalize();
   });
 };
 
