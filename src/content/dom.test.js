@@ -542,7 +542,44 @@ describe('findElementsByNgBindings', () => {
     expect(findElementsByNgBindings(document, 'some.binding')).toEqual([]);
   });
 
-  console.log('findElementsByNgBindings requires manual testing');
+  test('element with ng-binding', () => {
+    // mock the angular $binding
+    document.angular = {
+      element() {
+        return {
+          data() {
+            return 'person';
+          },
+        };
+      },
+    };
+
+    document.body.innerHTML = '<a id="test1" class="ng-binding">Click</a>';
+    const element = document.getElementById('test1');
+    expect(findElementsByNgBindings(document, 'person')).toEqual([element]);
+
+    delete document.angular;
+  });
+
+  test('multiple elements with ng-binding', () => {
+    // mock the angular $binding
+    document.angular = {
+      element() {
+        return {
+          data() {
+            return 'person';
+          },
+        };
+      },
+    };
+
+    document.body.innerHTML = '<a id="test1" class="ng-binding">Click</a><a id="test2" class="ng-binding">Click</a>';
+    const element1 = document.getElementById('test1');
+    const element2 = document.getElementById('test2');
+    expect(findElementsByNgBindings(document, 'person')).toEqual([element1, element2]);
+
+    delete document.angular;
+  });
 });
 
 describe('findElementsByNgModel', () => {
