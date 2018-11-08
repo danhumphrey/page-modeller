@@ -162,6 +162,28 @@ const getLabel = element => {
   return null;
 };
 
+const getNgBinding = element => {
+  if (!window.angular || !element.classList.contains('ng-binding')) {
+    return null;
+  }
+  const dataBinding = window.angular.element(element).data('$binding');
+  if (dataBinding) {
+    return dataBinding.exp || dataBinding[0].exp || dataBinding;
+  }
+  return null;
+};
+
+const getNgModel = element => {
+  const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', 'ng:'];
+  for (let p = 0; p < prefixes.length; p += 1) {
+    const model = element.getAttribute(`${prefixes[p]}model`);
+    if (model) {
+      return model;
+    }
+  }
+  return null;
+};
+
 const findElementsByXPath = (document, locator) => {
   const results = [];
   try {
@@ -217,19 +239,16 @@ const findElementsByPartialLinkText = (document, locator) => {
   return els.filter(el => el.textContent.indexOf(locator) !== -1);
 };
 
-const findElementsByNgBindings = (document, locator) => {
+const findElementsByNgBinding = (document, locator) => {
   const matches = [];
-  if (!document.angular) {
+  if (!window.angular) {
     return matches;
   }
   const bindings = document.getElementsByClassName('ng-binding');
   for (let i = 0; i < bindings.length; i += 1) {
-    const dataBinding = document.angular.element(bindings[i]).data('$binding');
-    if (dataBinding) {
-      const bindingName = dataBinding.exp || dataBinding[0].exp || dataBinding;
-      if (bindingName.indexOf(locator) !== -1) {
-        matches.push(bindings[i]);
-      }
+    const binding = getNgBinding(bindings[i]);
+    if (binding && binding.indexOf(locator) !== -1) {
+      matches.push(bindings[i]);
     }
   }
   return matches;
@@ -265,6 +284,8 @@ export default {
   getCssSelector,
   getLinkText,
   getLabel,
+  getNgBinding,
+  getNgModel,
   findElementsById,
   findElementsByName,
   findElementsByLinkText,
@@ -274,7 +295,7 @@ export default {
   findElementsByCssSelector,
   findElementsByXPath,
   findElementsByTagIndex,
-  findElementsByNgBindings,
+  findElementsByNgBinding,
   findElementsByNgModel,
   IGNORE_ELEMENT_VISIBILITY,
 };

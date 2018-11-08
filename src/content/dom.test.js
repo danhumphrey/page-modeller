@@ -296,6 +296,92 @@ describe('getLabel', () => {
   });
 });
 
+describe('getNgBinding', () => {
+  const getNgBinding = dom.__get__('getNgBinding');
+
+  test('page without angular framework returns null', () => {
+    document.body.innerHTML = '<div><input id="test">Paragraph</input></div>';
+    const element = document.getElementById('test');
+    expect(getNgBinding(element)).toBe(null);
+  });
+
+  test('element without ng-binding class returns null', () => {
+    // mock the angular $binding
+    Object.defineProperty(global, 'angular', {
+      value: {
+        element() {
+          return {
+            data() {
+              return 'person';
+            },
+          };
+        },
+      },
+    });
+    document.body.innerHTML = '<div><p id="test" >{{person}}</p></div>';
+    const element = document.getElementById('test');
+    expect(getNgBinding(element)).toBe(null);
+  });
+
+  test('element with binding', () => {
+    // mock the angular $binding
+    Object.defineProperty(global, 'angular', {
+      value: {
+        element() {
+          return {
+            data() {
+              return 'person';
+            },
+          };
+        },
+      },
+    });
+    document.body.innerHTML = '<div><p id="test" class="ng-binding">{{person}}</p></div>';
+    const element = document.getElementById('test');
+    expect(getNgBinding(element)).toBe('person');
+  });
+});
+
+describe('getNgModel', () => {
+  const getNgModel = dom.__get__('getNgModel');
+
+  test('test no ng-model attribute returns null', () => {
+    document.body.innerHTML = '<div><input id="test" /></div>';
+    const element = document.getElementById('test');
+    expect(getNgModel(element)).toBe(null);
+  });
+
+  test('test ng-model attribute', () => {
+    document.body.innerHTML = '<div><input id="test" ng-model="person" /></div>';
+    const element = document.getElementById('test');
+    expect(getNgModel(element)).toBe('person');
+  });
+
+  test('test ng_model attribute', () => {
+    document.body.innerHTML = '<div><input id="test" ng_model="employee" /></div>';
+    const element = document.getElementById('test');
+    expect(getNgModel(element)).toBe('employee');
+  });
+
+  test('test data-ng-model attribute', () => {
+    document.body.innerHTML = '<div><input id="test" data-ng-model="user" /></div>';
+    const element = document.getElementById('test');
+    expect(getNgModel(element)).toBe('user');
+  });
+
+  test('test x-ng-model attribute', () => {
+    document.body.innerHTML = '<div><input id="test" x-ng-model="manager" /></div>';
+    const element = document.getElementById('test');
+    expect(getNgModel(element)).toBe('manager');
+  });
+
+  test('test ng:model attribute', () => {
+    document.body.innerHTML = '<div><input id="test" ng:model="forename" /></div>';
+    const element = document.getElementById('test');
+    expect(getNgModel(element)).toBe('forename');
+  });
+});
+
 describe('findElementsByXPath', () => {
   const findElementsByXPath = dom.__get__('findElementsByXPath');
 
@@ -534,51 +620,50 @@ describe('findElementsByTagIndex', () => {
   });
 });
 
-describe('findElementsByNgBindings', () => {
-  const findElementsByNgBindings = dom.__get__('findElementsByNgBindings');
+describe('findElementsByNgBinding', () => {
+  const findElementsByNgBinding = dom.__get__('findElementsByNgBinding');
 
   test('page without angular framework returns empty array', () => {
     document.body.innerHTML = '<a id="test1" class="ng-binding">Click</a>';
-    expect(findElementsByNgBindings(document, 'some.binding')).toEqual([]);
+    expect(findElementsByNgBinding(document, 'some.binding')).toEqual([]);
   });
 
   test('element with ng-binding', () => {
     // mock the angular $binding
-    document.angular = {
-      element() {
-        return {
-          data() {
-            return 'person';
-          },
-        };
+    Object.defineProperty(global, 'angular', {
+      value: {
+        element() {
+          return {
+            data() {
+              return 'person';
+            },
+          };
+        },
       },
-    };
+    });
 
     document.body.innerHTML = '<a id="test1" class="ng-binding">Click</a>';
     const element = document.getElementById('test1');
-    expect(findElementsByNgBindings(document, 'person')).toEqual([element]);
-
-    delete document.angular;
+    expect(findElementsByNgBinding(document, 'person')).toEqual([element]);
   });
 
   test('multiple elements with ng-binding', () => {
     // mock the angular $binding
-    document.angular = {
-      element() {
-        return {
-          data() {
-            return 'person';
-          },
-        };
+    Object.defineProperty(global, 'angular', {
+      value: {
+        element() {
+          return {
+            data() {
+              return 'person';
+            },
+          };
+        },
       },
-    };
-
+    });
     document.body.innerHTML = '<a id="test1" class="ng-binding">Click</a><a id="test2" class="ng-binding">Click</a>';
     const element1 = document.getElementById('test1');
     const element2 = document.getElementById('test2');
-    expect(findElementsByNgBindings(document, 'person')).toEqual([element1, element2]);
-
-    delete document.angular;
+    expect(findElementsByNgBinding(document, 'person')).toEqual([element1, element2]);
   });
 });
 
