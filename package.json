@@ -22,8 +22,8 @@
     "zip": "npm run zip:chrome && npm run zip:firefox",
     "watch": "npm run build -- --watch",
     "watch:dev": "npm run build:dev -- --watch",
-    "watch:chrome": "cross-env LAUNCH_CHROME=true HMR=true npm run watch:dev",
-    "watch:firefox": "cross-env LAUNCH_FIREFOX=true npm run watch:dev",
+    "launch:chrome": "cross-env LAUNCH_CHROME=true HMR=true npm run watch:dev",
+    "launch:firefox": "cross-env LAUNCH_FIREFOX=true npm run watch:dev",
     "version": "cd scripts && node release.js && cd ./",
     "release": "npm run version && npm run build && npm run zip:chrome && npm run sign:firefox"
   },
