@@ -2,6 +2,7 @@ import SeleniumWebDriverJavaTemplate from './SeleniumWebDriverJavaTemplate';
 import SeleniumWebDriverCSharpTemplate from './SeleniumWebDriverCSharpTemplate';
 import RobotFrameworkTemplate from './RobotFrameworkTemplate';
 import PuppeteerTemplate from './PuppeteerTemplate';
+import ProtractorTemplate from './ProtractorTemplate';
 
 export default [
   {
@@ -23,5 +24,10 @@ export default [
     name: 'Puppeteer',
     template: PuppeteerTemplate,
     locators: ['css', 'xpath'],
+  },
+  {
+    name: 'Protractor',
+    template: ProtractorTemplate,
+    locators: ['id', 'linkText', 'partialLinkText', 'name', 'model', 'binding', 'css', 'xpath', 'className', 'tagName'],
   },
 ];

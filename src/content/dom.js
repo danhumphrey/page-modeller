@@ -241,7 +241,7 @@ const findElementsByPartialLinkText = (document, locator) => {
 
 const findElementsByNgBinding = (document, locator) => {
   const matches = [];
-  if (!window.angular) {
+  if (!window.angular || !locator) {
     return matches;
   }
   const bindings = document.getElementsByClassName('ng-binding');
@@ -255,6 +255,9 @@ const findElementsByNgBinding = (document, locator) => {
 };
 
 const findElementsByNgModel = (document, model) => {
+  if (!model) {
+    return [];
+  }
   const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', 'ng:'];
   for (let p = 0; p < prefixes.length; p += 1) {
     const selector = `[${prefixes[p]}model="${model}"]`;

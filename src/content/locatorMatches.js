@@ -31,6 +31,12 @@ export default locator => {
     case 'partialLinkText':
       matches = dom.findElementsByPartialLinkText(document, locator.locator);
       break;
+    case 'model':
+      matches = dom.findElementsByNgModel(document, locator.locator);
+      break;
+    case 'binding':
+      matches = dom.findElementsByNgBinding(document, locator.locator);
+      break;
     default:
       console.error(`Unexpected locator ${locator}`);
   }

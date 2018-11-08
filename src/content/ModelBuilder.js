@@ -108,6 +108,14 @@ export default class ModelBuilder {
         locator: dom.getName(element),
       },
       {
+        name: 'model',
+        locator: dom.getNgModel(element),
+      },
+      {
+        name: 'binding',
+        locator: dom.getNgBinding(element),
+      },
+      {
         name: 'css',
         locator: getCssSelector(element),
       },
