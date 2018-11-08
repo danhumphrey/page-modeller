@@ -38,7 +38,8 @@ const renderGetAndSetCheckboxRadio = entity => `
  async set${entity.name}(onOrOff) {
    const val = await this.get${entity.name}();
    if( (onOrOff && !val) || (!onOrOff && val)) {
-     await this.click${entity.name}(); 
+     const element = await this.get${entity.name}Element(); 
+     element.click();
    }
  }
 `;
