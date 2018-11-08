@@ -120,8 +120,9 @@ const getTextContent = element => {
 };
 
 const getClassName = element => {
-  if (element.className) {
-    return element.className.match(/\S+/g)[0];
+  const classAttribute = element.getAttribute('class');
+  if (classAttribute) {
+    return classAttribute.match(/\S+/g)[0];
   }
   return null;
 };
