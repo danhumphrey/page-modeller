@@ -35,6 +35,16 @@ const idAttributeRule = element => {
   return id || false;
 };
 
+const ngModelRule = element => {
+  const model = dom.getNgModel(element);
+  return model || false;
+};
+
+const ngBindingRule = element => {
+  const binding = dom.getNgBinding(element);
+  return binding || false;
+};
+
 const textContentRule = element => {
   const textContent = dom.getTextContent(element);
   return textContent || false;
@@ -142,7 +152,7 @@ const cleanName = (name, element) => {
   return upperFirst(limitNameLength(ret));
 };
 
-const rules = [labelNameRule, buttonValueRule, nameAttributeRule, idAttributeRule, textContentRule, specialElementTypeRule];
+const rules = [labelNameRule, buttonValueRule, nameAttributeRule, idAttributeRule, ngModelRule, ngBindingRule, textContentRule, specialElementTypeRule];
 rules.push(defaultNameRule);
 
 const generateName = element => {
