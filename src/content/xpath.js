@@ -43,7 +43,7 @@ const uniqueXPath = (element, xpath) => {
     return xpath;
   }
   for (let i = 0; i < matchingElements.length; i += 1) {
-    const newXPath = `${xpath}[${i + 1}]`;
+    const newXPath = `(${xpath})[${i + 1}]`;
     if ([...dom.findElementsByXPath(element.ownerDocument, newXPath)][0] === element) {
       return newXPath;
     }
@@ -171,6 +171,14 @@ const imageBuilder = element => {
   return false;
 };
 
+const uniqueClassNameBuilder = element => {
+  const className = dom.getClassName(element);
+  if (className && dom.findElementsByClassName(element.ownerDocument, className).length === 1) {
+    return `${element.nodeName.toLowerCase()}[contains(@class,${attributeValue(className)})]`;
+  }
+  return false;
+};
+
 const getIndexBasedXPath = element => {
   let path = '';
   let current = element;
@@ -195,7 +203,18 @@ const getIndexBasedXPath = element => {
 
 const indexedXPathBuilder = element => uniqueXPath(element, getIndexBasedXPath(element));
 
-const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, linkTextBuilder, linkHrefBuilder, buttonTextBuilder, inputButtonValueBuilder, imageBuilder];
+const builders = [
+  idBuilder,
+  ngModelBuilder,
+  nameBuilder,
+  ariaLabelBuilder,
+  linkTextBuilder,
+  uniqueClassNameBuilder,
+  linkHrefBuilder,
+  buttonTextBuilder,
+  inputButtonValueBuilder,
+  imageBuilder,
+];
 
 const getPreferredXPath = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {

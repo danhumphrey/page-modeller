@@ -34,8 +34,8 @@ describe('uniqueXPath', () => {
     const els = document.querySelectorAll('p');
     const p1 = els[0];
     const p2 = els[1];
-    expect(uniqueXPath(p1, '//p')).toBe('//p[1]');
-    expect(uniqueXPath(p2, '//p')).toBe('//p[2]');
+    expect(uniqueXPath(p1, '//p')).toBe('(//p)[1]');
+    expect(uniqueXPath(p2, '//p')).toBe('(//p)[2]');
   });
 });
 
@@ -74,8 +74,8 @@ describe('idBuilder', () => {
     document.body.innerHTML = '<input id="surname" /><input id="surname" class="second" />';
     const element1 = document.getElementById('surname');
     const element2 = document.getElementsByClassName('second')[0];
-    expect(idBuilder(element1)).toBe(`//input[@id='surname'][1]`);
-    expect(idBuilder(element2)).toBe(`//input[@id='surname'][2]`);
+    expect(idBuilder(element1)).toBe(`(//input[@id='surname'])[1]`);
+    expect(idBuilder(element2)).toBe(`(//input[@id='surname'])[2]`);
   });
 });
 
@@ -122,8 +122,8 @@ describe('ngModelBuilder', () => {
     document.body.innerHTML = '<input ng-model="something" /><input ng-model="something" class="second" />';
     const element1 = document.querySelector(`input`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(ngModelBuilder(element1)).toBe(`//input[@ng-model='something'][1]`);
-    expect(ngModelBuilder(element2)).toBe(`//input[@ng-model='something'][2]`);
+    expect(ngModelBuilder(element1)).toBe(`(//input[@ng-model='something'])[1]`);
+    expect(ngModelBuilder(element2)).toBe(`(//input[@ng-model='something'])[2]`);
   });
 });
 
@@ -146,8 +146,8 @@ describe('nameBuilder', () => {
     document.body.innerHTML = '<input name="surname" /><input name="surname" class="second" />';
     const element1 = document.querySelector(`input[name='surname']`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(nameBuilder(element1)).toBe(`//input[@name='surname'][1]`);
-    expect(nameBuilder(element2)).toBe(`//input[@name='surname'][2]`);
+    expect(nameBuilder(element1)).toBe(`(//input[@name='surname'])[1]`);
+    expect(nameBuilder(element2)).toBe(`(//input[@name='surname'])[2]`);
   });
 });
 
@@ -170,8 +170,8 @@ describe('ariaLabelBuilder', () => {
     document.body.innerHTML = '<input aria-label="Something" /><input aria-label="Something" class="second" />';
     const element1 = document.querySelector(`input`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(ariaLabelBuilder(element1)).toBe(`//input[@aria-label='Something'][1]`);
-    expect(ariaLabelBuilder(element2)).toBe(`//input[@aria-label='Something'][2]`);
+    expect(ariaLabelBuilder(element1)).toBe(`(//input[@aria-label='Something'])[1]`);
+    expect(ariaLabelBuilder(element2)).toBe(`(//input[@aria-label='Something'])[2]`);
   });
 });
 
@@ -206,8 +206,8 @@ describe('linkTextBuilder', () => {
     document.body.innerHTML = '<a>Test</a><a class="second">Test</a>';
     const element1 = document.querySelector(`a`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(linkTextBuilder(element1)).toBe(`//a[contains(text(),'Test')][1]`);
-    expect(linkTextBuilder(element2)).toBe(`//a[contains(text(),'Test')][2]`);
+    expect(linkTextBuilder(element1)).toBe(`(//a[contains(text(),'Test')])[1]`);
+    expect(linkTextBuilder(element2)).toBe(`(//a[contains(text(),'Test')])[2]`);
   });
 });
 
@@ -242,8 +242,8 @@ describe('buttonTextBuilder', () => {
     document.body.innerHTML = '<button>Test</button><button class="second">Test</button>';
     const element1 = document.querySelector(`button`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(buttonTextBuilder(element1)).toBe(`//button[contains(text(),'Test')][1]`);
-    expect(buttonTextBuilder(element2)).toBe(`//button[contains(text(),'Test')][2]`);
+    expect(buttonTextBuilder(element1)).toBe(`(//button[contains(text(),'Test')])[1]`);
+    expect(buttonTextBuilder(element2)).toBe(`(//button[contains(text(),'Test')])[2]`);
   });
 });
 
@@ -290,8 +290,8 @@ describe('inputButtonValueBuilder', () => {
     document.body.innerHTML = '<input type="submit" value="Test" /> <input type="submit" value="Test" class="second" />';
     const element1 = document.querySelector(`input`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(inputButtonValueBuilder(element1)).toBe(`//input[contains(@value,'Test')][1]`);
-    expect(inputButtonValueBuilder(element2)).toBe(`//input[contains(@value,'Test')][2]`);
+    expect(inputButtonValueBuilder(element1)).toBe(`(//input[contains(@value,'Test')])[1]`);
+    expect(inputButtonValueBuilder(element2)).toBe(`(//input[contains(@value,'Test')])[2]`);
   });
 });
 
@@ -326,8 +326,8 @@ describe('linkHrefBuilder', () => {
     document.body.innerHTML = '<a href="contact.html"/>Contact<a href="contact.html" class="second"/>';
     const element1 = document.querySelector(`a`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(linkHrefBuilder(element1)).toBe(`//a[contains(@href,'contact.html')][1]`);
-    expect(linkHrefBuilder(element2)).toBe(`//a[contains(@href,'contact.html')][2]`);
+    expect(linkHrefBuilder(element1)).toBe(`(//a[contains(@href,'contact.html')])[1]`);
+    expect(linkHrefBuilder(element2)).toBe(`(//a[contains(@href,'contact.html')])[2]`);
   });
 });
 
@@ -356,8 +356,8 @@ describe('imageBuilder', () => {
     document.body.innerHTML = '<img alt="Test"/><img alt="Test" class="second"/>';
     const element1 = document.querySelector(`img`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(imageBuilder(element1)).toBe(`//img[@alt='Test'][1]`);
-    expect(imageBuilder(element2)).toBe(`//img[@alt='Test'][2]`);
+    expect(imageBuilder(element1)).toBe(`(//img[@alt='Test'])[1]`);
+    expect(imageBuilder(element2)).toBe(`(//img[@alt='Test'])[2]`);
   });
 
   test('IMG element with title attribute returns correct xpath', () => {
@@ -370,8 +370,8 @@ describe('imageBuilder', () => {
     document.body.innerHTML = '<img title="Test"/><img title="Test" class="second"/>';
     const element1 = document.querySelector(`img`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(imageBuilder(element1)).toBe(`//img[@title='Test'][1]`);
-    expect(imageBuilder(element2)).toBe(`//img[@title='Test'][2]`);
+    expect(imageBuilder(element1)).toBe(`(//img[@title='Test'])[1]`);
+    expect(imageBuilder(element2)).toBe(`(//img[@title='Test'])[2]`);
   });
 
   test('IMG element with relative src attribute returns correct xpath', () => {
@@ -390,8 +390,36 @@ describe('imageBuilder', () => {
     document.body.innerHTML = '<img src="puppy.png"/><img src="puppy.png" class="second"/>';
     const element1 = document.querySelector(`img`);
     const element2 = document.getElementsByClassName('second')[0];
-    expect(imageBuilder(element1)).toBe(`//img[contains(@src,'puppy.png')][1]`);
-    expect(imageBuilder(element2)).toBe(`//img[contains(@src,'puppy.png')][2]`);
+    expect(imageBuilder(element1)).toBe(`(//img[contains(@src,'puppy.png')])[1]`);
+    expect(imageBuilder(element2)).toBe(`(//img[contains(@src,'puppy.png')])[2]`);
+  });
+});
+
+describe('uniqueClassNameBuilder', () => {
+  const uniqueClassNameBuilder = xpath.__get__('uniqueClassNameBuilder');
+
+  test('element without class attribute returns false', () => {
+    document.body.innerHTML = '<a id="contact-link">Contact</a>';
+    const element = document.querySelector('a');
+    expect(uniqueClassNameBuilder(element)).toBe(false);
+  });
+
+  test('element without unique class attribute returns false', () => {
+    document.body.innerHTML = '<a id="contact-link" class="menu-item">Contact</a><a id="home-link" class="menu-item">Home</a>';
+    const element = document.getElementById('home-link');
+    expect(uniqueClassNameBuilder(element)).toBe(false);
+  });
+
+  test('element with unique class attribute', () => {
+    document.body.innerHTML = '<a id="contact-link" class="menu-item">Contact</a><a id="home-link" class="last-menu-item">Home</a>';
+    const element = document.getElementById('contact-link');
+    expect(uniqueClassNameBuilder(element)).toBe(`a[contains(@class,'menu-item')]`);
+  });
+
+  test('element with unique class name and other class names', () => {
+    document.body.innerHTML = '<a id="contact-link" class="menu-item first-menu-item">Contact</a><a id="home-link" class="last-menu-item">Home</a>';
+    const element = document.getElementById('contact-link');
+    expect(uniqueClassNameBuilder(element)).toBe(`a[contains(@class,'menu-item')]`);
   });
 });
 

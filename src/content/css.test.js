@@ -329,6 +329,34 @@ describe('relativeCssBuilder', () => {
   });
 });
 
+describe('uniqueClassNameBuilder', () => {
+  const uniqueClassNameBuilder = css.__get__('uniqueClassNameBuilder');
+
+  test('element without class attribute returns false', () => {
+    document.body.innerHTML = '<a id="contact-link">Contact</a>';
+    const element = document.querySelector('a');
+    expect(uniqueClassNameBuilder(element)).toBe(false);
+  });
+
+  test('element without unique class attribute returns false', () => {
+    document.body.innerHTML = '<a id="contact-link" class="menu-item">Contact</a><a id="home-link" class="menu-item">Home</a>';
+    const element = document.getElementById('home-link');
+    expect(uniqueClassNameBuilder(element)).toBe(false);
+  });
+
+  test('element with unique class attribute', () => {
+    document.body.innerHTML = '<a id="contact-link" class="menu-item">Contact</a><a id="home-link" class="last-menu-item">Home</a>';
+    const element = document.getElementById('contact-link');
+    expect(uniqueClassNameBuilder(element)).toBe(`a[class^='menu-item']`);
+  });
+
+  test('element with unique class name within attribute', () => {
+    document.body.innerHTML = '<a id="contact-link" class="menu-item first-menu-item">Contact</a><a id="home-link" class="last-menu-item">Home</a>';
+    const element = document.getElementById('contact-link');
+    expect(uniqueClassNameBuilder(element)).toBe(`a[class^='menu-item']`);
+  });
+});
+
 describe('getCssSelector', () => {
   const getCssSelector = css.__get__('getCssSelector');
 

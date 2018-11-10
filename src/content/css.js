@@ -87,7 +87,16 @@ const imageBuilder = element => {
   }
   return false;
 };
-const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, linkHrefBuilder, inputButtonValueBuilder, imageBuilder];
+
+const uniqueClassNameBuilder = element => {
+  const className = dom.getClassName(element);
+  if (className && dom.findElementsByClassName(element.ownerDocument, className).length === 1) {
+    return `${element.nodeName.toLowerCase()}[class^='${className}']`;
+  }
+  return false;
+};
+
+const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, uniqueClassNameBuilder, linkHrefBuilder, inputButtonValueBuilder, imageBuilder];
 
 const getPreferredLocator = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {
