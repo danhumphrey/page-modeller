@@ -174,7 +174,7 @@ const imageBuilder = element => {
 const uniqueClassNameBuilder = element => {
   const className = dom.getClassName(element);
   if (className && dom.findElementsByClassName(element.ownerDocument, className).length === 1) {
-    return `${element.nodeName.toLowerCase()}[contains(@class,${attributeValue(className)})]`;
+    return `//${getElementNodeName(element)}[contains(@class,${attributeValue(className)})]`;
   }
   return false;
 };

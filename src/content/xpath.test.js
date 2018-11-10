@@ -413,13 +413,13 @@ describe('uniqueClassNameBuilder', () => {
   test('element with unique class attribute', () => {
     document.body.innerHTML = '<a id="contact-link" class="menu-item">Contact</a><a id="home-link" class="last-menu-item">Home</a>';
     const element = document.getElementById('contact-link');
-    expect(uniqueClassNameBuilder(element)).toBe(`a[contains(@class,'menu-item')]`);
+    expect(uniqueClassNameBuilder(element)).toBe(`//a[contains(@class,'menu-item')]`);
   });
 
   test('element with unique class name and other class names', () => {
     document.body.innerHTML = '<a id="contact-link" class="menu-item first-menu-item">Contact</a><a id="home-link" class="last-menu-item">Home</a>';
     const element = document.getElementById('contact-link');
-    expect(uniqueClassNameBuilder(element)).toBe(`a[contains(@class,'menu-item')]`);
+    expect(uniqueClassNameBuilder(element)).toBe(`//a[contains(@class,'menu-item')]`);
   });
 });
 
