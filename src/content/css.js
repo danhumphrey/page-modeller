@@ -55,7 +55,9 @@ const linkHrefBuilder = element => {
     if (element.href !== '') {
       const url = new URL(element.href);
       const path = url.pathname.substr(1, url.pathname.length - 1);
-      return uniqueCss(element, `a[href*='${path}']`);
+      if (path) {
+        return uniqueCss(element, `a[href*='${path}']`);
+      }
     }
   }
   return false;

@@ -128,7 +128,9 @@ const linkHrefBuilder = element => {
     if (element.href !== '') {
       const url = new URL(element.href);
       const path = url.pathname.substr(1, url.pathname.length - 1);
-      return uniqueXPath(element, `//${getElementNodeName(element)}[contains(@href,${attributeValue(path)})]`);
+      if (path) {
+        return uniqueXPath(element, `//${getElementNodeName(element)}[contains(@href,${attributeValue(path)})]`);
+      }
     }
   }
   return false;
