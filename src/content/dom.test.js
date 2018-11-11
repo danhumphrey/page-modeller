@@ -234,6 +234,28 @@ describe('getClassName', () => {
   });
 });
 
+describe('getClassNames', () => {
+  const getClassNames = dom.__get__('getClassNames');
+
+  test('element without class returns empty array', () => {
+    document.body.innerHTML = `<input id="test1" />`;
+    const element = document.getElementById('test1');
+    expect(getClassNames(element)).toEqual([]);
+  });
+
+  test('element with class returns it in an array', () => {
+    document.body.innerHTML = `<p id="test1" class="my-test">Test</p>`;
+    const element = document.getElementById('test1');
+    expect(getClassNames(element)).toEqual(['my-test']);
+  });
+
+  test('element with multiple classes returns all in an array', () => {
+    document.body.innerHTML = `<p id="test1" class="my-test my-button big">Test</p>`;
+    const element = document.getElementById('test1');
+    expect(getClassNames(element)).toEqual(['my-test', 'my-button', 'big']);
+  });
+});
+
 describe('getLinkText', () => {
   const getLinkText = dom.__get__('getLinkText');
 

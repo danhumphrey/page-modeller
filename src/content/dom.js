@@ -127,6 +127,14 @@ const getClassName = element => {
   return null;
 };
 
+const getClassNames = element => {
+  const classes = element.classList;
+  if (classes.length === 0) {
+    return [];
+  }
+  return [...classes];
+};
+
 const getLinkText = element => {
   if (element.nodeName === 'A') {
     return getTextContent(element);
@@ -285,6 +293,7 @@ export default {
   getId,
   getName,
   getClassName,
+  getClassNames,
   getCssSelector,
   getLinkText,
   getLabel,

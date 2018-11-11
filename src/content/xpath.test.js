@@ -421,6 +421,12 @@ describe('uniqueClassNameBuilder', () => {
     const element = document.getElementById('contact-link');
     expect(uniqueClassNameBuilder(element)).toBe(`//a[contains(@class,'menu-item')]`);
   });
+
+  test('element with unique class name in middle of class attribute', () => {
+    document.body.innerHTML = '<a id="contact-link" class="item menu-item first-menu-item">Contact</a><a id="home-link" class="item last-menu-item">Home</a>';
+    const element = document.getElementById('contact-link');
+    expect(uniqueClassNameBuilder(element)).toBe(`//a[contains(@class,'menu-item')]`);
+  });
 });
 
 describe('indexedXPathBuilder', () => {
