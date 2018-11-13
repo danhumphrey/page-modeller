@@ -63,8 +63,12 @@ describe('getIndexOfElement', () => {
   });
 });
 
-describe('getElementCoordinates', () => {
-  console.log('getElementCoordinates requires manual testing');
+describe('getElementBox', () => {
+  console.log('getElementBox requires manual testing');
+});
+
+describe('getScrollPosition', () => {
+  console.log('getScrollPosition requires manual testing');
 });
 
 describe('isElementOffScreen', () => {

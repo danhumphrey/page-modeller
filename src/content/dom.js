@@ -1,4 +1,5 @@
 import Simmer from 'simmerjs';
+import scrollIntoView from 'scroll-into-view-if-needed';
 
 const getSameSiblingCount = element => {
   const { childNodes } = element.parentNode;
@@ -28,34 +29,68 @@ const getIndexOfElement = element => {
   return index;
 };
 
-const getElementCoordinates = element => ({
-  x: element.getBoundingClientRect().left + element.offsetWidth / 2,
-  y: element.getBoundingClientRect().top + element.offsetHeight / 2,
+const getElementBox = element => {
+  const rect = element.getBoundingClientRect();
+  return {
+    x: rect.x,
+    y: rect.y,
+    width: rect.width,
+    height: rect.height,
+    centreX: rect.left + rect.width / 2,
+    centreY: rect.top + rect.height / 2,
+  };
+};
+
+const getScrollPosition = () => ({
+  scrollDownRemaining: document.documentElement.scrollHeight - (window.innerHeight + document.documentElement.scrollTop),
+  scrollUpRemaining: document.documentElement.scrollTop,
+  scrollLeftRemaining: document.documentElement.scrollLeft,
+  scrollRightRemaining: document.documentElement.scrollWidth - (window.innerWidth + document.documentElement.scrollLeft),
 });
 
 const isElementOffScreen = element => {
-  const elemCenter = getElementCoordinates(element);
-  if (elemCenter.x < 0) return true;
-  if (elemCenter.x > (document.documentElement.clientWidth || window.innerWidth)) return true;
-  if (elemCenter.y < 0) return true;
-  if (elemCenter.y > (document.documentElement.clientHeight || window.innerHeight)) return true;
+  const vpW = document.documentElement.clientWidth || window.innerWidth;
+  const vpH = document.documentElement.clientHeight || window.innerHeight;
+
+  const elementBox = getElementBox(element);
+  if (elementBox.x < 0 && elementBox.x + elementBox.width < 0) return true;
+  if (elementBox.x > vpW) return true;
+  if (elementBox.y < 0 && elementBox.y + elementBox.height < 0) return true;
+  if (elementBox.y > vpH) return true;
   return false;
 };
 
 const isElementHidden = element => {
-  let coords = getElementCoordinates(element);
-
-  /* Stash current Window Scroll */
+  // stash current window scroll position
   const scrollX = window.pageXOffset;
   const scrollY = window.pageYOffset;
 
-  /* Scroll to element */
-  window.scrollTo(coords.x, coords.y);
+  const vpW = document.documentElement.clientWidth || window.innerWidth;
+  const vpH = document.documentElement.clientHeight || window.innerHeight;
 
-  coords = getElementCoordinates(element);
+  let box = getElementBox(element);
+
+  window.scrollTo(0, 0);
+  if (box.x < document.documentElement.scrollWidth && box.y < document.documentElement.scrollHeight) {
+    scrollIntoView(element, { behavior: 'instant', scrollMode: 'if-needed' });
+  }
+
+  // get position again
+  box = getElementBox(element);
+
+  if (isElementOffScreen(element)) {
+    window.scrollTo(scrollX, scrollY);
+    return true;
+  }
+
+  const centreOffScreen = box.centreX < 0 || box.centreY < 0 || box.centreX > vpW || box.centreY > vpH;
+  const elementsAtPoint = document.elementsFromPoint(box.centreX, box.centreY);
+  if (centreOffScreen || elementsAtPoint.length === 0) {
+    window.scrollTo(scrollX, scrollY);
+    return false; // iterate children as some may be within viewport
+  }
 
   let hidden = true;
-  const elementsAtPoint = document.elementsFromPoint(coords.x, coords.y);
   elementsAtPoint.some(e => {
     if (e === element) {
       hidden = false;
@@ -63,7 +98,7 @@ const isElementHidden = element => {
     }
     return false;
   });
-  /* revert to the previous scroll location */
+  // revert to the previous scroll position
   window.scrollTo(scrollX, scrollY);
   return hidden;
 };
@@ -76,7 +111,7 @@ const isVisible = element => {
   if (element.offsetWidth + element.offsetHeight + element.getBoundingClientRect().height + element.getBoundingClientRect().width === 0) {
     return false;
   }
-
+  console.log('isVisible');
   if (element.offsetHeight > 0 && isElementHidden(element)) {
     return false;
   }
@@ -299,6 +334,7 @@ export default {
   getLabel,
   getNgBinding,
   getNgModel,
+  getScrollPosition,
   findElementsById,
   findElementsByName,
   findElementsByLinkText,
