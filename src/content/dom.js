@@ -313,6 +313,17 @@ const findElementsByNgModel = (document, model) => {
   return [];
 };
 
+const getUniqueClassName = element => {
+  const classNames = getClassNames(element);
+  for (let i = 0, j = classNames.length; i < j; i += 1) {
+    const className = classNames[i];
+    if (className && findElementsByClassName(element.ownerDocument, className).length === 1) {
+      return className;
+    }
+  }
+  return null;
+};
+
 const IGNORE_ELEMENT_VISIBILITY = ['THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD'];
 
 export default {
@@ -329,6 +340,7 @@ export default {
   getName,
   getClassName,
   getClassNames,
+  getUniqueClassName,
   getCssSelector,
   getLinkText,
   getLabel,

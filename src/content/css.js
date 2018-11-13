@@ -91,12 +91,9 @@ const imageBuilder = element => {
 };
 
 const uniqueClassNameBuilder = element => {
-  const classNames = dom.getClassNames(element);
-  for (let i = 0, j = classNames.length; i < j; i += 1) {
-    const className = classNames[i];
-    if (className && dom.findElementsByClassName(element.ownerDocument, className).length === 1) {
-      return `${element.nodeName.toLowerCase()}[class^='${className}']`;
-    }
+  const uniqueClassName = dom.getUniqueClassName(element);
+  if (uniqueClassName) {
+    return `${element.nodeName.toLowerCase()}[class^='${uniqueClassName}']`;
   }
   return false;
 };

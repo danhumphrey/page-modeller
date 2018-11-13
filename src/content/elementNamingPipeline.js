@@ -35,6 +35,11 @@ const idAttributeRule = element => {
   return id || false;
 };
 
+const ariaLabelRule = element => {
+  const label = element.getAttribute('aria-label');
+  return label || false;
+};
+
 const ngModelRule = element => {
   const model = dom.getNgModel(element);
   return model || false;
@@ -48,6 +53,11 @@ const ngBindingRule = element => {
 const textContentRule = element => {
   const textContent = dom.getTextContent(element);
   return textContent || false;
+};
+
+const uniqueClassNameRule = element => {
+  const className = dom.getUniqueClassName(element);
+  return className || false;
 };
 
 const specialElementTypeRule = element => {
@@ -152,7 +162,18 @@ const cleanName = (name, element) => {
   return upperFirst(limitNameLength(ret));
 };
 
-const rules = [labelNameRule, buttonValueRule, nameAttributeRule, idAttributeRule, ngModelRule, ngBindingRule, textContentRule, specialElementTypeRule];
+const rules = [
+  labelNameRule,
+  buttonValueRule,
+  nameAttributeRule,
+  idAttributeRule,
+  ariaLabelRule,
+  ngModelRule,
+  ngBindingRule,
+  textContentRule,
+  uniqueClassNameRule,
+  specialElementTypeRule,
+];
 rules.push(defaultNameRule);
 
 const generateName = element => {

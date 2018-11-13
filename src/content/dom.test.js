@@ -260,6 +260,32 @@ describe('getClassNames', () => {
   });
 });
 
+describe('getUniqueClassName', () => {
+  const getUniqueClassName = dom.__get__('getUniqueClassName');
+
+  test('element without class attribute returns null', () => {
+    document.body.innerHTML = `<input id="test1" />`;
+    const element = document.getElementById('test1');
+    expect(getUniqueClassName(element)).toBe(null);
+  });
+
+  test('element without unique class name returns null', () => {
+    document.body.innerHTML = `<input id="test1" class="form-element"/><input id="test2" class="form-element"/>`;
+    const element1 = document.getElementById('test1');
+    const element2 = document.getElementById('test2');
+    expect(getUniqueClassName(element1)).toBe(null);
+    expect(getUniqueClassName(element2)).toBe(null);
+  });
+
+  test('element with unique class name', () => {
+    document.body.innerHTML = `<input id="test1" class="form-element first"/><input id="test2" class="form-element"/>`;
+    const element1 = document.getElementById('test1');
+    const element2 = document.getElementById('test2');
+    expect(getUniqueClassName(element1)).toBe('first');
+    expect(getUniqueClassName(element2)).toBe(null);
+  });
+});
+
 describe('getLinkText', () => {
   const getLinkText = dom.__get__('getLinkText');
 
