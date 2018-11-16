@@ -13,7 +13,7 @@ const getSameSiblingCount = element => {
   return total - 1;
 };
 
-const getIndexOfElement = element => {
+const getElementIndex = element => {
   const { childNodes } = element.parentNode;
   let total = 0;
   let index = -1;
@@ -338,7 +338,7 @@ export default {
   isElementOffScreen,
   isVisible,
   getSameSiblingCount,
-  getIndexOfElement,
+  getIndexOfElement: getElementIndex,
   getTagName,
   getTagType,
   getTagIndex,
