@@ -102,25 +102,32 @@ const isElementHidden = element => {
   window.scrollTo(scrollX, scrollY);
   return hidden;
 };
+const getTagName = element => element.tagName;
+
+const getTagType = element => element.type || null;
 
 const isVisible = element => {
   const style = element.ownerDocument.defaultView.getComputedStyle(element);
-  if (style.display === 'none') return false;
-  if (style.visibility !== 'visible') return false;
-  if (style.opacity < 0.1) return false;
+  if (style.display === 'none') {
+    return false;
+  }
+  if (style.visibility !== 'visible') {
+    return false;
+  }
+  if (style.opacity < 0.1) {
+    return false;
+  }
   if (element.offsetWidth + element.offsetHeight + element.getBoundingClientRect().height + element.getBoundingClientRect().width === 0) {
     return false;
   }
-  console.log('isVisible');
+  if (getTagName(element) === 'INPUT' && getTagType(element) === 'hidden') {
+    return false;
+  }
   if (element.offsetHeight > 0 && isElementHidden(element)) {
     return false;
   }
   return true;
 };
-
-const getTagName = element => element.tagName;
-
-const getTagType = element => element.type || null;
 
 const getTagIndex = element => {
   const n = getTagName(element);
