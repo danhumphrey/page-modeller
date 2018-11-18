@@ -95,6 +95,18 @@ export default {
       this.activeProfile = profileName;
       chrome.runtime.sendMessage({ type: 'activateProfile', data: { profileName } });
     },
+    loadOptions() {
+      chrome.storage.sync.get(['options'], result => {
+        if (result) {
+          if (result.options) {
+            this.options = result.options;
+          } else {
+            // no options saved, so save defaults
+            chrome.runtime.sendMessage({ type: 'saveOptions', data: { options: this.options } });
+          }
+        }
+      });
+    },
   },
   mounted() {
     this.$root.$confirm = this.$refs.confirm.open;
@@ -155,6 +167,9 @@ export default {
             return;
           case 'showCode':
             this.$refs.code.show(this.activeProfile, msg.data.code);
+            break;
+          case 'optionsUpdated':
+            this.loadOptions();
             break;
           default:
         }

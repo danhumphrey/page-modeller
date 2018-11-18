@@ -52,7 +52,9 @@ chrome.runtime.onMessage.addListener(msg => {
       activateProfile(msg.data.profileName);
       return;
     case 'saveOptions':
-      chrome.storage.sync.set({ options: msg.data.options }, () => {});
+      chrome.storage.sync.set({ options: msg.data.options }, () => {
+        sendMessage('optionsUpdated', {});
+      });
       return;
     case 'generateModel':
       chrome.storage.sync.get('activeProfileName', result => {
