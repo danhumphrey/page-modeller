@@ -18,9 +18,11 @@ export default {
   methods: {
     openOptions() {
       chrome.runtime.openOptionsPage();
+      window.close();
     },
     openSupport() {
       chrome.tabs.create({ url: 'https://github.com/danhumphrey/page-modeller' });
+      window.close();
     },
   },
 };
