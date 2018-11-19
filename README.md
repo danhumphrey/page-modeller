@@ -58,7 +58,7 @@ Options can be configured via the browser extension options.
 - Model Hidden Elements
 
 <p align="center">
-  <img src="media/popup_options.png" width="604" alt="Popup Options" /> 
+  <img src="media/popup_options.png" width="302" alt="Popup Options" /> 
 </p>
 
 ## Screenshots
