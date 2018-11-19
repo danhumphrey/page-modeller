@@ -57,6 +57,10 @@ Options can be configured via the browser extension options.
 - Dark Mode
 - Model Hidden Elements
 
+<p align="center">
+  <img src="media/popup_options.png" width="604" alt="Popup Options" /> 
+</p>
+
 ## Screenshots
 
 <p align="center">
