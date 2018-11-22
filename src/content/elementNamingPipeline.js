@@ -25,6 +25,11 @@ const buttonValueRule = element => {
   return false;
 };
 
+const placeholderRule = element => {
+  const placeholder = element.getAttribute('placeholder');
+  return placeholder || false;
+};
+
 const nameAttributeRule = element => {
   const name = dom.getName(element);
   return name || false;
@@ -149,21 +154,27 @@ const replaceSymbols = name => {
   return ret;
 };
 
-const cleanName = (name, element) => {
-  let ret = name.replace(/\s/g, '');
-  ret = replaceNumbers(ret);
-  ret = replaceSymbols(ret);
-  ret = ret.replace(/[^\w]+$/, '');
+const cleanName = name => {
+  let theName = name.replace(/\s/g, '');
+  theName = replaceNumbers(theName);
+  theName = replaceSymbols(theName);
+  theName = theName.replace(/[^\w]+$/, '');
 
-  if (!ret.match(/^\w+$/)) {
-    ret = defaultNameRule(element);
+  if (!theName.match(/^\w+$/)) {
+    return false;
   }
-  ret = camelCase(ret) || ret; // accommodate for weird bug which results in empty string for single character!
-  return upperFirst(limitNameLength(ret));
+
+  return theName;
+};
+
+const formatName = name => {
+  const theName = camelCase(name) || name; // accommodate for weird bug which results in empty string for single character!
+  return upperFirst(limitNameLength(theName));
 };
 
 const rules = [
   labelNameRule,
+  placeholderRule,
   buttonValueRule,
   nameAttributeRule,
   idAttributeRule,
@@ -177,15 +188,19 @@ const rules = [
 rules.push(defaultNameRule);
 
 const generateName = element => {
-  let ret;
+  let theName;
   for (let i = 0, j = rules.length; i < j; i += 1) {
     const rule = rules[i];
-    ret = rule(element);
-    if (ret) {
-      break;
+    theName = rule(element);
+    console.log('wat da name');
+    if (theName) {
+      const cleanedName = cleanName(theName);
+      if (cleanedName !== false) {
+        return formatName(cleanedName);
+      }
     }
   }
-  return cleanName(ret, element);
+  return formatName(defaultNameRule(element));
 };
 
 export default generateName;
