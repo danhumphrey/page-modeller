@@ -8,6 +8,22 @@ import locatorMatches from './locatorMatches';
 import profiles from '../profiles/profiles';
 
 const INTERACTIVE_ELEMENTS = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+const generateLinkTextLocator = (element, partial = false) => {
+  const newLineRegex = /(\r\n|\r|\n)/;
+  const linkText = dom.getLinkText(element);
+  if (!linkText) {
+    return null;
+  }
+  const newLineMatches = linkText.match(newLineRegex);
+  if (newLineMatches) {
+    // handle links containing new lines
+    if (partial) {
+      return linkText.split(newLineRegex)[0];
+    }
+    return null;
+  }
+  return linkText;
+};
 
 export default class ModelBuilder {
   deDupeName(name) {
@@ -69,23 +85,6 @@ export default class ModelBuilder {
     };
   }
 
-  generateLinkTextLocator(element, partial = false) {
-    const newLineRegex = /(\r\n|\r|\n)/;
-    const linkText = dom.getLinkText(element);
-    if (!linkText) {
-      return null;
-    }
-    const newLineMatches = linkText.match(newLineRegex);
-    if (newLineMatches) {
-      // handle links containing new lines
-      if (partial) {
-        return linkText.split(newLineRegex)[0];
-      }
-      return null;
-    }
-    return linkText;
-  }
-
   getLocators(element) {
     const tagName = dom.getTagName(element);
     const tagIndex = dom.getTagIndex(element);
@@ -97,11 +96,11 @@ export default class ModelBuilder {
       },
       {
         name: 'linkText',
-        locator: this.generateLinkTextLocator(element),
+        locator: generateLinkTextLocator(element),
       },
       {
         name: 'partialLinkText',
-        locator: this.generateLinkTextLocator(element, true),
+        locator: generateLinkTextLocator(element, true),
       },
       {
         name: 'name',
