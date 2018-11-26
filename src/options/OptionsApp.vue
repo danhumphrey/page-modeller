@@ -1,6 +1,9 @@
 <template>
   <v-app :dark="darkMode">
     <v-card>
+      <v-card-title primary-title>
+        <h1 class="header-title"><img src="icons/icon_32.png" width="24" /> Page Modeller Options</h1>
+      </v-card-title>
       <v-card-text>
         <v-form>
           <v-layout row wrap>
@@ -58,7 +61,7 @@ export default {
           this.originalOptions = JSON.parse(JSON.stringify(result.options));
           this.showTooltips = this.originalOptions.showTooltips;
           this.modelHiddenElements = this.originalOptions.modelHiddenElements;
-          this.darkMode = this.originalOptions.darkMode || defaultOptions.darkMode; // default re
+          this.darkMode = this.originalOptions.darkMode || defaultOptions.darkMode; // default if no saved option for darkMode
           this.options = result.options;
         } else {
           // no options saved, so save defaults
@@ -98,4 +101,13 @@ export default {
 
 <style lang="scss">
 @import '../styles/colours';
+.header-title {
+  color: dimgray;
+  font-size: 3.1em !important;
+  font-weight: 300;
+  img {
+    margin-top: -4px;
+    vertical-align: middle;
+  }
+}
 </style>
