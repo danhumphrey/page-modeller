@@ -6,7 +6,8 @@ import '../styles/material.scss';
 import 'vuetify/dist/vuetify.css';
 import colours from '../styles/colours.scss';
 
-Vue.config.devtools = true;
+Vue.config.devtools = false;
+
 Vue.use(Vuetify, {
   theme: {
     highlight: colours.active,
