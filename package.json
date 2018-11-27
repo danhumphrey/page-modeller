@@ -78,7 +78,7 @@
     "terser-webpack-plugin": "^1.1.0",
     "vue-loader": "^15.4.2",
     "vue-template-compiler": "^2.5.13",
-    "webpack": "^4.26.0",
+    "webpack": "^4.26.1",
     "webpack-chrome-extension-reloader": "^0.8.3",
     "webpack-cli": "^3.1.2",
     "webpack-shell-plugin": "^0.5.0"
