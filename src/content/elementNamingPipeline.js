@@ -56,7 +56,12 @@ const ngBindingRule = element => {
 };
 
 const textContentRule = element => {
-  const textContent = dom.getTextContent(element);
+  const newLineRegex = /(\r\n|\r|\n)/;
+  let textContent = dom.getTextContent(element);
+  const newLineMatches = textContent.match(newLineRegex);
+  if (newLineMatches) {
+    [textContent] = textContent.split(newLineRegex);
+  }
   return textContent || false;
 };
 
