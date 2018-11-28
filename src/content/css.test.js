@@ -347,19 +347,19 @@ describe('uniqueClassNameBuilder', () => {
   test('element with unique class attribute', () => {
     document.body.innerHTML = '<a id="contact-link" class="menu-item">Contact</a><a id="home-link" class="last-menu-item">Home</a>';
     const element = document.getElementById('contact-link');
-    expect(uniqueClassNameBuilder(element)).toBe(`a[class^='menu-item']`);
+    expect(uniqueClassNameBuilder(element)).toBe(`a[class*='menu-item']`);
   });
 
   test('element with unique class name within attribute', () => {
     document.body.innerHTML = '<a id="contact-link" class="menu-item first-menu-item">Contact</a><a id="home-link" class="last-menu-item">Home</a>';
     const element = document.getElementById('contact-link');
-    expect(uniqueClassNameBuilder(element)).toBe(`a[class^='menu-item']`);
+    expect(uniqueClassNameBuilder(element)).toBe(`a[class*='menu-item']`);
   });
 
   test('element with unique class name in middle of class attribute', () => {
     document.body.innerHTML = '<a id="contact-link" class="item menu-item first-menu-item">Contact</a><a id="home-link" class="item last-menu-item">Home</a>';
     const element = document.getElementById('contact-link');
-    expect(uniqueClassNameBuilder(element)).toBe(`a[class^='menu-item']`);
+    expect(uniqueClassNameBuilder(element)).toBe(`a[class*='menu-item']`);
   });
 });
 

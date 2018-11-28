@@ -93,7 +93,7 @@ const imageBuilder = element => {
 const uniqueClassNameBuilder = element => {
   const uniqueClassName = dom.getUniqueClassName(element);
   if (uniqueClassName) {
-    return `${element.nodeName.toLowerCase()}[class^='${uniqueClassName}']`;
+    return `${element.nodeName.toLowerCase()}[class*='${uniqueClassName}']`;
   }
   return false;
 };
