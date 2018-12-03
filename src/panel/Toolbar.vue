@@ -19,7 +19,7 @@
           <v-icon>arrow_drop_down</v-icon>
         </v-btn>
         <v-list>
-          <v-list-tile v-for="item in profileList" :key="item.name" @click="selectProfile(item);"> <v-list-tile-title v-text="item.name"></v-list-tile-title> </v-list-tile>
+          <v-list-tile v-for="item in profileList" :key="item.name" @click="selectProfile(item)"> <v-list-tile-title v-text="item.name"></v-list-tile-title> </v-list-tile>
         </v-list>
       </v-menu>
       <span>Select Modelling Profile</span>
