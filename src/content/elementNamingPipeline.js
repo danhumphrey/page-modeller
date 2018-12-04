@@ -58,6 +58,9 @@ const ngBindingRule = element => {
 const textContentRule = element => {
   const newLineRegex = /(\r\n|\r|\n)/;
   let textContent = dom.getTextContent(element);
+  if (!textContent) {
+    return false;
+  }
   const newLineMatches = textContent.match(newLineRegex);
   if (newLineMatches) {
     [textContent] = textContent.split(newLineRegex);
@@ -197,7 +200,6 @@ const generateName = element => {
   for (let i = 0, j = rules.length; i < j; i += 1) {
     const rule = rules[i];
     theName = rule(element);
-    console.log('wat da name');
     if (theName) {
       const cleanedName = cleanName(theName);
       if (cleanedName !== false) {

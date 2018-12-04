@@ -1,6 +1,6 @@
 {
   "name": "page-modeller",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A browser extension for modelling web pages for automation",
   "main": "gulpfile.js",
   "author": "Dan Humphrey - danh2000@gmail.com",
@@ -17,7 +17,7 @@
     "build:dev": "cross-env NODE_ENV=development webpack --hide-modules",
     "zip:chrome": "node scripts/build-chrome.js",
     "zip:firefox": "web-ext build -s build-firefox -a release-firefox --overwrite-dest",
-    "manifest:firefox": "cp -a build build-firefox && cd scripts && node firefox-manifest.js",
+    "manifest:firefox": "cp -a build build-firefox && cp build/manifest.json build-firefox && cd scripts && node firefox-manifest.js",
     "sign:firefox": "source .appenv && npm run manifest:firefox && web-ext sign --api-key $AMO_KEY --api-secret $AMO_SECRET -s build-firefox -a release-firefox",
     "zip": "npm run zip:chrome && npm run zip:firefox",
     "watch": "npm run build -- --watch",
