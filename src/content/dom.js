@@ -117,9 +117,11 @@ const isVisible = element => {
   if (style.opacity < 0.1) {
     return false;
   }
-  if (element.offsetWidth + element.offsetHeight + element.getBoundingClientRect().height + element.getBoundingClientRect().width === 0) {
-    return false;
-  }
+  // This is unreliable and prevents some visible child elements from being included:
+  // if (element.offsetWidth + element.offsetHeight + element.getBoundingClientRect().height + element.getBoundingClientRect().width === 0) {
+  //   return false;
+  // }
+
   if (getTagName(element) === 'INPUT' && getTagType(element) === 'hidden') {
     return false;
   }
