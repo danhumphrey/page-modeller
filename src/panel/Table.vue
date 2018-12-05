@@ -1,6 +1,6 @@
 <template>
   <div class="model-table">
-    <v-dialog v-model="dialog">
+    <v-dialog v-model="dialog" @keydown.enter="save">
       <form>
         <v-card>
           <v-card-title class="pa-2"> <span class="headline">Edit Element</span> </v-card-title>
