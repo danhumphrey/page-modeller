@@ -360,6 +360,7 @@ describe('getNgBinding', () => {
   test('element without ng-binding class returns null', () => {
     // mock the angular $binding
     Object.defineProperty(global, 'angular', {
+      configurable: true,
       value: {
         element() {
           return {
@@ -378,6 +379,7 @@ describe('getNgBinding', () => {
   test('element with binding', () => {
     // mock the angular $binding
     Object.defineProperty(global, 'angular', {
+      configurable: true,
       value: {
         element() {
           return {
