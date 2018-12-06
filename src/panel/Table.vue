@@ -34,7 +34,7 @@
                 <v-flex>
                   <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
                     <v-tooltip left open-delay="1000" slot="append" :disabled="!showTooltips">
-                      <v-icon slot="activator" small class="mr-2" @click="showMatchesForLocator(currentLocator)"> remove_red_eye </v-icon>
+                      <v-icon slot="activator" small class="mr-2 pa-1" @click="showMatchesForLocator(currentLocator)"> remove_red_eye </v-icon>
                       <span>View Matched Elements</span>
                     </v-tooltip>
                   </v-text-field>
@@ -57,15 +57,15 @@
           <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ itemLocator(props.item) }}</td>
           <td class="text-xs-right px-0 unselectable">
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
-              <v-icon slot="activator" small class="mr-2" @click="showMatchesForEntity(props.item)" :disabled="isInspecting"> remove_red_eye </v-icon>
+              <v-icon slot="activator" small class="mr-2 pa-1" @click="showMatchesForEntity(props.item)" :disabled="isInspecting"> remove_red_eye </v-icon>
               <span>View Matched Elements</span>
             </v-tooltip>
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
-              <v-icon slot="activator" small class="mr-2" @click="editItem(props.item)" :disabled="isInspecting"> edit </v-icon>
+              <v-icon slot="activator" small class="mr-2 pa-1" @click="editItem(props.item)" :disabled="isInspecting"> edit </v-icon>
               <span>Edit</span>
             </v-tooltip>
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
-              <v-icon slot="activator" small class="mr-4" @click="deleteItem(props.item)" :disabled="isInspecting"> delete </v-icon>
+              <v-icon slot="activator" small class="mr-4 pa-1" @click="deleteItem(props.item)" :disabled="isInspecting"> delete </v-icon>
               <span>Delete</span>
             </v-tooltip>
           </td>
