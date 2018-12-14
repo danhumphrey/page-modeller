@@ -136,7 +136,15 @@ if (process.env.LAUNCH_FIREFOX === 'true') {
 }
 
 if (process.env.HMR === 'true') {
-  config.plugins = (config.plugins || []).concat([new ChromeExtensionReloader()]);
+  config.plugins = (config.plugins || []).concat([
+    new ChromeExtensionReloader({
+      reloadPage: true, // Force the reload of the page also
+      entries: {
+        contentScript: 'content',
+        background: 'background',
+      },
+    }),
+  ]);
 }
 
 module.exports = config;
