@@ -52,7 +52,7 @@
     </v-dialog>
     <v-data-table :items="model == null ? [] : model.entities" :headers="headers" hide-actions class="elevation-0">
       <template slot="items" slot-scope="props">
-        <tr v-on:dblclick="editItem(props.item)">
+        <tr v-on:dblclick="editItem(props.item)" @click="showMatchesForEntity(props.item, true)">
           <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ props.item.name }}</td>
           <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ itemLocator(props.item) }}</td>
           <td class="text-xs-right px-0 unselectable">
@@ -81,6 +81,7 @@
 import upperFirst from 'lodash/upperFirst';
 import { validationMixin } from 'vuelidate';
 import { required } from 'vuelidate/lib/validators';
+import defaultOptions from '../options/defaultOptions';
 
 export default {
   mixins: [validationMixin],
@@ -133,6 +134,7 @@ export default {
         type: '',
         locators: [],
       },
+      options: defaultOptions,
     };
   },
   computed: {
@@ -218,9 +220,21 @@ export default {
     showMatchesForLocator(locator) {
       chrome.runtime.sendMessage({ type: 'appShowMatches', data: { locator } });
     },
-    showMatchesForEntity(entity) {
+    showMatchesForEntity(entity, tableClick = false) {
+      if (tableClick && !this.options.clickTableRowsToViewMatchedElements) {
+        return;
+      }
       const locator = entity.locators.find(l => l.selected);
       this.showMatchesForLocator(locator);
+    },
+    loadOptions() {
+      chrome.storage.sync.get(['options'], result => {
+        if (result) {
+          if (result.options) {
+            this.options = result.options;
+          }
+        }
+      });
     },
   },
 };

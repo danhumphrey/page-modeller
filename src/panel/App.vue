@@ -14,7 +14,7 @@
       :active-profile="activeProfile"
       :show-tooltips="options.showTooltips"
     />
-    <EntityTable :model="model" :is-inspecting="isInspecting" :show-tooltips="options.showTooltips" @emptyModel="emptyModel" /> <Alert ref="alert"></Alert>
+    <EntityTable ref="table" :model="model" :is-inspecting="isInspecting" :show-tooltips="options.showTooltips" @emptyModel="emptyModel" /> <Alert ref="alert"></Alert>
     <Popup ref="popup" :dark-mode="options.darkMode"></Popup> <Confirm ref="confirm"></Confirm> <CodeDialog ref="code"></CodeDialog>
   </v-app>
 </template>
@@ -116,6 +116,8 @@ export default {
     this.$root.$popupWarning = this.$refs.popup.warning;
     this.$root.$popupSuccess = this.$refs.popup.success;
     this.$root.$profileEditor = this.$refs.profileEditor;
+    this.$root.$table = this.$refs.table;
+    this.$root.$table.loadOptions();
 
     chrome.storage.sync.get(['activeProfileName', 'options'], result => {
       if (result) {
@@ -170,6 +172,7 @@ export default {
             break;
           case 'optionsUpdated':
             this.loadOptions();
+            this.$root.$table.loadOptions();
             break;
           default:
         }

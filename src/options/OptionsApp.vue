@@ -11,6 +11,7 @@
               <v-switch label="Show Tooltips" v-model="showTooltips"> </v-switch>
               <v-switch label="Dark Mode" v-model="darkMode"> </v-switch>
               <v-switch label="Model Hidden Elements" v-model="modelHiddenElements"> </v-switch>
+              <v-switch label="Click Table Rows To View Matched Elements" v-model="clickTableRowsToViewMatchedElements"> </v-switch>
             </v-flex>
           </v-layout>
         </v-form>
@@ -34,6 +35,7 @@ export default {
       showTooltips: defaultOptions.showTooltips,
       modelHiddenElements: defaultOptions.modelHiddenElements,
       darkMode: defaultOptions.darkMode,
+      clickTableRowsToViewMatchedElements: defaultOptions.clickTableRowsToViewMatchedElements,
       originalOptions: defaultOptions,
     };
   },
@@ -43,6 +45,7 @@ export default {
         showTooltips: this.showTooltips,
         modelHiddenElements: this.modelHiddenElements,
         darkMode: this.darkMode,
+        clickTableRowsToViewMatchedElements: this.clickTableRowsToViewMatchedElements,
       };
       chrome.runtime.sendMessage({
         type: 'saveOptions',
@@ -62,6 +65,7 @@ export default {
           this.showTooltips = this.originalOptions.showTooltips;
           this.modelHiddenElements = this.originalOptions.modelHiddenElements;
           this.darkMode = this.originalOptions.darkMode || defaultOptions.darkMode; // default if no saved option for darkMode
+          this.clickTableRowsToViewMatchedElements = this.originalOptions.clickTableRowsToViewMatchedElements || defaultOptions.clickTableRowsToViewMatchedElements; //default if no saved options
           this.options = result.options;
         } else {
           // no options saved, so save defaults
@@ -84,6 +88,11 @@ export default {
     },
     darkMode(val) {
       if (this.originalOptions.darkMode !== val) {
+        this.unchanged = false;
+      }
+    },
+    clickTableRowsToViewMatchedElements(val) {
+      if (this.originalOptions.clickTableRowsToViewMatchedElements !== val) {
         this.unchanged = false;
       }
     },
