@@ -65,7 +65,7 @@ export default {
           this.showTooltips = this.originalOptions.showTooltips;
           this.modelHiddenElements = this.originalOptions.modelHiddenElements;
           this.darkMode = this.originalOptions.darkMode || defaultOptions.darkMode; // default if no saved option for darkMode
-          this.clickTableRowsToViewMatchedElements = this.originalOptions.clickTableRowsToViewMatchedElements || defaultOptions.clickTableRowsToViewMatchedElements; //default if no saved options
+          this.clickTableRowsToViewMatchedElements = this.originalOptions.clickTableRowsToViewMatchedElements || defaultOptions.clickTableRowsToViewMatchedElements; // default if no saved options
           this.options = result.options;
         } else {
           // no options saved, so save defaults
