@@ -158,7 +158,9 @@ export default {
             return;
           case 'elementInspected':
             this.model = msg.data.model;
-
+            if (this.model === null) {
+              this.$root.$popupWarning('Cannot determine model - add elements individually.');
+            }
             if (this.isAdding) {
               setTimeout(() => {
                 document.scrollingElement.scrollTop = document.scrollingElement.scrollHeight;
