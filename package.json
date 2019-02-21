@@ -39,13 +39,13 @@
     "simmerjs": "^0.5.6",
     "vue": "^2.6.6",
     "vuelidate": "^0.7.4",
-    "vuetify": "^1.5.1"
+    "vuetify": "^1.5.2"
   },
   "devDependencies": {
     "@babel/core": "^7.3.3",
     "@babel/plugin-proposal-optional-chaining": "^7.2.0",
     "@babel/preset-env": "^7.3.1",
-    "@types/chrome": "^0.0.80",
+    "@types/chrome": "^0.0.81",
     "archiver": "^3.0.0",
     "babel-core": "^7.0.0-bridge.0",
     "babel-eslint": "^10.0.1",
@@ -53,7 +53,7 @@
     "babel-loader": "^8.0.5",
     "babel-plugin-transform-class-properties": "^6.24.1",
     "chrome-launch": "^1.1.4",
-    "copy-webpack-plugin": "^4.6.0",
+    "copy-webpack-plugin": "^5.0.0",
     "cross-env": "^5.1.6",
     "css-loader": "^2.1.0",
     "eslint": "^5.14.1",
@@ -76,7 +76,7 @@
     "sass-loader": "^7.0.1",
     "semver": "^5.6.0",
     "terser-webpack-plugin": "^1.2.2",
-    "vue-loader": "^15.6.2",
+    "vue-loader": "^15.6.4",
     "vue-template-compiler": "^2.6.6",
     "webpack": "^4.29.5",
     "webpack-chrome-extension-reloader": "^1.2.0",
