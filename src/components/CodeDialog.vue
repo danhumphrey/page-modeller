@@ -10,7 +10,6 @@
         </pre>
       </v-card-text>
       <v-card-actions class="pt-0">
-        <v-spacer></v-spacer>
         <v-btn color="primary darken-1" flat="flat" @click.native="copy">Copy</v-btn>
         <v-btn color="primary darken-1" flat="flat" @click.native="ok">Ok</v-btn>
       </v-card-actions>
