@@ -128,8 +128,7 @@ if (process.env.LAUNCH_CHROME === 'true') {
 if (process.env.LAUNCH_FIREFOX === 'true') {
   config.plugins = (config.plugins || []).concat([
     new WebpackShellPlugin({
-      onBuildExit: ['npm run manifest:firefox'],
-      onBuildEnd: ['npm run manifest:firefox && web-ext run -s build-firefox'],
+      onBuildExit: ['npm run manifest:firefox && web-ext run -s build-firefox'],
       safe: true,
     }),
   ]);

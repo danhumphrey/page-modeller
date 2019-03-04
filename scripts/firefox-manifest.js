@@ -9,5 +9,9 @@ const manifest = require('../build-firefox/manifest.json');
       strict_min_version: '57.0',
     },
   };
+
+  delete manifest.version_name;
+  delete manifest.background.persistent;
+
   fs.writeFileSync('../build-firefox/manifest.json', JSON.stringify(manifest, null, 2));
 })();
