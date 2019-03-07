@@ -7,7 +7,8 @@ const uniqueCss = (element, cssSelector) => {
   }
   for (let i = 0; i < matchingElements.length; i += 1) {
     const newCssSelector = `${cssSelector}:nth-of-type(${i + 1})`;
-    if ([...dom.findElementsByCssSelector(element.ownerDocument, newCssSelector)][0] === element) {
+    const matches = [...dom.findElementsByCssSelector(element.ownerDocument, newCssSelector)];
+    if (matches[0] === element) {
       return newCssSelector;
     }
   }
@@ -98,7 +99,15 @@ const uniqueClassNameBuilder = element => {
   return false;
 };
 
-const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, uniqueClassNameBuilder, linkHrefBuilder, inputButtonValueBuilder, imageBuilder];
+const forBuilder = element => {
+  const forValue = element.getAttribute('for');
+  if (forValue) {
+    return uniqueCss(element, `${element.nodeName.toLowerCase()}[for='${forValue}']`);
+  }
+  return false;
+};
+
+const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, uniqueClassNameBuilder, linkHrefBuilder, inputButtonValueBuilder, imageBuilder, forBuilder];
 
 const getPreferredLocator = element => {
   for (let i = 0, j = builders.length; i < j; i += 1) {

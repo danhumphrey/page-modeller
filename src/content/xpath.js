@@ -113,6 +113,14 @@ const ariaLabelBuilder = element => {
   return false;
 };
 
+const forBuilder = element => {
+  const forValue = element.getAttribute('for');
+  if (forValue) {
+    return uniqueXPath(element, `//${getElementNodeName(element)}[@for=${attributeValue(forValue)}]`);
+  }
+  return false;
+};
+
 const linkTextBuilder = element => {
   if (element.nodeName === 'A') {
     const text = element.textContent.trim();
@@ -216,6 +224,7 @@ const builders = [
   buttonTextBuilder,
   inputButtonValueBuilder,
   imageBuilder,
+  forBuilder,
 ];
 
 const getPreferredXPath = element => {

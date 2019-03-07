@@ -44,6 +44,31 @@ describe('idBuilder', () => {
   });
 });
 
+describe('forBuilder', () => {
+  const forBuilder = css.__get__('forBuilder');
+
+  test('element without for returns false', () => {
+    document.body.innerHTML = '<p>Paragraph</p>';
+    const element = document.querySelector('p');
+    expect(forBuilder(element)).toBe(false);
+  });
+
+  test('css selector for element with for', () => {
+    document.body.innerHTML = '<label for="forename"></label>';
+    const element = document.getElementsByTagName('label')[0];
+    expect(forBuilder(element)).toBe(`label[for='forename']`);
+  });
+
+  test('css selector for multiple elements with duplicate for', () => {
+    document.body.innerHTML = '<label for="surname"></label><label for="surname"/></label>';
+    const all = document.querySelectorAll('label');
+    const element1 = all[0];
+    const element2 = all[1];
+    expect(forBuilder(element1)).toBe(`label[for='surname']:nth-of-type(1)`);
+    expect(forBuilder(element2)).toBe(`label[for='surname']:nth-of-type(2)`);
+  });
+});
+
 describe('nameBuilder', () => {
   const nameBuilder = css.__get__('nameBuilder');
 
