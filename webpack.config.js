@@ -75,6 +75,7 @@ const config = {
       { from: 'devtools/devtools-page.html', to: 'devtools-page.html' },
       { from: 'panel/panel.html', to: 'panel/panel.html' },
       { from: 'options/options.html', to: 'options.html' },
+      { from: '../version.json', to: 'version.json' },
       {
         from: 'manifest.json',
         to: 'manifest.json',

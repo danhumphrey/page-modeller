@@ -1,7 +1,10 @@
 <template>
   <v-app>
     <v-card>
-      <v-card-text class="body-1">Please open DevTools to use the Page Modeller extension.</v-card-text>
+      <v-card-text class="body-1">
+        <h3>Page Modeller {{ version }}</h3>
+        <p>Please open DevTools to use the Page Modeller extension.</p>
+      </v-card-text>
       <v-card-actions class="pt-0">
         <v-spacer></v-spacer>
         <v-btn flat small color="primary" v-on:click="openSupport">Support</v-btn><v-btn flat small color="primary" v-on:click="openOptions">Options</v-btn>
@@ -13,7 +16,9 @@
 <script>
 export default {
   data() {
-    return {};
+    return {
+      version: '1.2.2',
+    };
   },
   methods: {
     openOptions() {
