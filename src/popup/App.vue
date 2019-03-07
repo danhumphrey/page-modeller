@@ -17,7 +17,7 @@
 export default {
   data() {
     return {
-      version: '1.2.2',
+      version: '1.2.3',
     };
   },
   methods: {
