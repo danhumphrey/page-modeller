@@ -47,19 +47,19 @@ describe('idBuilder', () => {
 describe('forBuilder', () => {
   const forBuilder = css.__get__('forBuilder');
 
-  test('element without for returns false', () => {
+  test('element without for attribute returns false', () => {
     document.body.innerHTML = '<p>Paragraph</p>';
     const element = document.querySelector('p');
     expect(forBuilder(element)).toBe(false);
   });
 
-  test('css selector for element with for', () => {
+  test('css selector for element with for attribute', () => {
     document.body.innerHTML = '<label for="forename"></label>';
     const element = document.getElementsByTagName('label')[0];
     expect(forBuilder(element)).toBe(`label[for='forename']`);
   });
 
-  test('css selector for multiple elements with duplicate for', () => {
+  test('css selector for multiple elements with duplicate for attributes', () => {
     document.body.innerHTML = '<label for="surname"></label><label for="surname"/></label>';
     const all = document.querySelectorAll('label');
     const element1 = all[0];

@@ -82,19 +82,19 @@ describe('idBuilder', () => {
 describe('forBuilder', () => {
   const forBuilder = xpath.__get__('forBuilder');
 
-  test('element without for returns false', () => {
+  test('element without for attribute returns false', () => {
     document.body.innerHTML = '<p>Paragraph</p>';
     const element = document.querySelector('p');
     expect(forBuilder(element)).toBe(false);
   });
 
-  test('xpath for element with for', () => {
+  test('xpath for element with for attribute', () => {
     document.body.innerHTML = '<label for="forename" ></label>';
     const element = document.getElementsByTagName('label')[0];
     expect(forBuilder(element)).toBe(`//label[@for='forename']`);
   });
 
-  test('xpath for multiple elements with duplicate for', () => {
+  test('xpath for multiple elements with duplicate for attribute', () => {
     document.body.innerHTML = '<label for="surname" class="first"></label><label for="surname" class="second" ></label>';
     const element1 = document.getElementsByClassName('first')[0];
     const element2 = document.getElementsByClassName('second')[0];
