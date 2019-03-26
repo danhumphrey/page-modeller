@@ -48,7 +48,6 @@
     "@babel/preset-env": "^7.4.2",
     "@types/chrome": "^0.0.81",
     "archiver": "^3.0.0",
-    "babel-core": "^7.0.0-bridge.0",
     "babel-eslint": "^10.0.1",
     "babel-jest": "^24.5.0",
     "babel-loader": "^8.0.5",
