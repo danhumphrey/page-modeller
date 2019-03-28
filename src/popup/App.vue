@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-card>
-      <v-card-text class="body-1">
+      <v-card-text class="body-1 pb-0 pt-2">
         <h3>Page Modeller {{ version }}</h3>
         <p>Please open DevTools to use the Page Modeller extension.</p>
       </v-card-text>
@@ -17,7 +17,7 @@
 export default {
   data() {
     return {
-      version: '1.2.3',
+      version: '1.2.4',
     };
   },
   methods: {
