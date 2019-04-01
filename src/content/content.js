@@ -19,19 +19,29 @@ const removeStyle = el => {
 chrome.runtime.onMessage.addListener(msg => {
   if (msg.type === 'startScanning') {
     inspector.start({ profile: msg.data.profile, options: msg.data.options });
+    return;
   }
 
   if (msg.type === 'startAdding') {
     inspector.start({ model: msg.data.model || null, profile: msg.data.profile, options: msg.data.options });
+    return;
   }
 
   if (msg.type === 'stopInspecting') {
     inspector.stop();
+    return;
   }
 
   if (msg.type === 'showMatches') {
     const { locator } = msg.data;
 
+    console.log(`showMatches for ${locator}`);
+
+    // remove existing matches
+    clearTimeout(styleTimeout);
+    [...dom.findElementsByClassName(document, 'page-modeller-highlight')].forEach(el => {
+      removeStyle(el);
+    });
     const matches = locatorMatches(locator);
 
     if (matches.length === 0) {
@@ -44,12 +54,6 @@ chrome.runtime.onMessage.addListener(msg => {
     if (matches.length > 1) {
       chrome.runtime.sendMessage({ type: 'contentPopupWarning', data: { message: `${matches.length} elements match that locator` } });
     }
-
-    // remove existing matches
-    clearTimeout(styleTimeout);
-    [...dom.findElementsByClassName(document, 'page-modeller-highlight')].forEach(el => {
-      removeStyle(el);
-    });
 
     scrollIntoView(matches[0], { behavior: 'smooth', scrollMode: 'if-needed' });
 
