@@ -1,5 +1,5 @@
 <template>
-  <v-dialog scrollable v-model="dialog" :max-width="490" @keydown.esc="cancel">
+  <v-dialog scrollable v-model="dialog" @keydown.esc="cancel">
     <v-card>
       <v-toolbar dark dense flat>
         <v-toolbar-title class="white--text">{{ title }}</v-toolbar-title>
