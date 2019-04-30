@@ -43,9 +43,9 @@
     "vuetify": "^1.5.13"
   },
   "devDependencies": {
-    "@babel/core": "^7.4.3",
+    "@babel/core": "^7.4.4",
     "@babel/plugin-proposal-optional-chaining": "^7.2.0",
-    "@babel/preset-env": "^7.4.3",
+    "@babel/preset-env": "^7.4.4",
     "@types/chrome": "^0.0.83",
     "archiver": "^3.0.0",
     "babel-eslint": "^10.0.1",
@@ -70,7 +70,7 @@
     "inquirer": "^6.3.1",
     "jest": "^24.7.1",
     "mini-css-extract-plugin": "^0.6.0",
-    "node-sass": "^4.11.0",
+    "node-sass": "^4.12.0",
     "prettier": "^1.17.0",
     "pretty-quick": "^1.10.0",
     "rimraf": "^2.6.3",
