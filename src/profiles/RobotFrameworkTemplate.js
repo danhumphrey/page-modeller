@@ -21,13 +21,15 @@ const transformLocatorName = locatorName => {
   }
 };
 
+const renderLocatorName = entity => `${lowerFirst(entity.name)}Locator`;
+
 const renderLocator = entity => {
   const locator = entity.locators.find(l => l.selected);
   return `${transformLocatorName(locator.name)}=${locator.locator.replace(/"/g, "'")}`;
 };
 
 const renderLocatorVariable = entity => `
-\${${lowerFirst(entity.name)}}${nameSpaces(entity.name)}${renderLocator(entity)}`;
+\${${renderLocatorName(entity)}}${nameSpaces(entity.name)}${renderLocator(entity)}`;
 
 const renderLocators = entities => {
   minWidth = getMinWidth(entities);
@@ -44,7 +46,7 @@ const renderClickMethod = entity => {
     return ` 
 Click ${entity.name}
     [Documentation]  Click on the ${entity.name} ${entity.tagName} element
-    Click Element  \${${lowerFirst(entity.name)}}  
+    Click Element  \${${renderLocatorName(entity)}}  
 `;
   }
   return '';
@@ -53,33 +55,33 @@ Click ${entity.name}
 const renderGetAndSetCheckboxRadio = entity => `
 Set ${entity.name}
     [Documentation]  Set the ${entity.name} ${entity.tagName} element
-    Click Element  \${${lowerFirst(entity.name)}}
+    Click Element  \${${renderLocatorName(entity)}}
 
 Get ${entity.name}
     [Documentation]  Returns the state of the ${entity.name} ${entity.tagName} element
-    \${${lowerFirst(entity.name)}IsSelected}=  Run Keyword And Return Status  Checkbox Should Be Selected  \${${lowerFirst(entity.name)}}
-    [Return]  \${${lowerFirst(entity.name)}IsSelected}
+    \${${lowerFirst(entity.name)}IsSelected}=  Run Keyword And Return Status  Checkbox Should Be Selected  \${${renderLocatorName(entity)}}
+    [Return]  \${${lowerFirst(entity)}IsSelected}
 `;
 
 const renderGetAndSetSelect = entity => `
 Set ${entity.name}
     [Arguments]  \${${lowerFirst(entity.name)}Value}
     [Documentation]  Set ${entity.name} ${entity.tagName} element by value
-    Select From List  \${${lowerFirst(entity.name)}}  \${${lowerFirst(entity.name)}Value}
+    Select From List  \${${renderLocatorName(entity)}}  \${${lowerFirst(entity.name)}Value}
     
 Set ${entity.name} By Label
     [Arguments]  \${${lowerFirst(entity.name)}Label}
     [Documentation]  Set ${entity.name} ${entity.tagName} element by label
-    Select From List By Label  \${${lowerFirst(entity.name)}}  \${${lowerFirst(entity.name)}Label}
+    Select From List By Label  \${${renderLocatorName(entity)}}  \${${lowerFirst(entity.name)}Label}
 
 Get ${entity.name} Value
     [Documentation]  Get ${entity.name} ${entity.tagName} element value
-    \${${lowerFirst(entity.name)}Value}=  Get Selected List Value  \${${lowerFirst(entity.name)}}
+    \${${lowerFirst(entity.name)}Value}=  Get Selected List Value  \${${renderLocatorName(entity)}}
     [Return]  \${${lowerFirst(entity.name)}Value}
 
 Get ${entity.name} Label
     [Documentation]  Get ${entity.name} ${entity.tagName} element label
-    \${${lowerFirst(entity.name)}Label}=  Get Selected List Label  \${${lowerFirst(entity.name)}}
+    \${${lowerFirst(entity.name)}Label}=  Get Selected List Label  \${${renderLocatorName(entity)}}
     [Return]  \${${entity.name}Label}    
 `;
 
@@ -96,13 +98,13 @@ const renderGetAndSetMethods = entity => {
     return `
 Get ${entity.name}
     [Documentation]  Get ${entity.name} ${entity.tagName} element value
-    \${${lowerFirst(entity.name)}Value}=  Get Value  \${${lowerFirst(entity.name)}}
+    \${${lowerFirst(entity.name)}Value}=  Get Value  \${${renderLocatorName(entity)}}
     [Return]  \${${lowerFirst(entity.name)}Value}
  
 Set ${entity.name}
     [Arguments]  \${${lowerFirst(entity.name)}Value}
     [Documentation]  Set ${entity.name} ${entity.tagName} element value
-    Input Text  \${${lowerFirst(entity.name)}}  \${${lowerFirst(entity.name)}Value}
+    Input Text  \${${renderLocatorName(entity)}}  \${${lowerFirst(entity.name)}Value}
 `;
   }
   if (entity.tagName === 'SELECT') {
@@ -117,7 +119,7 @@ const renderGetTextMethod = entity => {
   return ` 
 Get ${entity.name}
     [Documentation]  Get ${entity.name} ${entity.tagName} element value
-    \${${lowerFirst(entity.name)}Value}=  Get Text  \${${lowerFirst(entity.name)}}
+    \${${lowerFirst(entity.name)}Value}=  Get Text  \${${renderLocatorName(entity)}}
     [Return]  \${${lowerFirst(entity.name)}Value} 
 `;
 };
