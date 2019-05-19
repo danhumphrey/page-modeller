@@ -87,7 +87,7 @@ export default {
   mixins: [validationMixin],
   validations() {
     return {
-      editedItemName: { required, uniqueName: this.uniqueName },
+      editedItemName: { required, uniqueName: this.uniqueName, noSpaces: this.noSpaces },
       currentLocator: { required },
     };
   },
@@ -149,6 +149,10 @@ export default {
       if (!this.$v.editedItemName.uniqueName) {
         errors.push('Name must be unique.');
       }
+
+      if (!this.$v.editedItemName.noSpaces) {
+        errors.push('Name cannot contain spaces.');
+      }
       return errors;
     },
   },
@@ -164,6 +168,9 @@ export default {
     uniqueName(n) {
       const res = this.model.entities.filter(e => e.name === n);
       return res.length === 0 || n === this.editedItem.name;
+    },
+    noSpaces(n) {
+      return /\s/g.test(n) === false;
     },
     editItem(item) {
       if (this.isInspecting) {
