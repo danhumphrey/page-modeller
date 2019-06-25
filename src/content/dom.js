@@ -150,7 +150,7 @@ const getId = element => {
 };
 
 const getName = element => {
-  if (element.name) {
+  if (element.name && element.name.trim) {
     return element.name.trim();
   }
   return null;
