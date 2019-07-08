@@ -43,9 +43,9 @@
     "vuetify": "^1.5.16"
   },
   "devDependencies": {
-    "@babel/core": "^7.4.5",
+    "@babel/core": "^7.5.0",
     "@babel/plugin-proposal-optional-chaining": "^7.2.0",
-    "@babel/preset-env": "^7.4.5",
+    "@babel/preset-env": "^7.5.0",
     "@types/chrome": "^0.0.86",
     "archiver": "^3.0.0",
     "babel-eslint": "^10.0.2",
@@ -61,7 +61,7 @@
     "eslint-config-prettier": "^6.0.0",
     "eslint-friendly-formatter": "^4.0.1",
     "eslint-import-resolver-webpack": "^0.11.1",
-    "eslint-loader": "^2.1.2",
+    "eslint-loader": "^2.2.1",
     "eslint-plugin-import": "^2.18.0",
     "eslint-plugin-prettier": "^3.1.0",
     "eslint-plugin-vue": "^5.2.3",
