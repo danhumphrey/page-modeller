@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "babel-plugin-rewire": "^1.2.0",
-    "lodash": "^4.17.10",
+    "lodash": "^4.17.14",
     "save-dev": "^2.0.0",
     "scroll-into-view-if-needed": "^2.2.20",
     "simmerjs": "^0.5.6",
@@ -43,9 +43,9 @@
     "vuetify": "^1.5.16"
   },
   "devDependencies": {
-    "@babel/core": "^7.5.0",
+    "@babel/core": "^7.5.4",
     "@babel/plugin-proposal-optional-chaining": "^7.2.0",
-    "@babel/preset-env": "^7.5.2",
+    "@babel/preset-env": "^7.5.4",
     "@types/chrome": "^0.0.86",
     "archiver": "^3.0.0",
     "babel-eslint": "^10.0.2",
