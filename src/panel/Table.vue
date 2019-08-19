@@ -177,9 +177,9 @@ export default {
         return;
       }
       this.editedIndex = this.model.entities.indexOf(item);
-      this.editedItem = Object.assign({}, item);
+      this.editedItem = { ...item };
       this.editedItem.locators = item.locators.filter(l => !l.hidden);
-      this.originalItem = JSON.parse(JSON.stringify(Object.assign({}, item)));
+      this.originalItem = JSON.parse(JSON.stringify({ ...item }));
       this.editedItemName = this.editedItem.name;
       this.currentLocator = this.editedItem.locators.find(l => l.selected);
       this.dialog = true;
@@ -204,7 +204,7 @@ export default {
           Object.assign(this.model.entities[this.editedIndex], this.originalItem);
         }
         this.editedItemName = this.defaultItem.name;
-        this.editedItem = Object.assign({}, this.defaultItem);
+        this.editedItem = { ...this.defaultItem };
         this.editedIndex = -1;
         this.$v.$reset();
         this.dialog = false;
