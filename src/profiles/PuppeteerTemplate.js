@@ -88,7 +88,7 @@ const renderGetAndSetMethods = entity => {
  
  async set${entity.name}(value) {
    const element = await this.get${entity.name}Element();
-   element.type(value);
+   await element.type(value);
  }
  `;
   }
