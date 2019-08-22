@@ -24,7 +24,7 @@ const renderClickMethod = entity => {
   return `
  async click${entity.name}() {
    const element = await this.get${entity.name}Element(); 
-   element.click();
+   await element.click();
  }
 `;
 };
@@ -39,7 +39,7 @@ const renderGetAndSetCheckboxRadio = entity => `
    const val = await this.get${entity.name}();
    if( (onOrOff && !val) || (!onOrOff && val)) {
      const element = await this.get${entity.name}Element(); 
-     element.click();
+     await element.click();
    }
  }
 `;
