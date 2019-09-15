@@ -1,6 +1,6 @@
 {
   "name": "page-modeller",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "A browser extension for modelling web pages for automation",
   "main": "gulpfile.js",
   "author": "Dan Humphrey - danh2000@gmail.com",
