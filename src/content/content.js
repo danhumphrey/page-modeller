@@ -32,21 +32,19 @@ chrome.runtime.onMessage.addListener(msg => {
     return;
   }
   if (msg.type === 'showMatches') {
+    const { locator } = msg.data;
+    const matches = locatorMatches(locator);
+    console.log('matches:', matches);
+
     // remove existing matches
     clearTimeout(styleTimeout);
     [...dom.findElementsByClassName(document, 'page-modeller-highlight')].forEach(el => {
       removeStyle(el);
     });
 
-    const { locator } = msg.data;
-
     console.log(`showMatches for ${locator}`);
 
-    const matches = locatorMatches(locator);
-
-    console.log('matches:', matches);
-
-    if (matches.length === 0) {
+    if (matches.length < 1) {
       chrome.runtime.sendMessage({ type: 'contentPopupError', data: { message: `0 elements match that locator` } });
       return;
     }

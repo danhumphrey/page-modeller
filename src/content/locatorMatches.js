@@ -40,7 +40,5 @@ export default locator => {
     default:
       console.error(`Unexpected locator ${locator}`);
   }
-
-  matches = [...matches];
-  return matches;
+  return [...matches];
 };
