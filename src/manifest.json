@@ -1,5 +1,5 @@
 {
-  "name": "Page Modeller",
+  "name": "Page Modeller (Selenium, Robot Framework etc)",
   "short_name": "PageModeller",
   "description": "Browser DevTools extension for modelling web pages for automation.",
   "version": "1.5.3",
