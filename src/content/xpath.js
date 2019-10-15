@@ -52,8 +52,12 @@ const uniqueXPath = (element, xpath) => {
 };
 
 const isXhtmlDocument = doc => {
-  if (doc.doctype.publicId.includes('XHTML') || doc.contentType === 'application/xhtml+xml') {
-    return true;
+  try {
+    if (doc.contentType === 'application/xhtml+xml' || doc.doctype.publicId.includes('XHTML')) {
+      return true;
+    }
+  } catch (e) {
+    return false;
   }
   return false;
 };
