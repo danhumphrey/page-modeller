@@ -4,7 +4,7 @@
 
 The Page Modeller extension enables developers to scan a web page and generate page object style code for various tools, languages and frameworks and test the UI locators in the browser.
 
-Current release: **1.5.3**
+Current release: **1.5.4**
 
 Supported tools and languages are:
 
