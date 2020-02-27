@@ -1,5 +1,5 @@
 <template>
-  <v-app :dark="darkMode">
+  <v-app>
     <v-card>
       <v-card-title primary-title>
         <h1 class="header-title"><img src="icons/icon_32.png" width="24" /> Page Modeller Options</h1>
@@ -18,7 +18,7 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="blue darken-1" flat @click.native="save" :disabled="unchanged">Save</v-btn>
+        <v-btn text @click.native="save" :disabled="unchanged">Save</v-btn>
       </v-card-actions>
     </v-card>
   </v-app>
@@ -90,6 +90,7 @@ export default {
       if (this.originalOptions.darkMode !== val) {
         this.unchanged = false;
       }
+      this.$vuetify.theme.dark = val;
     },
     clickTableRowsToViewMatchedElements(val) {
       if (this.originalOptions.clickTableRowsToViewMatchedElements !== val) {

@@ -1,20 +1,13 @@
 import Vue from 'vue/dist/vue.runtime.esm';
-import Vuetify from 'vuetify';
+import vuetify from '../plugins/vuetify';
 import App from './App';
 
+import 'vuetify/dist/vuetify.min.css';
 import './panel.scss';
-import '../styles/material.scss';
-import 'vuetify/dist/vuetify.css';
 
-Vue.config.devtools = false;
-Vue.use(Vuetify, {
-  options: {
-    customProperties: true,
-  },
-});
+Vue.config.productionTip = false;
 
-(() =>
-  new Vue({
-    el: '#app',
-    render: h => h(App),
-  }))();
+new Vue({
+  vuetify,
+  render: h => h(App),
+}).$mount('#app');

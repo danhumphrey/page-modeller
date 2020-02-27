@@ -45,7 +45,7 @@ const config = {
       },
       {
         test: /\.sass$/,
-        use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader?indentedSyntax'],
+        use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
       },
       {
         test: /\.(png|jpg|gif)$/,

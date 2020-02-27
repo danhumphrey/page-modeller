@@ -1,5 +1,5 @@
 <template>
-  <v-app :dark="options.darkMode">
+  <v-app>
     <Toolbar
       @scan="scan"
       @add="add"
@@ -15,7 +15,7 @@
       :show-tooltips="options.showTooltips"
     />
     <EntityTable ref="table" :model="model" :is-inspecting="isInspecting" :show-tooltips="options.showTooltips" @emptyModel="emptyModel" /> <Alert ref="alert"></Alert>
-    <Popup ref="popup" :dark-mode="options.darkMode"></Popup> <Confirm ref="confirm"></Confirm> <CodeDialog ref="code"></CodeDialog>
+    <Popup ref="popup"></Popup> <Confirm ref="confirm"></Confirm> <CodeDialog ref="code"></CodeDialog>
   </v-app>
 </template>
 
@@ -100,6 +100,7 @@ export default {
         if (result) {
           if (result.options) {
             this.options = result.options;
+            this.$vuetify.theme.dark = this.options.darkMode;
           } else {
             // no options saved, so save defaults
             chrome.runtime.sendMessage({ type: 'saveOptions', data: { options: this.options } });
@@ -118,7 +119,7 @@ export default {
     this.$root.$profileEditor = this.$refs.profileEditor;
     this.$root.$table = this.$refs.table;
     this.$root.$table.loadOptions();
-
+    this.loadOptions();
     chrome.storage.sync.get(['activeProfileName', 'options'], result => {
       if (result) {
         if (result.options) {

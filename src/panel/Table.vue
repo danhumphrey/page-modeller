@@ -3,7 +3,9 @@
     <v-dialog v-model="dialog" @keydown.enter="save">
       <form>
         <v-card>
-          <v-card-title class="pa-2"> <span class="headline">Edit Element</span> </v-card-title>
+          <v-toolbar dark dense flat>
+            <v-toolbar-title class="white--text">Edit Element</v-toolbar-title>
+          </v-toolbar>
           <v-card-text class="pb-1">
             <v-container grid-list-md pa-0>
               <v-layout wrap>
@@ -44,18 +46,18 @@
           </v-card-text>
           <v-card-actions class="py-1">
             <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" flat @click.native="dialog = false">Cancel</v-btn>
-            <v-btn color="blue darken-1" flat @click.native="save">Save</v-btn>
+            <v-btn text @click.native="dialog = false">Cancel</v-btn>
+            <v-btn text @click.native="save">Save</v-btn>
           </v-card-actions>
         </v-card>
       </form>
     </v-dialog>
-    <v-data-table :items="model == null ? [] : model.entities" :headers="headers" hide-actions class="elevation-0">
-      <template slot="items" slot-scope="props">
+    <v-data-table :items="model == null ? [] : model.entities" :headers="headers" hide-default-footer fixed-header class="elevation-0" mobile-breakpoint="50">
+      <template slot="item" slot-scope="props">
         <tr v-on:dblclick="editItem(props.item)" @click="showMatchesForEntity(props.item, true)">
           <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ props.item.name }}</td>
           <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ itemLocator(props.item) }}</td>
-          <td class="text-xs-right px-0 unselectable">
+          <td class="text-right px-0 unselectable">
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
               <v-icon slot="activator" small class="mr-2 pa-1" @click="showMatchesForEntity(props.item)" :disabled="isInspecting"> remove_red_eye </v-icon>
               <span>View Matched Elements</span>
@@ -242,11 +244,13 @@ export default {
           }
         }
       });
+
+      this.$vuetify.theme.dark = this.options.darkMode;
     },
   },
 };
 </script>
-
+s
 <style scoped lang="scss">
 @import '../styles/colours';
 @import '../styles/material';

@@ -10,8 +10,8 @@
         </pre>
       </v-card-text>
       <v-card-actions class="pt-0">
-        <v-btn color="primary darken-1" flat="flat" @click.native="copy">Copy</v-btn>
-        <v-btn color="primary darken-1" flat="flat" @click.native="ok">Ok</v-btn>
+        <v-btn color="primary darken-1" text @click.native="copy">Copy</v-btn>
+        <v-btn color="primary darken-1" text @click.native="ok">Ok</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
