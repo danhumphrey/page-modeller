@@ -113,7 +113,7 @@ export default {
 @import '../styles/colours';
 .header-title {
   color: dimgray;
-  font-size: 3.1em !important;
+  font-size: 1.8em !important;
   font-weight: 300;
   img {
     margin-top: -4px;
