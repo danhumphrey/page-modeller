@@ -250,7 +250,7 @@ export default {
   },
 };
 </script>
-s
+
 <style scoped lang="scss">
 @import '../styles/colours';
 @import '../styles/material';

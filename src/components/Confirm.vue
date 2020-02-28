@@ -7,8 +7,8 @@
       <v-card-text v-show="!!message" class="body-1">{{ message }}</v-card-text>
       <v-card-actions class="pt-0">
         <v-spacer></v-spacer>
-        <v-btn color="primary darken-1" flat="flat" @click.native="agree">Yes</v-btn>
-        <v-btn color="grey" flat="flat" @click.native="cancel">Cancel</v-btn>
+        <v-btn text @click.native="agree">Yes</v-btn>
+        <v-btn text @click.native="cancel">Cancel</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -49,4 +49,8 @@ export default {
 };
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+@import '../styles/colours';
+@import '../styles/material';
+@import '../styles/buttons';
+</style>

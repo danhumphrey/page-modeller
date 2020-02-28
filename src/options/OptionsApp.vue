@@ -101,16 +101,13 @@ export default {
 };
 </script>
 <style scoped lang="scss">
+@import '../styles/colours';
 @import '../styles/material';
 @import '../styles/buttons';
 .v-list__tile__action {
   min-width: 16px !important;
   width: 32px !important;
 }
-</style>
-
-<style lang="scss">
-@import '../styles/colours';
 .header-title {
   color: dimgray;
   font-size: 1.8em !important;

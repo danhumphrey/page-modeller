@@ -7,8 +7,8 @@
       </v-card-text>
       <v-card-actions class="pt-0">
         <v-spacer></v-spacer>
-        <v-btn text small color="primary" v-on:click="openSupport">Support</v-btn>
-        <v-btn text small color="primary" v-on:click="openOptions">Options</v-btn>
+        <v-btn text small v-on:click="openSupport">Support</v-btn>
+        <v-btn text small v-on:click="openOptions">Options</v-btn>
       </v-card-actions>
     </v-card>
   </v-app>

@@ -10,8 +10,8 @@
         </pre>
       </v-card-text>
       <v-card-actions class="pt-0">
-        <v-btn color="primary darken-1" text @click.native="copy">Copy</v-btn>
-        <v-btn color="primary darken-1" text @click.native="ok">Ok</v-btn>
+        <v-btn text @click.native="copy">Copy</v-btn>
+        <v-btn text @click.native="ok">Ok</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -51,7 +51,10 @@ export default {
 };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import '../styles/colours';
+@import '../styles/material';
+@import '../styles/buttons';
 pre {
   font-size: 11px;
 }

@@ -7,7 +7,7 @@
       <v-icon v-if="successIcon" color="green darken-2">check_circle</v-icon>
       <span class="message">{{ message }}</span>
     </v-layout>
-    <v-btn flat @click="close"> Close </v-btn>
+    <v-btn text @click="close"> Close </v-btn>
   </v-snackbar>
 </template>
 
@@ -63,6 +63,9 @@ export default {
 </script>
 
 <style scoped lang="scss">
+@import '../styles/colours';
+@import '../styles/material';
+@import '../styles/buttons';
 .message {
   margin-left: 1em;
 }
