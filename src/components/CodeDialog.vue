@@ -9,7 +9,8 @@
           {{ code }}
         </pre>
       </v-card-text>
-      <v-card-actions class="pt-0">
+      <v-card-actions>
+        <v-spacer></v-spacer>
         <v-btn text @click.native="copy">Copy</v-btn>
         <v-btn text @click.native="ok">Ok</v-btn>
       </v-card-actions>

@@ -4,8 +4,8 @@
       <v-toolbar dark dense flat>
         <v-toolbar-title class="white--text">{{ title }}</v-toolbar-title>
       </v-toolbar>
-      <v-card-text v-show="!!message" class="body-1">{{ message }}</v-card-text>
-      <v-card-actions class="pt-0">
+      <v-card-text v-show="!!message" class="pt-3">{{ message }}</v-card-text>
+      <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn text @click.native="agree">Yes</v-btn>
         <v-btn text @click.native="cancel">Cancel</v-btn>

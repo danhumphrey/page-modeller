@@ -46,7 +46,7 @@
               </v-layout>
             </v-container>
           </v-card-text>
-          <v-card-actions class="py-1">
+          <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn text @click.native="dialog = false">Cancel</v-btn>
             <v-btn text @click.native="save">Save</v-btn>

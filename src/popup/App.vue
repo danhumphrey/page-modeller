@@ -5,7 +5,7 @@
         <h3>Page Modeller {{ version }}</h3>
         <p>Please open DevTools to use the Page Modeller extension.</p>
       </v-card-text>
-      <v-card-actions class="pt-0">
+      <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn text small v-on:click="openSupport">Support</v-btn>
         <v-btn text small v-on:click="openOptions">Options</v-btn>
