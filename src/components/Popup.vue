@@ -1,10 +1,10 @@
 <template>
   <v-snackbar v-model="snackbar" :timeout="timeout">
-    <v-layout justify-start row>
-      <v-icon v-if="warningIcon" color="yellow darken-2">warning</v-icon>
-      <v-icon v-if="errorIcon" color="red darken-2">error</v-icon>
-      <v-icon v-if="infoIcon" color="blue darken-2">info</v-icon>
-      <v-icon v-if="successIcon" color="green darken-2">check_circle</v-icon>
+    <v-layout justify-start row class="pl-2">
+      <v-icon v-if="warningIcon" color="yellow darken-2">{{ mdiAlert }}</v-icon>
+      <v-icon v-if="errorIcon" color="red darken-2">{{ mdiAlertCircle }}</v-icon>
+      <v-icon v-if="infoIcon" color="blue darken-2">{{ mdiInformation }}</v-icon>
+      <v-icon v-if="successIcon" color="green darken-2">{{ mdiCheckCircle }}</v-icon>
       <span class="message">{{ message }}</span>
     </v-layout>
     <v-btn text @click="close"> Close </v-btn>
@@ -12,9 +12,15 @@
 </template>
 
 <script>
+import { mdiCheckCircle, mdiAlert, mdiAlertCircle, mdiInformation } from '@mdi/js';
+
 export default {
   props: ['darkMode'],
   data: () => ({
+    mdiCheckCircle,
+    mdiAlert,
+    mdiAlertCircle,
+    mdiInformation,
     snackbar: false,
     timeout: 3000,
     message: null,
@@ -64,7 +70,6 @@ export default {
 
 <style scoped lang="scss">
 @import '../styles/colours';
-@import '../styles/material';
 @import '../styles/buttons';
 .message {
   margin-left: 1em;

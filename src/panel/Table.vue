@@ -37,7 +37,7 @@
                   <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
                     <v-tooltip left open-delay="1000" slot="append" :disabled="!showTooltips">
                       <template v-slot:activator="{ on }">
-                        <v-icon v-on="on" small class="mr-2 pa-1" @click="showMatchesForLocator(currentLocator)"> remove_red_eye </v-icon>
+                        <v-icon v-on="on" class="mr-2 pa-1" @click="showMatchesForLocator(currentLocator)"> {{ mdiEye }} </v-icon>
                       </template>
                       <span>View Matched Elements</span>
                     </v-tooltip>
@@ -62,19 +62,19 @@
           <td class="text-right px-0 unselectable">
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
               <template v-slot:activator="{ on }">
-                <v-icon v-on="on" small class="mr-2 pa-1" @click="showMatchesForEntity(props.item)" :disabled="isInspecting"> remove_red_eye </v-icon>
+                <v-icon v-on="on" class="mr-1 pa-1" @click="showMatchesForEntity(props.item)" :disabled="isInspecting"> {{ mdiEye }} </v-icon>
               </template>
               <span>View Matched Elements</span>
             </v-tooltip>
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
               <template v-slot:activator="{ on }">
-                <v-icon v-on="on" small class="mr-2 pa-1" @click="editItem(props.item)" :disabled="isInspecting"> edit </v-icon>
+                <v-icon v-on="on" class="mr-1 pa-1" @click="editItem(props.item)" :disabled="isInspecting"> {{ mdiPencil }} </v-icon>
               </template>
               <span>Edit</span>
             </v-tooltip>
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
               <template v-slot:activator="{ on }">
-                <v-icon v-on="on" small class="mr-4 pa-1" @click="deleteItem(props.item)" :disabled="isInspecting"> delete </v-icon>
+                <v-icon v-on="on" class="mr-2 pa-1" @click="deleteItem(props.item)" :disabled="isInspecting"> {{ mdiDelete }} </v-icon>
               </template>
               <span>Delete</span>
             </v-tooltip>
@@ -90,6 +90,7 @@
   </div>
 </template>
 <script>
+import { mdiEye, mdiPencil, mdiDelete } from '@mdi/js';
 import upperFirst from 'lodash/upperFirst';
 import { validationMixin } from 'vuelidate';
 import { required } from 'vuelidate/lib/validators';
@@ -107,6 +108,9 @@ export default {
   props: ['isInspecting', 'model', 'showTooltips'],
   data() {
     return {
+      mdiEye,
+      mdiPencil,
+      mdiDelete,
       dialog: false,
       headers: [
         {
@@ -263,7 +267,6 @@ export default {
 
 <style scoped lang="scss">
 @import '../styles/colours';
-@import '../styles/material';
 @import '../styles/buttons';
 
 .model-table {

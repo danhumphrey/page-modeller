@@ -102,7 +102,6 @@ export default {
 </script>
 <style scoped lang="scss">
 @import '../styles/colours';
-@import '../styles/material';
 @import '../styles/buttons';
 .v-list__tile__action {
   min-width: 16px !important;
