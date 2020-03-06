@@ -39,3 +39,9 @@ body {
   width: 260px;
 }
 </style>
+
+<style lang="scss" scoped>
+@import '../styles/colours';
+@import '../styles/material';
+@import '../styles/buttons';
+</style>
