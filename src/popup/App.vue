@@ -1,8 +1,8 @@
 <template>
   <v-app>
     <v-card>
-      <v-card-text class="body-1 pb-0 pt-2">
-        <h3>Page Modeller {{ version }}</h3>
+      <v-card-text class="body-2 pb-0 pt-2">
+        <h1 class="title mb-2">Page Modeller {{ version }}</h1>
         <p>Please open DevTools to use the Page Modeller extension.</p>
       </v-card-text>
       <v-card-actions>
@@ -41,7 +41,9 @@ body {
 </style>
 
 <style lang="scss" scoped>
+h1.title {
+  color: #000;
+}
 @import '../styles/colours';
-@import '../styles/material';
 @import '../styles/buttons';
 </style>
