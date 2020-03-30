@@ -58,7 +58,7 @@ export default {
     },
   },
   mounted() {
-    chrome.storage.sync.get(['options'], result => {
+    chrome.storage.sync.get(['options'], (result) => {
       if (result) {
         if (result.options) {
           this.originalOptions = JSON.parse(JSON.stringify(result.options));

@@ -10,13 +10,13 @@ const bo = colours.highlightBorder;
 const styleString = `border: ${bo} solid 2px !important; background-color: ${bg} !important; background: ${bg} !important;`;
 let styleTimeout = null;
 
-const removeStyle = el => {
+const removeStyle = (el) => {
   const style = el.getAttribute('style');
   el.setAttribute('style', style.replace(styleString, ''));
   el.classList.remove('page-modeller-highlight');
 };
 
-chrome.runtime.onMessage.addListener(msg => {
+chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'startScanning') {
     inspector.start({ profile: msg.data.profile, options: msg.data.options });
     return;
@@ -38,7 +38,7 @@ chrome.runtime.onMessage.addListener(msg => {
 
     // remove existing matches
     clearTimeout(styleTimeout);
-    [...dom.findElementsByClassName(document, 'page-modeller-highlight')].forEach(el => {
+    [...dom.findElementsByClassName(document, 'page-modeller-highlight')].forEach((el) => {
       removeStyle(el);
     });
 
@@ -57,7 +57,7 @@ chrome.runtime.onMessage.addListener(msg => {
 
     scrollIntoView(matches[0], { behavior: 'smooth', scrollMode: 'if-needed' });
 
-    matches.forEach(el => {
+    matches.forEach((el) => {
       el.classList.add('page-modeller-highlight');
       el.setAttribute('style', styleString);
       styleTimeout = setTimeout(() => {

@@ -137,10 +137,10 @@ export default class ModelBuilder {
         hidden: true,
       },
     ];
-    const profile = profiles.find(p => p.name === this.activeProfile);
+    const profile = profiles.find((p) => p.name === this.activeProfile);
 
     const locators = [];
-    possibleLocators.forEach(l => {
+    possibleLocators.forEach((l) => {
       if (profile.locators.includes(l.name) || l.always) {
         locators.push(l);
       }
@@ -159,9 +159,9 @@ export default class ModelBuilder {
     }
 
     // force an index based xpath locator if we don't have a better one
-    let selectedLocator = locators.find(l => l.selected === true);
+    let selectedLocator = locators.find((l) => l.selected === true);
     if (!selectedLocator) {
-      selectedLocator = locators.find(l => l.name === 'xpath');
+      selectedLocator = locators.find((l) => l.name === 'xpath');
       selectedLocator.selected = true;
       selectedLocator.locator = xpath.getIndexBasedXPath(element);
     }

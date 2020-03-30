@@ -88,8 +88,8 @@ export default {
       this.$emit('generateModel');
     },
     selectProfile(profile) {
-      this.profileList.find(p => p.active).active = false;
-      this.profileList.find(p => p.name === profile.name).active = true;
+      this.profileList.find((p) => p.active).active = false;
+      this.profileList.find((p) => p.name === profile.name).active = true;
       this.$emit('activateProfile', profile.name);
     },
   },

@@ -1,7 +1,7 @@
 import Simmer from 'simmerjs';
 import scrollIntoView from 'scroll-into-view-if-needed';
 
-const getSameSiblingCount = element => {
+const getSameSiblingCount = (element) => {
   const { childNodes } = element.parentNode;
   let total = 0;
   for (let i = 0; i < childNodes.length; i += 1) {
@@ -13,7 +13,7 @@ const getSameSiblingCount = element => {
   return total - 1;
 };
 
-const getElementIndex = element => {
+const getElementIndex = (element) => {
   const { childNodes } = element.parentNode;
   let total = 0;
   let index = -1;
@@ -29,7 +29,7 @@ const getElementIndex = element => {
   return index;
 };
 
-const getElementBox = element => {
+const getElementBox = (element) => {
   const rect = element.getBoundingClientRect();
   return {
     x: rect.x,
@@ -48,7 +48,7 @@ const getScrollPosition = () => ({
   scrollRightRemaining: document.documentElement.scrollWidth - (window.innerWidth + document.documentElement.scrollLeft),
 });
 
-const isElementOffScreen = element => {
+const isElementOffScreen = (element) => {
   const vpW = document.documentElement.clientWidth || window.innerWidth;
   const vpH = document.documentElement.clientHeight || window.innerHeight;
 
@@ -60,7 +60,7 @@ const isElementOffScreen = element => {
   return false;
 };
 
-const isElementHidden = element => {
+const isElementHidden = (element) => {
   // stash current window scroll position
   const scrollX = window.pageXOffset;
   const scrollY = window.pageYOffset;
@@ -91,7 +91,7 @@ const isElementHidden = element => {
   }
 
   let hidden = true;
-  elementsAtPoint.some(e => {
+  elementsAtPoint.some((e) => {
     if (e === element) {
       hidden = false;
       return true;
@@ -102,11 +102,11 @@ const isElementHidden = element => {
   window.scrollTo(scrollX, scrollY);
   return hidden;
 };
-const getTagName = element => element.tagName;
+const getTagName = (element) => element.tagName;
 
-const getTagType = element => element.type || null;
+const getTagType = (element) => element.type || null;
 
-const isVisible = element => {
+const isVisible = (element) => {
   const style = element.ownerDocument.defaultView.getComputedStyle(element);
   if (style.display === 'none') {
     return false;
@@ -131,7 +131,7 @@ const isVisible = element => {
   return true;
 };
 
-const getTagIndex = element => {
+const getTagIndex = (element) => {
   const n = getTagName(element);
   const all = element.ownerDocument.getElementsByTagName(n);
   for (let i = 0; i < all.length; i += 1) {
@@ -142,28 +142,28 @@ const getTagIndex = element => {
   return null;
 };
 
-const getId = element => {
+const getId = (element) => {
   if (element.id) {
     return element.id.trim();
   }
   return null;
 };
 
-const getName = element => {
+const getName = (element) => {
   if (element.name && element.name.trim) {
     return element.name.trim();
   }
   return null;
 };
 
-const getTextContent = element => {
+const getTextContent = (element) => {
   if (element.textContent) {
     return element.textContent.trim();
   }
   return null;
 };
 
-const getClassName = element => {
+const getClassName = (element) => {
   const classAttribute = element.getAttribute('class');
   if (classAttribute) {
     const matches = classAttribute.match(/\S+/g);
@@ -174,7 +174,7 @@ const getClassName = element => {
   return null;
 };
 
-const getClassNames = element => {
+const getClassNames = (element) => {
   const classes = element.classList;
   if (classes.length === 0) {
     return [];
@@ -182,14 +182,14 @@ const getClassNames = element => {
   return [...classes];
 };
 
-const getLinkText = element => {
+const getLinkText = (element) => {
   if (element.nodeName === 'A') {
     return getTextContent(element);
   }
   return null;
 };
 
-const getCssSelector = element => {
+const getCssSelector = (element) => {
   const simmer = new Simmer(element.ownerDocument);
   const ret = simmer(element);
   if (ret === false) {
@@ -198,7 +198,7 @@ const getCssSelector = element => {
   return ret;
 };
 
-const getLabel = element => {
+const getLabel = (element) => {
   // use 'for' attribute to find label
   const id = getId(element);
   if (id) {
@@ -218,7 +218,7 @@ const getLabel = element => {
   return null;
 };
 
-const getNgBinding = element => {
+const getNgBinding = (element) => {
   if (!window.angular || !element.classList.contains('ng-binding')) {
     return null;
   }
@@ -229,7 +229,7 @@ const getNgBinding = element => {
   return null;
 };
 
-const getNgModel = element => {
+const getNgModel = (element) => {
   const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', 'ng:'];
   for (let p = 0; p < prefixes.length; p += 1) {
     const model = element.getAttribute(`${prefixes[p]}model`);
@@ -272,7 +272,7 @@ const findElementsById = (document, locator) => findElementsByCssSelector(docume
 const findElementsByLinkText = (document, locator) => {
   const els = findElementsByTagName(document, 'A');
 
-  return els.filter(el => {
+  return els.filter((el) => {
     const c = el.textContent.replace(/\xA0/g, ' ').replace(/^\s*(.*?)\s*$/, '$1');
     return c === locator;
   });
@@ -292,7 +292,7 @@ const findElementsByTagIndex = (document, locator) => {
 
 const findElementsByPartialLinkText = (document, locator) => {
   const els = findElementsByTagName(document, 'A');
-  return els.filter(el => el.textContent.indexOf(locator) !== -1);
+  return els.filter((el) => el.textContent.indexOf(locator) !== -1);
 };
 
 const findElementsByNgBinding = (document, locator) => {
@@ -325,7 +325,7 @@ const findElementsByNgModel = (document, model) => {
   return [];
 };
 
-const getUniqueClassName = element => {
+const getUniqueClassName = (element) => {
   const classNames = getClassNames(element);
   for (let i = 0, j = classNames.length; i < j; i += 1) {
     const className = classNames[i];
