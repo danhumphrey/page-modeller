@@ -3,6 +3,7 @@ import SeleniumWebDriverCSharpTemplate from './SeleniumWebDriverCSharpTemplate';
 import RobotFrameworkTemplate from './RobotFrameworkTemplate';
 import PuppeteerTemplate from './PuppeteerTemplate';
 import ProtractorTemplate from './ProtractorTemplate';
+import ProtractorTypescriptTemplate from './ProtractorTypescriptTemplate';
 
 export default [
   {
@@ -30,4 +31,9 @@ export default [
     template: ProtractorTemplate,
     locators: ['id', 'linkText', 'partialLinkText', 'name', 'model', 'binding', 'css', 'xpath', 'className', 'tagName'],
   },
+  {
+    name: 'Protractor (Typescript)',
+    template: ProtractorTypescriptTemplate,
+    locators: ['id', 'linkText', 'partialLinkText', 'name', 'model', 'binding', 'css', 'xpath', 'className', 'tagName'],
+  }
 ];
