@@ -33,7 +33,7 @@ const renderGetAndSetCheckboxRadio = entity => `
  }
  
  set${entity.name}(onOrOff: boolean) {
-   var val = this.get${entity.name}();
+   const val = this.get${entity.name}();
    if( (onOrOff && !val) || (!onOrOff && val)) {
      const elmt = this.get${entity.name}Element();
      elmt.click(); 
