@@ -33,33 +33,33 @@ const renderGetAndSetCheckboxRadio = entity => `
  }
  
  this.set${entity.name}(onOrOff) {
-   var val = this.get${entity.name}();
+   const val = this.get${entity.name}();
    if( (onOrOff && !val) || (!onOrOff && val)) {
-     var element = this.get${entity.name}Element();
-     element.click(); 
+     const elmt = this.get${entity.name}Element();
+     elmt.click(); 
    }
  }
 `;
 
 const renderGetAndSetSelect = entity => `
  this.get${entity.name}Text = function() {
-   var element = this.get${entity.name}Element();
-   return element.all(by.css('option[selected="selected"]')).getText();
+   const elmt = this.get${entity.name}Element();
+   return elmt.all(by.css('option[selected="selected"]')).getText();
  }
  
  this.get${entity.name}Value = function() {
-   var element = this.get${entity.name}Element();
-   return element.all(by.css('option[selected="selected"]')).getAttribute('value');
+   const elmt = this.get${entity.name}Element();
+   return elmt.all(by.css('option[selected="selected"]')).getAttribute('value');
  }
  
  this.set${entity.name}ByValue = function(value) {
-   var element = this.get${entity.name}Element();  
-   element.all(by.css('option[value="' + value + '"]')).click();
+   const elmt = this.get${entity.name}Element();  
+   elmt.all(by.css('option[value="' + value + '"]')).click();
  }
  
  this.set${entity.name}ByText = function(text) {
-   var element = this.get${entity.name}Element();  
-   element.all(by.xpath('option[.="' + text + '"]')).click(); 
+   const elmt = this.get${entity.name}Element();  
+   elmt.all(by.xpath('option[.="' + text + '"]')).click(); 
  }
 `;
 
@@ -75,13 +75,13 @@ const renderGetAndSetMethods = entity => {
     // regular input
     return `
  this.get${entity.name} = function() {
-   var element = this.get${entity.name}Element();
-   return element.getAttribute('value');
+   const elmt = this.get${entity.name}Element();
+   return elmt.getAttribute('value');
  }
  
  this.set${entity.name} = function(value) {
-   var element = this.get${entity.name}Element();
-   element.sendKeys(value);
+   const elmt = this.get${entity.name}Element();
+   elmt.sendKeys(value);
  }
  `;
   }
@@ -97,8 +97,8 @@ const renderGetTextMethod = entity => {
 
   return `
  this.get${entity.name} = function() {
-   var element = this.get${entity.name}Element();
-   return element.getText();
+   const elmt = this.get${entity.name}Element();
+   return elmt.getText();
  }
 `;
 };
