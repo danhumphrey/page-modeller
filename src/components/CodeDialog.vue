@@ -4,14 +4,15 @@
       <v-toolbar dark dense flat>
         <v-toolbar-title class="white--text">{{ title }}</v-toolbar-title>
       </v-toolbar>
-      <v-card-text style="height: 450px">
+      <v-card-text style="height: 450px;">
         <pre>
           {{ code }}
         </pre>
       </v-card-text>
-      <v-card-actions class="pt-0">
-        <v-btn color="primary darken-1" flat="flat" @click.native="copy">Copy</v-btn>
-        <v-btn color="primary darken-1" flat="flat" @click.native="ok">Ok</v-btn>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn text @click.native="copy">Copy</v-btn>
+        <v-btn text @click.native="ok">Ok</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -51,7 +52,9 @@ export default {
 };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import '../styles/colours';
+@import '../styles/buttons';
 pre {
   font-size: 11px;
 }

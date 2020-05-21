@@ -15,7 +15,7 @@ const uniqueCss = (element, cssSelector) => {
   return cssSelector;
 };
 
-const idBuilder = element => {
+const idBuilder = (element) => {
   const id = dom.getId(element);
   if (id) {
     return uniqueCss(element, `${element.nodeName.toLowerCase()}[id='${id}']`);
@@ -23,7 +23,7 @@ const idBuilder = element => {
   return false;
 };
 
-const ngModelBuilder = element => {
+const ngModelBuilder = (element) => {
   const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', `ng:`];
   for (let i = 0, j = prefixes.length; i < j; i += 1) {
     const attr = `${prefixes[i]}model`;
@@ -35,7 +35,7 @@ const ngModelBuilder = element => {
   return false;
 };
 
-const nameBuilder = element => {
+const nameBuilder = (element) => {
   const name = dom.getName(element);
   if (name) {
     return uniqueCss(element, `${element.nodeName.toLowerCase()}[name='${name}']`);
@@ -43,7 +43,7 @@ const nameBuilder = element => {
   return false;
 };
 
-const ariaLabelBuilder = element => {
+const ariaLabelBuilder = (element) => {
   const label = element.getAttribute('aria-label');
   if (label) {
     return uniqueCss(element, `${element.nodeName.toLowerCase()}[aria-label='${label}']`);
@@ -51,7 +51,7 @@ const ariaLabelBuilder = element => {
   return false;
 };
 
-const linkHrefBuilder = element => {
+const linkHrefBuilder = (element) => {
   if (element.nodeName === 'A') {
     if (element.href !== '') {
       const url = new URL(element.href);
@@ -64,7 +64,7 @@ const linkHrefBuilder = element => {
   return false;
 };
 
-const inputButtonValueBuilder = element => {
+const inputButtonValueBuilder = (element) => {
   if (element.nodeName === 'INPUT' && ['button', 'submit'].includes(element.type)) {
     const text = element.value.trim();
     if (!text.match(/^\s*$/)) {
@@ -74,7 +74,7 @@ const inputButtonValueBuilder = element => {
   return false;
 };
 
-const imageBuilder = element => {
+const imageBuilder = (element) => {
   if (element.nodeName === 'IMG') {
     if (element.alt !== '') {
       return uniqueCss(element, `img[alt='${element.alt}']`);
@@ -91,7 +91,7 @@ const imageBuilder = element => {
   return false;
 };
 
-const uniqueClassNameBuilder = element => {
+const uniqueClassNameBuilder = (element) => {
   const uniqueClassName = dom.getUniqueClassName(element);
   if (uniqueClassName) {
     return `${element.nodeName.toLowerCase()}[class*='${uniqueClassName}']`;
@@ -99,7 +99,7 @@ const uniqueClassNameBuilder = element => {
   return false;
 };
 
-const forBuilder = element => {
+const forBuilder = (element) => {
   const forValue = element.getAttribute('for');
   if (forValue) {
     return uniqueCss(element, `${element.nodeName.toLowerCase()}[for='${forValue}']`);
@@ -109,7 +109,7 @@ const forBuilder = element => {
 
 const builders = [idBuilder, ngModelBuilder, nameBuilder, ariaLabelBuilder, uniqueClassNameBuilder, linkHrefBuilder, inputButtonValueBuilder, imageBuilder, forBuilder];
 
-const getPreferredLocator = element => {
+const getPreferredLocator = (element) => {
   for (let i = 0, j = builders.length; i < j; i += 1) {
     const builder = builders[i];
     const ret = builder(element);
@@ -120,7 +120,7 @@ const getPreferredLocator = element => {
   return false;
 };
 
-const getRelativeCssFromParent = element => {
+const getRelativeCssFromParent = (element) => {
   const index = dom.getIndexOfElement(element);
   const sameSiblingCount = dom.getSameSiblingCount(element);
   let currentSelector = `${element.nodeName.toLowerCase()}`;
@@ -130,7 +130,7 @@ const getRelativeCssFromParent = element => {
   return currentSelector;
 };
 
-const relativeCssBuilder = element => {
+const relativeCssBuilder = (element) => {
   let path = '';
   let current = element;
   while (current != null) {
@@ -155,7 +155,7 @@ const relativeCssBuilder = element => {
   return false;
 };
 
-const getCssSelector = element => {
+const getCssSelector = (element) => {
   // regular builders
   let ret = getPreferredLocator(element);
   if (ret) {

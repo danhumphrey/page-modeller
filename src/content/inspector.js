@@ -8,7 +8,7 @@ let existingModel = null;
 let activeProfile = null;
 let appOptions = {};
 
-const onMouseOver = evt => {
+const onMouseOver = (evt) => {
   currentStyle = evt.target.getAttribute('style');
   evt.target.classList.add(CLASS_NAME);
   evt.target.setAttribute(
@@ -16,17 +16,17 @@ const onMouseOver = evt => {
     `${currentStyle}; border: ${colours.inspectorBorder} solid 2px !important; background-color: ${colours.inspectorBg} !important; background: ${colours.inspectorBg} !important;`
   );
 };
-const onMouseOut = evt => {
+const onMouseOut = (evt) => {
   evt.target.setAttribute('style', currentStyle);
   evt.target.classList.remove(CLASS_NAME);
 };
-const onFocus = evt => {
+const onFocus = (evt) => {
   evt.preventDefault();
   evt.stopPropagation();
   const el = evt.target;
   el.blur();
 };
-const onClick = evt => {
+const onClick = (evt) => {
   evt.preventDefault();
   evt.stopPropagation();
   onMouseOut(evt);
@@ -35,7 +35,7 @@ const onClick = evt => {
   const tagName = dom.getTagName(element);
   const tagIndex = dom.getTagIndex(element);
 
-  if (existingModel && existingModel.entities.find(entity => undefined !== entity.locators.find(l => l.name === 'tagIndex' && l.locator === `${tagName}${tagIndex}`))) {
+  if (existingModel && existingModel.entities.find((entity) => undefined !== entity.locators.find((l) => l.name === 'tagIndex' && l.locator === `${tagName}${tagIndex}`))) {
     chrome.runtime.sendMessage({ type: 'contentPopupError', data: { message: 'That element already exists in the model' } });
     return false;
   }

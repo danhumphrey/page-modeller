@@ -4,7 +4,7 @@ import dom from './dom';
 
 const MAX_NAME_LENGTH = 25;
 
-const labelNameRule = element => {
+const labelNameRule = (element) => {
   const tagName = dom.getTagName(element);
 
   if (!['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'PROGRESS', 'METER', 'OUTPUT'].includes(tagName)) {
@@ -16,7 +16,7 @@ const labelNameRule = element => {
   return labelName || false;
 };
 
-const buttonValueRule = element => {
+const buttonValueRule = (element) => {
   const tagName = dom.getTagName(element);
   if (tagName === 'BUTTON' || ['submit', 'reset'].includes(element.type)) {
     const val = element.value.trim();
@@ -25,37 +25,37 @@ const buttonValueRule = element => {
   return false;
 };
 
-const placeholderRule = element => {
+const placeholderRule = (element) => {
   const placeholder = element.getAttribute('placeholder');
   return placeholder || false;
 };
 
-const nameAttributeRule = element => {
+const nameAttributeRule = (element) => {
   const name = dom.getName(element);
   return name || false;
 };
 
-const idAttributeRule = element => {
+const idAttributeRule = (element) => {
   const id = dom.getId(element);
   return id || false;
 };
 
-const ariaLabelRule = element => {
+const ariaLabelRule = (element) => {
   const label = element.getAttribute('aria-label');
   return label || false;
 };
 
-const ngModelRule = element => {
+const ngModelRule = (element) => {
   const model = dom.getNgModel(element);
   return model || false;
 };
 
-const ngBindingRule = element => {
+const ngBindingRule = (element) => {
   const binding = dom.getNgBinding(element);
   return binding || false;
 };
 
-const textContentRule = element => {
+const textContentRule = (element) => {
   const newLineRegex = /(\r\n|\r|\n)/;
   let textContent = dom.getTextContent(element);
   if (!textContent) {
@@ -68,12 +68,12 @@ const textContentRule = element => {
   return textContent || false;
 };
 
-const uniqueClassNameRule = element => {
+const uniqueClassNameRule = (element) => {
   const className = dom.getUniqueClassName(element);
   return className || false;
 };
 
-const specialElementTypeRule = element => {
+const specialElementTypeRule = (element) => {
   const tagName = dom.getTagName(element);
   if (tagName === 'INPUT' && ['password', 'email', 'tel', 'url', 'search', 'color', 'date', 'month', 'week', 'time'].includes(element.type)) {
     return `${element.type}Element`;
@@ -81,15 +81,15 @@ const specialElementTypeRule = element => {
   return false;
 };
 
-const defaultNameRule = element => {
+const defaultNameRule = (element) => {
   const tagName = dom.getTagName(element);
   const tagIndex = dom.getTagIndex(element);
   return `${tagName}${tagIndex}`;
 };
 
-const limitNameLength = name => name.substring(0, MAX_NAME_LENGTH);
+const limitNameLength = (name) => name.substring(0, MAX_NAME_LENGTH);
 
-const replaceNumbers = name => {
+const replaceNumbers = (name) => {
   const ret = name;
   const matches = ret.substr(0, 1).match(/^[0-9]/g);
   if (matches == null) {
@@ -113,7 +113,7 @@ const replaceNumbers = name => {
   return ret.replace(matches[0], replacements[matches[0]]);
 };
 
-const replaceSymbols = name => {
+const replaceSymbols = (name) => {
   let ret = name;
   // eslint-disable-next-line no-useless-escape
   const matches = name.match(/[-!$%^&*()+|~=`{}\[\]:";'<>?,.\/\\]/g);
@@ -156,13 +156,13 @@ const replaceSymbols = name => {
     return ret.replace(matches[0], replacements[matches[0]]);
   }
   // replace all symbols
-  matches.forEach(m => {
+  matches.forEach((m) => {
     ret = ret.split(m).join('');
   });
   return ret;
 };
 
-const cleanName = name => {
+const cleanName = (name) => {
   let theName = name.replace(/\s/g, '');
   theName = replaceNumbers(theName);
   theName = replaceSymbols(theName);
@@ -175,7 +175,7 @@ const cleanName = name => {
   return theName;
 };
 
-const formatName = name => {
+const formatName = (name) => {
   const theName = camelCase(name) || name; // accommodate for weird bug which results in empty string for single character!
   return upperFirst(limitNameLength(theName));
 };
@@ -195,7 +195,7 @@ const rules = [
 ];
 rules.push(defaultNameRule);
 
-const generateName = element => {
+const generateName = (element) => {
   let theName;
   for (let i = 0, j = rules.length; i < j; i += 1) {
     const rule = rules[i];

@@ -1,6 +1,6 @@
 import dom from './dom';
 
-const attributeValue = value => {
+const attributeValue = (value) => {
   let val = value;
   if (val.indexOf("'") < 0) {
     return `'${val}'`;
@@ -51,7 +51,7 @@ const uniqueXPath = (element, xpath) => {
   return xpath;
 };
 
-const isXhtmlDocument = doc => {
+const isXhtmlDocument = (doc) => {
   try {
     if (doc.contentType === 'application/xhtml+xml' || doc.doctype.publicId.includes('XHTML')) {
       return true;
@@ -61,7 +61,7 @@ const isXhtmlDocument = doc => {
   }
   return false;
 };
-const getElementNodeName = element => {
+const getElementNodeName = (element) => {
   const name = element.nodeName.toLowerCase();
   if (isXhtmlDocument(element.ownerDocument)) {
     // "x:" prefix is required for XHTML pages
@@ -70,7 +70,7 @@ const getElementNodeName = element => {
   return name;
 };
 
-const getRelativeXPathFromParent = element => {
+const getRelativeXPathFromParent = (element) => {
   const index = dom.getIndexOfElement(element);
   const sameSiblingCount = dom.getSameSiblingCount(element);
   let currentPath = `/${getElementNodeName(element)}`;
@@ -81,7 +81,7 @@ const getRelativeXPathFromParent = element => {
 };
 
 // builder methods
-const idBuilder = element => {
+const idBuilder = (element) => {
   const id = dom.getId(element);
   if (id) {
     return uniqueXPath(element, `//${getElementNodeName(element)}[@id=${attributeValue(id)}]`);
@@ -89,7 +89,7 @@ const idBuilder = element => {
   return false;
 };
 
-const ngModelBuilder = element => {
+const ngModelBuilder = (element) => {
   const prefixes = ['ng-', 'ng_', 'data-ng-', 'x-ng-', `ng:`];
   for (let i = 0, j = prefixes.length; i < j; i += 1) {
     const attr = `${prefixes[i]}model`;
@@ -101,7 +101,7 @@ const ngModelBuilder = element => {
   return false;
 };
 
-const nameBuilder = element => {
+const nameBuilder = (element) => {
   const name = dom.getName(element);
   if (name) {
     return uniqueXPath(element, `//${getElementNodeName(element)}[@name=${attributeValue(name)}]`);
@@ -109,7 +109,7 @@ const nameBuilder = element => {
   return false;
 };
 
-const ariaLabelBuilder = element => {
+const ariaLabelBuilder = (element) => {
   const label = element.getAttribute('aria-label');
   if (label) {
     return uniqueXPath(element, `//${getElementNodeName(element)}[@aria-label=${attributeValue(label)}]`);
@@ -117,7 +117,7 @@ const ariaLabelBuilder = element => {
   return false;
 };
 
-const forBuilder = element => {
+const forBuilder = (element) => {
   const forValue = element.getAttribute('for');
   if (forValue) {
     return uniqueXPath(element, `//${getElementNodeName(element)}[@for=${attributeValue(forValue)}]`);
@@ -125,7 +125,7 @@ const forBuilder = element => {
   return false;
 };
 
-const linkTextBuilder = element => {
+const linkTextBuilder = (element) => {
   if (element.nodeName === 'A') {
     const text = element.textContent.trim();
     if (!text.match(/^\s*$/)) {
@@ -135,7 +135,7 @@ const linkTextBuilder = element => {
   return false;
 };
 
-const linkHrefBuilder = element => {
+const linkHrefBuilder = (element) => {
   if (element.nodeName === 'A') {
     if (element.href !== '') {
       const url = new URL(element.href);
@@ -148,7 +148,7 @@ const linkHrefBuilder = element => {
   return false;
 };
 
-const buttonTextBuilder = element => {
+const buttonTextBuilder = (element) => {
   if (element.nodeName === 'BUTTON') {
     const text = element.textContent.trim();
     if (!text.match(/^\s*$/)) {
@@ -158,7 +158,7 @@ const buttonTextBuilder = element => {
   return false;
 };
 
-const inputButtonValueBuilder = element => {
+const inputButtonValueBuilder = (element) => {
   if (element.nodeName === 'INPUT' && ['button', 'submit'].includes(element.type)) {
     const text = element.value.trim();
     if (!text.match(/^\s*$/)) {
@@ -168,7 +168,7 @@ const inputButtonValueBuilder = element => {
   return false;
 };
 
-const imageBuilder = element => {
+const imageBuilder = (element) => {
   if (element.nodeName === 'IMG') {
     if (element.alt !== '') {
       return uniqueXPath(element, `//${getElementNodeName(element)}[@alt=${attributeValue(element.alt)}]`);
@@ -185,7 +185,7 @@ const imageBuilder = element => {
   return false;
 };
 
-const uniqueClassNameBuilder = element => {
+const uniqueClassNameBuilder = (element) => {
   const uniqueClassName = dom.getUniqueClassName(element);
   if (uniqueClassName) {
     return `//${getElementNodeName(element)}[contains(@class,${attributeValue(uniqueClassName)})]`;
@@ -193,7 +193,7 @@ const uniqueClassNameBuilder = element => {
   return false;
 };
 
-const getIndexBasedXPath = element => {
+const getIndexBasedXPath = (element) => {
   let path = '';
   let current = element;
   while (current != null) {
@@ -215,7 +215,7 @@ const getIndexBasedXPath = element => {
   return null;
 };
 
-const indexedXPathBuilder = element => uniqueXPath(element, getIndexBasedXPath(element));
+const indexedXPathBuilder = (element) => uniqueXPath(element, getIndexBasedXPath(element));
 
 const builders = [
   idBuilder,
@@ -231,7 +231,7 @@ const builders = [
   forBuilder,
 ];
 
-const getPreferredXPath = element => {
+const getPreferredXPath = (element) => {
   for (let i = 0, j = builders.length; i < j; i += 1) {
     const builder = builders[i];
     const ret = builder(element);
@@ -242,7 +242,7 @@ const getPreferredXPath = element => {
   return false;
 };
 
-const relativeXPathBuilder = element => {
+const relativeXPathBuilder = (element) => {
   let path = '';
   let current = element;
   while (current != null) {
@@ -262,7 +262,7 @@ const relativeXPathBuilder = element => {
   return false;
 };
 
-const getXPath = element => {
+const getXPath = (element) => {
   // regular builders
   let ret = getPreferredXPath(element);
   if (ret) {

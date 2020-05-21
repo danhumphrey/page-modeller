@@ -1,6 +1,6 @@
 import dom from './dom';
 
-export default locator => {
+export default (locator) => {
   let matches;
 
   switch (locator.name) {

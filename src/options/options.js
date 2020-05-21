@@ -1,28 +1,12 @@
 import Vue from 'vue/dist/vue.runtime.esm';
-import Vuetify from 'vuetify';
+import vuetify from '../plugins/vuetify';
 import OptionsApp from './OptionsApp';
 
-import '../styles/material.scss';
-import 'vuetify/dist/vuetify.css';
-import colours from '../styles/colours.scss';
+import 'vuetify/dist/vuetify.min.css';
 
-Vue.config.devtools = false;
+Vue.config.productionTip = false;
 
-Vue.use(Vuetify, {
-  theme: {
-    highlight: colours.active,
-    primary: '#BDBDBD',
-    secondary: '#607D8B',
-    accent: colours.active,
-    error: '#f44336',
-    warning: '#ffeb3b',
-    info: '#2196f3',
-    success: '#4caf50',
-  },
-});
-
-(() =>
-  new Vue({
-    el: '#app',
-    render: h => h(OptionsApp),
-  }))();
+new Vue({
+  vuetify,
+  render: (h) => h(OptionsApp),
+}).$mount('#app');

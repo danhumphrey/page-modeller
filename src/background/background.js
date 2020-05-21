@@ -3,8 +3,8 @@ import profiles from '../profiles/profiles';
 
 let activeProfile = null;
 
-const activateProfile = profileName => {
-  activeProfile = profiles.find(p => p.active);
+const activateProfile = (profileName) => {
+  activeProfile = profiles.find((p) => p.active);
   if (activeProfile) {
     if (activeProfile.name === profileName) {
       return;
@@ -12,12 +12,12 @@ const activateProfile = profileName => {
     activeProfile.active = false;
   }
   // make activeProfile active and persist to storage sync
-  activeProfile = profiles.find(p => p.name === profileName);
+  activeProfile = profiles.find((p) => p.name === profileName);
   activeProfile.active = true;
   chrome.storage.sync.set({ activeProfileName: profileName }, () => {});
 };
 
-chrome.runtime.onInstalled.addListener(details => {
+chrome.runtime.onInstalled.addListener((details) => {
   const thisVersion = chrome.runtime.getManifest().version;
   if (details.reason === 'install') {
     console.log(`First install of version ${thisVersion}`);
@@ -35,15 +35,15 @@ const sendMessageToActiveTab = (msgType, data = {}) => {
     {
       active: true,
     },
-    tabs => {
-      tabs.forEach(tab => {
+    (tabs) => {
+      tabs.forEach((tab) => {
         chrome.tabs.sendMessage(tab.id, { type: msgType, data });
       });
     }
   );
 };
 
-chrome.runtime.onMessage.addListener(msg => {
+chrome.runtime.onMessage.addListener((msg) => {
   switch (msg.type) {
     case 'showOptions':
       chrome.runtime.openOptionsPage();
@@ -57,10 +57,10 @@ chrome.runtime.onMessage.addListener(msg => {
       });
       return;
     case 'generateModel':
-      chrome.storage.sync.get('activeProfileName', result => {
+      chrome.storage.sync.get('activeProfileName', (result) => {
         // get the active activeProfile from storage sync or activate the first activeProfile as default
         if (result && result.activeProfileName) {
-          activeProfile = profiles.find(p => p.name === result.activeProfileName);
+          activeProfile = profiles.find((p) => p.name === result.activeProfileName);
           activeProfile.active = true;
         } else {
           [activeProfile] = profiles;
