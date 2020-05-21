@@ -56,9 +56,9 @@
     </v-dialog>
     <v-data-table :items="model == null ? [] : model.entities" :headers="headers" hide-default-footer fixed-header class="elevation-0" mobile-breakpoint="50">
       <template slot="item" slot-scope="props">
-        <tr v-on:dblclick="editItem(props.item)" @click="showMatchesForEntity(props.item, true)">
-          <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ props.item.name }}</td>
-          <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ itemLocator(props.item) }}</td>
+        <tr v-on:dblclick="editItem(props.item)" @click="showMatchesForEntity(props.item, true)" class="unselectable" v-bind:class="{ disabled: isInspecting }">
+          <td>{{ props.item.name }}</td>
+          <td>{{ itemLocator(props.item) }}</td>
           <td class="text-right px-0 unselectable">
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
               <template v-slot:activator="{ on }">
@@ -264,15 +264,7 @@ export default {
   },
 };
 </script>
-
-<style scoped lang="scss">
-@import '../styles/colours';
-@import '../styles/buttons';
-
-.model-table {
-  margin: 6em 2em 0 2em;
-}
-
+<style>
 .unselectable {
   -moz-user-select: -moz-none;
   -khtml-user-select: none;
@@ -282,5 +274,14 @@ export default {
 }
 .disabled {
   opacity: 0.6;
+}
+</style>
+
+<style scoped lang="scss">
+@import '../styles/colours';
+@import '../styles/buttons';
+
+.model-table {
+  margin: 6em 2em 0 2em;
 }
 </style>
