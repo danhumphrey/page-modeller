@@ -45,7 +45,7 @@ const config = {
       },
       {
         test: /\.sass$/,
-        use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader?indentedSyntax'],
+        use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
       },
       {
         test: /\.(png|jpg|gif)$/,
@@ -69,27 +69,35 @@ const config = {
     new MiniCssExtractPlugin({
       filename: '[name].css',
     }),
-    new CopyWebpackPlugin([
-      { from: 'icons', to: 'icons', ignore: ['icon.svg', 'icon_grey.svg', 'icon_128.svg'] },
-      { from: 'popup/popup.html', to: 'popup/popup.html' },
-      { from: 'devtools/devtools-page.html', to: 'devtools-page.html' },
-      { from: 'panel/panel.html', to: 'panel/panel.html' },
-      { from: 'options/options.html', to: 'options.html' },
-      { from: '../version.json', to: 'version.json' },
-      {
-        from: 'manifest.json',
-        to: 'manifest.json',
-        transform: content => {
-          const jsonContent = JSON.parse(content);
-
-          if (config.mode === 'development') {
-            jsonContent.content_security_policy = "script-src 'self' 'unsafe-eval'; object-src 'self'";
-          }
-
-          return JSON.stringify(jsonContent, null, 2);
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: 'icons',
+          to: 'icons',
+          globOptions: {
+            ignore: ['icon.svg', 'icon_grey.svg', 'icon_128.svg'],
+          },
         },
-      },
-    ]),
+        { from: 'popup/popup.html', to: 'popup/popup.html' },
+        { from: 'devtools/devtools-page.html', to: 'devtools-page.html' },
+        { from: 'panel/panel.html', to: 'panel/panel.html' },
+        { from: 'options/options.html', to: 'options.html' },
+        { from: '../version.json', to: 'version.json' },
+        {
+          from: 'manifest.json',
+          to: 'manifest.json',
+          transform: (content) => {
+            const jsonContent = JSON.parse(content);
+
+            if (config.mode === 'development') {
+              jsonContent.content_security_policy = "script-src 'self' 'unsafe-eval'; object-src 'self'";
+            }
+
+            return JSON.stringify(jsonContent, null, 2);
+          },
+        },
+      ],
+    }),
     new WebpackShellPlugin({
       onBuildEnd: ['node scripts/remove-evals.js'],
     }),

@@ -3,7 +3,9 @@
     <v-dialog v-model="dialog" @keydown.enter="save">
       <form>
         <v-card>
-          <v-card-title class="pa-2"> <span class="headline">Edit Element</span> </v-card-title>
+          <v-toolbar dark dense flat>
+            <v-toolbar-title class="white--text">Edit Element</v-toolbar-title>
+          </v-toolbar>
           <v-card-text class="pb-1">
             <v-container grid-list-md pa-0>
               <v-layout wrap>
@@ -34,7 +36,9 @@
                 <v-flex>
                   <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
                     <v-tooltip left open-delay="1000" slot="append" :disabled="!showTooltips">
-                      <v-icon slot="activator" small class="mr-2 pa-1" @click="showMatchesForLocator(currentLocator)"> remove_red_eye </v-icon>
+                      <template v-slot:activator="{ on }">
+                        <v-icon v-on="on" class="mr-2 pa-1" @click="showMatchesForLocator(currentLocator)"> {{ mdiEye }} </v-icon>
+                      </template>
                       <span>View Matched Elements</span>
                     </v-tooltip>
                   </v-text-field>
@@ -42,42 +46,51 @@
               </v-layout>
             </v-container>
           </v-card-text>
-          <v-card-actions class="py-1">
+          <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" flat @click.native="dialog = false">Cancel</v-btn>
-            <v-btn color="blue darken-1" flat @click.native="save">Save</v-btn>
+            <v-btn text @click.native="dialog = false">Cancel</v-btn>
+            <v-btn text @click.native="save">Save</v-btn>
           </v-card-actions>
         </v-card>
       </form>
     </v-dialog>
-    <v-data-table :items="model == null ? [] : model.entities" :headers="headers" hide-actions class="elevation-0">
-      <template slot="items" slot-scope="props">
-        <tr v-on:dblclick="editItem(props.item)" @click="showMatchesForEntity(props.item, true)">
-          <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ props.item.name }}</td>
-          <td class="unselectable" v-bind:class="{ disabled: isInspecting }">{{ itemLocator(props.item) }}</td>
-          <td class="text-xs-right px-0 unselectable">
+    <v-data-table :items="model == null ? [] : model.entities" :headers="headers" hide-default-footer fixed-header class="elevation-0" mobile-breakpoint="50">
+      <template slot="item" slot-scope="props">
+        <tr v-on:dblclick="editItem(props.item)" @click="showMatchesForEntity(props.item, true)" class="unselectable" v-bind:class="{ disabled: isInspecting }">
+          <td>{{ props.item.name }}</td>
+          <td>{{ itemLocator(props.item) }}</td>
+          <td class="text-right px-0 unselectable">
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
-              <v-icon slot="activator" small class="mr-2 pa-1" @click="showMatchesForEntity(props.item)" :disabled="isInspecting"> remove_red_eye </v-icon>
+              <template v-slot:activator="{ on }">
+                <v-icon v-on="on" class="mr-1 pa-1" @click="showMatchesForEntity(props.item)" :disabled="isInspecting"> {{ mdiEye }} </v-icon>
+              </template>
               <span>View Matched Elements</span>
             </v-tooltip>
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
-              <v-icon slot="activator" small class="mr-2 pa-1" @click="editItem(props.item)" :disabled="isInspecting"> edit </v-icon>
+              <template v-slot:activator="{ on }">
+                <v-icon v-on="on" class="mr-1 pa-1" @click="editItem(props.item)" :disabled="isInspecting"> {{ mdiPencil }} </v-icon>
+              </template>
               <span>Edit</span>
             </v-tooltip>
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
-              <v-icon slot="activator" small class="mr-4 pa-1" @click="deleteItem(props.item)" :disabled="isInspecting"> delete </v-icon>
+              <template v-slot:activator="{ on }">
+                <v-icon v-on="on" class="mr-2 pa-1" @click="deleteItem(props.item)" :disabled="isInspecting"> {{ mdiDelete }} </v-icon>
+              </template>
               <span>Delete</span>
             </v-tooltip>
           </td>
         </tr>
       </template>
       <template slot="no-data">
-        <td colspan="3">Scan the page or start adding elements to build the model</td>
+        <tr>
+          <td colspan="3">Scan the page or start adding elements to build the model</td>
+        </tr>
       </template>
     </v-data-table>
   </div>
 </template>
 <script>
+import { mdiEye, mdiPencil, mdiDelete } from '@mdi/js';
 import upperFirst from 'lodash/upperFirst';
 import { validationMixin } from 'vuelidate';
 import { required } from 'vuelidate/lib/validators';
@@ -95,6 +108,9 @@ export default {
   props: ['isInspecting', 'model', 'showTooltips'],
   data() {
     return {
+      mdiEye,
+      mdiPencil,
+      mdiDelete,
       dialog: false,
       headers: [
         {
@@ -166,7 +182,7 @@ export default {
   },
   methods: {
     uniqueName(n) {
-      const res = this.model.entities.filter(e => e.name === n);
+      const res = this.model.entities.filter((e) => e.name === n);
       return res.length === 0 || n === this.editedItem.name;
     },
     noSpaces(n) {
@@ -178,15 +194,15 @@ export default {
       }
       this.editedIndex = this.model.entities.indexOf(item);
       this.editedItem = { ...item };
-      this.editedItem.locators = item.locators.filter(l => !l.hidden);
+      this.editedItem.locators = item.locators.filter((l) => !l.hidden);
       this.originalItem = JSON.parse(JSON.stringify({ ...item }));
       this.editedItemName = this.editedItem.name;
-      this.currentLocator = this.editedItem.locators.find(l => l.selected);
+      this.currentLocator = this.editedItem.locators.find((l) => l.selected);
       this.dialog = true;
     },
     deleteItem(item) {
       const index = this.model.entities.indexOf(item);
-      this.$root.$confirm('Delete Element', `Really delete ${item.name}?`).then(confirm => {
+      this.$root.$confirm('Delete Element', `Really delete ${item.name}?`).then((confirm) => {
         if (confirm) {
           this.model.entities.splice(index, 1);
           if (item.name in this.model.usedNames) {
@@ -213,15 +229,15 @@ export default {
     save() {
       this.$v.$touch();
       if (!this.$v.$invalid) {
-        delete this.editedItem.locators.find(l => l.selected).selected;
-        this.editedItem.locators.find(l => l.name === this.currentLocator.name).selected = true;
+        delete this.editedItem.locators.find((l) => l.selected).selected;
+        this.editedItem.locators.find((l) => l.name === this.currentLocator.name).selected = true;
         this.editedItem.name = upperFirst(this.editedItemName);
         Object.assign(this.model.entities[this.editedIndex], this.editedItem);
         this.close(true);
       }
     },
     itemLocator(item) {
-      const current = item.locators.find(l => l.selected === true);
+      const current = item.locators.find((l) => l.selected === true);
       return `${current.name}: ${current.locator}`;
     },
     showMatchesForLocator(locator) {
@@ -231,31 +247,24 @@ export default {
       if (tableClick && !this.options.clickTableRowsToViewMatchedElements) {
         return;
       }
-      const locator = entity.locators.find(l => l.selected);
+      const locator = entity.locators.find((l) => l.selected);
       this.showMatchesForLocator(locator);
     },
     loadOptions() {
-      chrome.storage.sync.get(['options'], result => {
+      chrome.storage.sync.get(['options'], (result) => {
         if (result) {
           if (result.options) {
             this.options = result.options;
           }
         }
       });
+
+      this.$vuetify.theme.dark = this.options.darkMode;
     },
   },
 };
 </script>
-
-<style scoped lang="scss">
-@import '../styles/colours';
-@import '../styles/material';
-@import '../styles/buttons';
-
-.model-table {
-  margin: 6em 2em 0 2em;
-}
-
+<style>
 .unselectable {
   -moz-user-select: -moz-none;
   -khtml-user-select: none;
@@ -265,5 +274,14 @@ export default {
 }
 .disabled {
   opacity: 0.6;
+}
+</style>
+
+<style scoped lang="scss">
+@import '../styles/colours';
+@import '../styles/buttons';
+
+.model-table {
+  margin: 6em 2em 0 2em;
 }
 </style>
