@@ -24,7 +24,7 @@
     "persistent": false
   },
   "devtools_page": "devtools-page.html",
-  "permissions": ["activeTab", "tabs", "storage", "clipboardWrite"],
+  "permissions": ["storage", "clipboardWrite"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
