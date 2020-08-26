@@ -4,7 +4,7 @@
       <v-toolbar dark dense flat>
         <v-toolbar-title class="white--text">{{ title }}</v-toolbar-title>
       </v-toolbar>
-      <v-card-text style="height: 450px;">
+      <v-card-text style="height: 450px">
         <pre>
           {{ code }}
         </pre>
