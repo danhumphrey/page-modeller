@@ -54,12 +54,12 @@
         </v-card>
       </form>
     </v-dialog>
-    <v-data-table :items="model == null ? [] : model.entities" :headers="headers" hide-default-footer fixed-header class="elevation-0" mobile-breakpoint="50">
+    <v-data-table disable-pagination :items="model == null ? [] : model.entities" :headers="headers" hide-default-footer fixed-header class="elevation-0" mobile-breakpoint="50">
       <template slot="item" slot-scope="props">
         <tr v-on:dblclick="editItem(props.item)" @click="showMatchesForEntity(props.item, true)" class="unselectable" v-bind:class="{ disabled: isInspecting }">
           <td>{{ props.item.name }}</td>
           <td>{{ itemLocator(props.item) }}</td>
-          <td class="text-right px-0 unselectable">
+          <td class="text-right px-0 unselectable" nowrap="nowrap">
             <v-tooltip left open-delay="1000" :disabled="!showTooltips || isInspecting">
               <template v-slot:activator="{ on }">
                 <v-icon v-on="on" class="mr-1 pa-1" @click="showMatchesForEntity(props.item)" :disabled="isInspecting"> {{ mdiEye }} </v-icon>
