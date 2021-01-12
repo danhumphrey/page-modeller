@@ -2,34 +2,27 @@ import upperFirst from 'lodash/upperFirst';
 import { isClickable, isInteractive } from './templates-helpers';
 
 const renderEntityComment = entity => `
-/*
- * ${entity.name}
- * ***************************************************************
- */
-`;
+
+// ${entity.name}`;
 
 const transformLocatorName = locatorName => {
   if (locatorName === 'css') {
     return 'CssSelector';
   }
+  if (locatorName === 'xpath') {
+    return 'XPath';
+  }
   return upperFirst(locatorName);
 };
 
-const renderFindByLocatorStatement = locator => `driver.FindElement(By.${transformLocatorName(locator.name)}("${locator.locator}"));`;
+const renderFindByLocatorStatement = locator => `_driver.FindElement(By.${transformLocatorName(locator.name)}("${locator.locator}"));`;
 
 const renderGetElementMethod = entity => {
   let output = `
- public IWebElement Get${entity.name}Element() 
- {
-     return ${renderFindByLocatorStatement(entity.locators.find(l => l.selected))}
- }
-`;
+public IWebElement ${entity.name}Element => ${renderFindByLocatorStatement(entity.locators.find(l => l.selected))}`;
   if (entity.tagName === 'SELECT') {
     output += `
- public SelectElement Get${entity.name}Select() 
- {
-     return new SelectElement(Get${entity.name}Element());
- }
+public SelectElement Get${entity.name}Select() => new SelectElement(${entity.name}Element);
 `;
   }
   return output;
@@ -37,51 +30,29 @@ const renderGetElementMethod = entity => {
 
 const renderClickMethod = entity => {
   if (isClickable(entity)) {
-    return ` 
- public void Click${entity.name}() 
- {
-     Get${entity.name}Element().Click();
- }
- `;
+    return `
+public void Click${entity.name}() => ${entity.name}Element.Click();`;
   }
   return '';
 };
 
 const renderGetAndSetCheckboxRadio = entity => `
- public Boolean Get${entity.name}() 
- {
-     return Get${entity.name}Element().Selected;
- }
- 
- public void Set${entity.name}(Boolean onOrOff) 
- {
-     IWebElement el = Get${entity.name}Element();
-     if( (onOrOff && !el.Selected) || (!onOrOff && el.Selected)) 
-     {
-         el.Click(); 
-     }
- }`;
+public bool ${entity.name} => ${entity.name}Element.Selected;
+
+public void Set${entity.name}(bool onOrOff) 
+{
+    IWebElement el = ${entity.name}Element;
+    if( (onOrOff && !el.Selected) || (!onOrOff && el.Selected)) 
+    {
+        el.Click(); 
+    }
+}`;
 
 const renderGetAndSetSelect = entity => `
- public String Get${entity.name}Text() 
- {
-     return Get${entity.name}Select().SelectedOption.Text;
- }
- 
- public String Get${entity.name}Value() 
- {
-     return Get${entity.name}Select().SelectedOption.GetAttribute("value");
- }
-
- public void Set${entity.name}ByValue(String value) 
- {
-     Get${entity.name}Select().SelectByValue(value);
- }
- 
- public void Set${entity.name}ByText(String text) 
- {
-     Get${entity.name}Select().SelectByText(text);
- }
+public string Get${entity.name}Text => Get${entity.name}Select().SelectedOption.Text;
+public string Get${entity.name}Value => Get${entity.name}Select().SelectedOption.GetAttribute("value");
+public void Set${entity.name}ByValue(string value) => Get${entity.name}Select().SelectByValue(value);
+public void Set${entity.name}ByText(string text) => Get${entity.name}Select().SelectByText(text);
 `;
 
 const renderGetAndSetMethods = entity => {
@@ -95,15 +66,8 @@ const renderGetAndSetMethods = entity => {
     }
     // regular input
     return `
- public String Get${entity.name}() 
- {
-     return Get${entity.name}Element().GetAttribute("value");
- }
- 
- public void Set${entity.name}(String value) 
- {
-     Get${entity.name}Element().SendKeys(value);
- }
+public string ${entity.name} => ${entity.name}Element.GetAttribute("value");
+public void Set${entity.name}(string value) => ${entity.name}Element.SendKeys(value);
 `;
   }
   if (entity.tagName === 'SELECT') {
@@ -117,10 +81,10 @@ const renderGetTextMethod = entity => {
     return '';
   }
   return ` 
- public String Get${entity.name}() 
- {
-     return Get${entity.name}Element().Text;
- }
+public string Get${entity.name}() 
+{
+    return Get${entity.name}Element().Text;
+}
 `;
 };
 
