@@ -1,13 +1,12 @@
 const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const WebpackShellPlugin = require('webpack-shell-plugin');
+const WebpackShellPlugin = require('webpack-shell-plugin-next');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const ChromeExtensionReloader = require('webpack-chrome-extension-reloader');
 const TerserPlugin = require('terser-webpack-plugin');
 const { VueLoaderPlugin } = require('vue-loader');
 
 const config = {
-  mode: process.env.NODE_ENV,
   context: `${__dirname}/src`,
   entry: {
     background: './background/background.js',
@@ -28,7 +27,7 @@ const config = {
     rules: [
       {
         test: /\.vue$/,
-        loaders: 'vue-loader',
+        loader: 'vue-loader',
       },
       {
         test: /\.js$/,
@@ -65,10 +64,11 @@ const config = {
     ],
   },
   plugins: [
-    new VueLoaderPlugin(),
-    new MiniCssExtractPlugin({
-      filename: '[name].css',
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
     }),
+    new VueLoaderPlugin(),
+    new MiniCssExtractPlugin({}),
     new CopyWebpackPlugin({
       patterns: [
         {
@@ -99,7 +99,11 @@ const config = {
       ],
     }),
     new WebpackShellPlugin({
-      onBuildEnd: ['node scripts/remove-evals.js'],
+      onBuildEnd: {
+        scripts: ['node scripts/remove-evals.js'],
+        blocking: true,
+        parallel: false,
+      },
     }),
   ],
   optimization: {
@@ -129,7 +133,11 @@ if (config.mode === 'production') {
 if (process.env.LAUNCH_CHROME === 'true') {
   config.plugins = (config.plugins || []).concat([
     new WebpackShellPlugin({
-      onBuildEnd: ['node scripts/launch-chrome.js'],
+      onBuildEnd: {
+        scripts: ['node scripts/launch-chrome.js'],
+        blocking: false,
+        parallel: false,
+      },
     }),
   ]);
 }
@@ -137,8 +145,9 @@ if (process.env.LAUNCH_CHROME === 'true') {
 if (process.env.LAUNCH_FIREFOX === 'true') {
   config.plugins = (config.plugins || []).concat([
     new WebpackShellPlugin({
-      onBuildExit: ['npm run manifest:firefox && web-ext run -s build-firefox'],
-      safe: true,
+      onBuildExit: {
+        scripts: ['npm run manifest:firefox && web-ext run -s build-firefox'],
+      },
     }),
   ]);
 }
