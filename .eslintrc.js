@@ -26,6 +26,7 @@ module.exports = {
   },
   // add your custom rules here
   rules: {
+    'vue/no-mutating-props': 'off',
     // don't require .vue extension when importing
     'import/extensions': [
       'error',
