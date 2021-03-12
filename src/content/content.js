@@ -2,11 +2,10 @@ import scrollIntoView from 'scroll-into-view-if-needed';
 import inspector from './inspector';
 import './content.scss';
 import dom from './dom';
-import colours from '../styles/colours.scss';
 import locatorMatches from './locatorMatches';
 
-const bg = colours.highlightBg;
-const bo = colours.highlightBorder;
+const bg = 'rgba(255, 255, 0, 0.5)';
+const bo = 'red';
 const styleString = `border: ${bo} solid 2px !important; background-color: ${bg} !important; background: ${bg} !important;`;
 let styleTimeout = null;
 

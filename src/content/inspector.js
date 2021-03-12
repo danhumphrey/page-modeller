@@ -1,7 +1,8 @@
 import ModelBuilder from './ModelBuilder';
 import dom from './dom';
-import colours from '../styles/colours.scss';
 
+const inspectorBorder = '#03a9f4';
+const inspectorBg = 'rgba(70, 142, 212, 0.5)';
 let currentStyle = '';
 const CLASS_NAME = 'page-modeller-hover';
 let existingModel = null;
@@ -13,7 +14,7 @@ const onMouseOver = (evt) => {
   evt.target.classList.add(CLASS_NAME);
   evt.target.setAttribute(
     'style',
-    `${currentStyle}; border: ${colours.inspectorBorder} solid 2px !important; background-color: ${colours.inspectorBg} !important; background: ${colours.inspectorBg} !important;`
+    `${currentStyle}; border: ${inspectorBorder} solid 2px !important; background-color: ${inspectorBg} !important; background: ${inspectorBg} !important;`
   );
 };
 const onMouseOut = (evt) => {
