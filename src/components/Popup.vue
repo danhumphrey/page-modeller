@@ -1,12 +1,10 @@
 <template>
   <v-snackbar v-model="snackbar" :timeout="timeout">
-    <v-layout justify-start row class="pl-2">
-      <v-icon v-if="warningIcon" color="yellow darken-2">{{ mdiAlert }}</v-icon>
-      <v-icon v-if="errorIcon" color="red darken-2">{{ mdiAlertCircle }}</v-icon>
-      <v-icon v-if="infoIcon" color="blue darken-2">{{ mdiInformation }}</v-icon>
-      <v-icon v-if="successIcon" color="green darken-2">{{ mdiCheckCircle }}</v-icon>
-      <span class="message">{{ message }}</span>
-    </v-layout>
+    <v-icon v-if="warningIcon" color="yellow darken-2">{{ mdiAlert }}</v-icon>
+    <v-icon v-if="errorIcon" color="red darken-2">{{ mdiAlertCircle }}</v-icon>
+    <v-icon v-if="infoIcon" color="blue darken-2">{{ mdiInformation }}</v-icon>
+    <v-icon v-if="successIcon" color="green darken-2">{{ mdiCheckCircle }}</v-icon>
+    <span class="message">{{ message }}</span>
     <v-btn text @click="close"> Close </v-btn>
   </v-snackbar>
 </template>
