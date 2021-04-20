@@ -4,4 +4,3 @@
 npm run pretty-quick --
 npm run lint
 npm test
-exit 1
