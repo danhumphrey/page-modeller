@@ -2,7 +2,7 @@
   "name": "page-modeller",
   "version": "2.1.0",
   "description": "A browser extension for modelling web pages for automation",
-  "author": "Dan Humphrey - danh2000@gmail.com",
+  "author": "Dan Humphrey - dan.humphrey.extensions@gmail.com",
   "homepage": "https://github.com/danhumphrey/page-modeller",
   "license": "MIT",
   "private": true,
