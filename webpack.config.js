@@ -2,7 +2,6 @@ const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const WebpackShellPlugin = require('webpack-shell-plugin-next');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const ChromeExtensionReloader = require('webpack-chrome-extension-reloader');
 const TerserPlugin = require('terser-webpack-plugin');
 const { VueLoaderPlugin } = require('vue-loader');
 
@@ -147,18 +146,6 @@ if (process.env.LAUNCH_FIREFOX === 'true') {
     new WebpackShellPlugin({
       onBuildExit: {
         scripts: ['npm run manifest:firefox && web-ext run -s build-firefox'],
-      },
-    }),
-  ]);
-}
-
-if (process.env.HMR === 'true') {
-  config.plugins = (config.plugins || []).concat([
-    new ChromeExtensionReloader({
-      reloadPage: true, // Force the reload of the page also
-      entries: {
-        contentScript: 'content',
-        background: 'background',
       },
     }),
   ]);
