@@ -25,7 +25,8 @@
     "launch:chrome": "cross-env LAUNCH_CHROME=true HMR=true npm run watch:dev",
     "launch:firefox": "cross-env LAUNCH_FIREFOX=true npm run watch:dev",
     "version": "cd scripts && node release.js && cd ./",
-    "release": "npm run version && npm run build && npm run zip:chrome && npm run sign:firefox"
+    "release": "npm run version && npm run build && npm run zip:chrome && npm run sign:firefox",
+    "pretty-quick": "pretty-quick --staged"
   },
   "repository": {
     "type": "git",
@@ -65,7 +66,7 @@
     "eslint-plugin-prettier": "^3.3.1",
     "eslint-plugin-vue": "^7.4.1",
     "file-loader": "^6.2.0",
-    "husky": "^4.3.7",
+    "husky": "^6.0.0",
     "inquirer": "^8.0.0",
     "jest": "^26.6.3",
     "mini-css-extract-plugin": "^1.3.9",
@@ -83,10 +84,5 @@
     "webpack": "^5.13.0",
     "webpack-cli": "^4.3.1",
     "webpack-shell-plugin-next": "^2.1.1"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "pretty-quick --staged && npm run lint && npm test"
-    }
   }
 }
