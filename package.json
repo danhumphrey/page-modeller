@@ -79,6 +79,7 @@
     "sass-loader": "^11.0.1",
     "semver": "^7.3.4",
     "terser-webpack-plugin": "^5.1.4",
+    "trim-newlines": ">=3.0.1",
     "vue-loader": "^15.9.6",
     "vue-template-compiler": "^2.6.12",
     "webpack": "^5.44.0",
