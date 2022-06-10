@@ -13,6 +13,7 @@ Supported tools and languages are:
 - Puppeteer
 - Robot Framework
 - Protractor
+- [Playwright](/README-PLAYWRIGHT.md)
 
 ## Contents
 

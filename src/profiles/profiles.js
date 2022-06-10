@@ -4,6 +4,7 @@ import RobotFrameworkTemplate from './RobotFrameworkTemplate';
 import PuppeteerTemplate from './PuppeteerTemplate';
 import ProtractorTemplate from './ProtractorTemplate';
 import ProtractorTypescriptTemplate from './ProtractorTypescriptTemplate';
+import PlaywrightTemplate from './PlaywrightTemplate';
 
 export default [
   {
@@ -35,5 +36,10 @@ export default [
     name: 'Protractor (Typescript)',
     template: ProtractorTypescriptTemplate,
     locators: ['id', 'linkText', 'partialLinkText', 'name', 'model', 'binding', 'css', 'xpath', 'className', 'tagName'],
-  }
+  },
+  {
+    name: 'Playwright',
+    template: PlaywrightTemplate,
+    locators: ['css', 'xpath'],
+  },
 ];
