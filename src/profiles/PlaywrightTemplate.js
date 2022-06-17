@@ -99,7 +99,7 @@ const renderGetTextMethod = entity => {
   return `
  async get${entity.name}() {
    const locator = this.get${entity.name}Locator();
-   return await locator.innerText();
+   return await locator.textContent();
  }
 `;
 };
