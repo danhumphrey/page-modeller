@@ -49,7 +49,7 @@ export default class ModelBuilder {
     this.model = existingModel || ModelBuilder.createEmptyModel();
     this.activeProfile = activeProfile;
     if (existingModel) {
-      this.model.entities.push(this.createEntity(element));
+      this.model.entities.push(this.createEntity(element, appOptions));
       return this.model;
     }
 
@@ -70,26 +70,30 @@ export default class ModelBuilder {
     while (walker.nextNode()) {
       const childElement = walker.currentNode;
       if (INTERACTIVE_ELEMENTS.includes(childElement.tagName)) {
-        this.model.entities.push(this.createEntity(childElement));
+        this.model.entities.push(this.createEntity(childElement, appOptions));
       }
     }
     return this.model.entities.length === 0 ? null : this.model;
   }
 
-  createEntity(element) {
+  createEntity(element, appOptions) {
     return {
-      name: this.deDupeName(generateName(element)),
-      locators: this.getLocators(element),
+      name: this.deDupeName(generateName(element, appOptions)),
+      locators: this.getLocators(element, appOptions),
       tagName: dom.getTagName(element),
       type: dom.getTagType(element),
     };
   }
 
-  getLocators(element) {
+  getLocators(element, appOptions) {
     const tagName = dom.getTagName(element);
     const tagIndex = dom.getTagIndex(element);
 
     const possibleLocators = [
+      {
+        name: 'customLocator',
+        locator: dom.getCustomLocator(element, appOptions),
+      },
       {
         name: 'id',
         locator: dom.getId(element),

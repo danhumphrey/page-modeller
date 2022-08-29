@@ -138,6 +138,16 @@ describe('getTagIndex', () => {
   });
 });
 
+describe('getCustomLocator', () => {
+  const getCustomLocator = dom.__get__('getCustomLocator');
+  const appOptions = {'customLocator': 'data-id'}
+  test('customLocator selector', () => {
+    document.body.innerHTML = '<div><p data-id="my-custom-locator">Paragraph</p></div>';
+    const element = document.querySelector('p');
+    expect(getCustomLocator(element, appOptions)).toBe('[data-id="my-custom-locator"]');
+  });
+});
+
 describe('getId', () => {
   const getId = dom.__get__('getId');
 
@@ -542,6 +552,22 @@ describe('findElementsByTagName', () => {
   });
 });
 
+describe('findElementsByCustomLocator', () => {
+  const findElementsByCustomLocator = dom.__get__('findElementsByCustomLocator');
+
+  test('no matches returns empty array', () => {
+    document.body.innerHTML = '<div><p>Paragraph</p></div>';
+    expect(findElementsByCustomLocator(document, '[data-id="my-custom-id')).toEqual([]);
+  });
+
+  test('always single match', () => {
+    document.body.innerHTML = '<div><input id="test1" data-id="my-custom-id" name="forename" /></div>';
+    const element = document.getElementById('test1');
+    expect(findElementsByCustomLocator(document, '[data-id="my-custom-id"]')).toEqual([element]);
+  });
+});
+
+
 describe('findElementsByClassName', () => {
   const findElementsByClassName = dom.__get__('findElementsByClassName');
 
@@ -673,6 +699,8 @@ describe('findElementsByTagIndex', () => {
     expect(findElementsByTagIndex(document, 'a2')).toEqual([element2]);
   });
 });
+
+
 
 describe('findElementsByNgBinding', () => {
   const findElementsByNgBinding = dom.__get__('findElementsByNgBinding');

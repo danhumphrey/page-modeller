@@ -6,7 +6,7 @@ const renderEntityComment = entity => `
 // ${entity.name}`;
 
 const transformLocatorName = locatorName => {
-  if (locatorName === 'css') {
+  if (locatorName === 'css' || locatorName === 'customLocator') {
     return 'CssSelector';
   }
   if (locatorName === 'xpath') {

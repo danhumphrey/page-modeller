@@ -9,6 +9,9 @@ const renderEntityComment = entity => `
 const getSelectedLocator = entity => entity.locators.find(l => l.selected);
 const renderGetElement = entity => {
   const locator = getSelectedLocator(entity);
+  if (locator.name === 'customLocator') {
+    locator.name = 'css'
+  };
   return `
  this.get${entity.name}Element = function() {
    return element(by.${locator.name}('${locator.locator}'));

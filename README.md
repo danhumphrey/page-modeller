@@ -56,6 +56,8 @@ Options can be configured via the browser extension options.
 - Show Tooltips
 - Dark Mode
 - Model Hidden Elements
+- Set Custom Locator Attribute
+- Create Name from Custom Locator Value
 
 <p align="center">
   <img src="media/popup_options.png" width="302" alt="Popup Options" /> 

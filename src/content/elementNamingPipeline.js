@@ -4,6 +4,14 @@ import dom from './dom';
 
 const MAX_NAME_LENGTH = 25;
 
+const customLocatorRule = (element, appOptions) => {
+  let customAttrName = '';
+  if (appOptions.customLocator && appOptions.useCustomLocatorVal) {
+      customAttrName = element.getAttribute(appOptions.customLocator);
+  }
+  return customAttrName || false;
+}
+
 const labelNameRule = (element) => {
   const tagName = dom.getTagName(element);
 
@@ -181,6 +189,7 @@ const formatName = (name) => {
 };
 
 const rules = [
+  customLocatorRule,
   labelNameRule,
   placeholderRule,
   buttonValueRule,
@@ -195,11 +204,15 @@ const rules = [
 ];
 rules.push(defaultNameRule);
 
-const generateName = (element) => {
+const generateName = (element, appOptions) => {
   let theName;
   for (let i = 0, j = rules.length; i < j; i += 1) {
     const rule = rules[i];
-    theName = rule(element);
+    if (rule.name === 'customLocatorRule') {
+      theName = rule(element, appOptions);  
+    } else {
+      theName = rule(element);
+    }
     if (theName) {
       const cleanedName = cleanName(theName);
       if (cleanedName !== false) {

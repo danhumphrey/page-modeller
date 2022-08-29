@@ -8,7 +8,7 @@ const renderEntityComment = entity => `
 `;
 
 const transformLocatorName = locatorName => {
-  if (locatorName === 'css') {
+  if (locatorName === 'css' || locatorName === 'customLocator') {
     return 'cssSelector';
   }
   return locatorName;

@@ -12,6 +12,9 @@
               <v-switch label="Dark Mode" v-model="darkMode"> </v-switch>
               <v-switch label="Model Hidden Elements" v-model="modelHiddenElements"> </v-switch>
               <v-switch label="Click Table Rows To View Matched Elements" v-model="clickTableRowsToViewMatchedElements"> </v-switch>
+              <v-text-field label="Set Custom Locator Attribute" clearable outlined persistent-hint
+                            placeholder="data-id" class="shrink" v-model="customLocator"></v-text-field>
+              <v-switch label="Create Name from Custom Locator Value" v-model="useCustomLocatorVal"> </v-switch>
             </v-flex>
           </v-layout>
         </v-form>
@@ -36,6 +39,8 @@ export default {
       modelHiddenElements: defaultOptions.modelHiddenElements,
       darkMode: defaultOptions.darkMode,
       clickTableRowsToViewMatchedElements: defaultOptions.clickTableRowsToViewMatchedElements,
+      customLocator: defaultOptions.customLocator,
+      useCustomLocatorVal: defaultOptions.useCustomLocatorVal,
       originalOptions: defaultOptions,
     };
   },
@@ -46,6 +51,8 @@ export default {
         modelHiddenElements: this.modelHiddenElements,
         darkMode: this.darkMode,
         clickTableRowsToViewMatchedElements: this.clickTableRowsToViewMatchedElements,
+        customLocator: this.customLocator,
+        useCustomLocatorVal: this.useCustomLocatorVal,
       };
       chrome.runtime.sendMessage({
         type: 'saveOptions',
@@ -66,6 +73,8 @@ export default {
           this.modelHiddenElements = this.originalOptions.modelHiddenElements;
           this.darkMode = this.originalOptions.darkMode || defaultOptions.darkMode; // default if no saved option for darkMode
           this.clickTableRowsToViewMatchedElements = this.originalOptions.clickTableRowsToViewMatchedElements || defaultOptions.clickTableRowsToViewMatchedElements; // default if no saved options
+          this.customLocator = this.originalOptions.customLocator || defaultOptions.customLocator;
+          this.useCustomLocatorVal = this.originalOptions.useCustomLocatorVal || defaultOptions.useCustomLocatorVal;
           this.options = result.options;
         } else {
           // no options saved, so save defaults
@@ -95,6 +104,16 @@ export default {
     clickTableRowsToViewMatchedElements(val) {
       if (this.originalOptions.clickTableRowsToViewMatchedElements !== val) {
         this.unchanged = false;
+      }
+    },
+    customLocator(val) {
+    if (this.originalOptions.customLocator !== val) {
+      this.unchanged = false;
+      }
+    },
+    useCustomLocatorVal(val) {
+    if (this.originalOptions.useCustomLocatorVal !== val) {
+      this.unchanged = false;
       }
     },
   },

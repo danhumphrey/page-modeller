@@ -4,6 +4,9 @@ export default (locator) => {
   let matches;
 
   switch (locator.name) {
+    case 'customLocator':
+      matches = dom.findElementsByCustomLocator(document, locator.locator);
+      break;
     case 'xpath':
       matches = dom.findElementsByXPath(document, locator.locator);
       break;

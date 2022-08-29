@@ -149,6 +149,14 @@ const getId = (element) => {
   return null;
 };
 
+const getCustomLocator = (element, appOptions) => {
+  if (appOptions.customLocator && element.hasAttribute(appOptions.customLocator)) {
+    const attrval = element.getAttribute(appOptions.customLocator)
+    return `[${appOptions.customLocator}="${attrval}"]`
+  }
+  return null;
+}
+
 const getName = (element) => {
   if (element.name && element.name.trim) {
     return element.name.trim();
@@ -239,6 +247,8 @@ const getNgModel = (element) => {
   }
   return null;
 };
+
+const findElementsByCustomLocator = (document, locator) => findElementsByCssSelector(document, locator);
 
 const findElementsByXPath = (document, locator) => {
   const results = [];
@@ -347,6 +357,7 @@ export default {
   getTagName,
   getTagType,
   getTagIndex,
+  getCustomLocator,
   getTextContent,
   getId,
   getName,
@@ -365,6 +376,7 @@ export default {
   findElementsByPartialLinkText,
   findElementsByClassName,
   findElementsByTagName,
+  findElementsByCustomLocator,
   findElementsByCssSelector,
   findElementsByXPath,
   findElementsByTagIndex,

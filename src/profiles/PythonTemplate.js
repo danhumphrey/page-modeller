@@ -12,8 +12,6 @@ const nameSpaces = name => ''.padEnd(minWidth - name.length, ' ');
 
 const transformLocatorName = locatorName => {
   switch (locatorName) {
-    case 'customLocator':
-      return 'css'
     case 'linkText':
       return 'link';
     case 'tagName':

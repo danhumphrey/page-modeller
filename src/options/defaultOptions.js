@@ -3,4 +3,6 @@ export default {
   modelHiddenElements: false,
   darkMode: false,
   clickTableRowsToViewMatchedElements: false,
+  customLocator: null,
+  useCustomLocatorVal: false,
 };

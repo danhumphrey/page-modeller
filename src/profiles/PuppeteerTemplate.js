@@ -9,7 +9,7 @@ const renderEntityComment = entity => `
 const getSelectedLocator = entity => entity.locators.find(l => l.selected);
 const renderGetElement = entity => {
   const locator = getSelectedLocator(entity);
-  const method = locator.name === 'css' ? '$' : '$x'; // css or xpath
+  const method = (locator.name === 'css' || locator.name === 'customLocator') ? '$' : '$x'; // css or xpath
   return `
  async get${entity.name}Element() {
    return (await this.page.${method}(\`${locator.locator}\`))${locator.name === 'xpath' ? '[0]' : ''};
