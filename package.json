@@ -33,7 +33,7 @@
     "url": "git+https://github.com/danhumphrey/page-modeller.git"
   },
   "dependencies": {
-    "@mdi/js": "^5.8.55",
+    "@mdi/js": "^7.0.96",
     "babel-plugin-rewire": "^1.2.0",
     "caniuse-lite": "^1.0.30001423",
     "lodash": "^4.17.20",
@@ -47,7 +47,7 @@
     "@babel/core": "^7.14.6",
     "@babel/plugin-proposal-optional-chaining": "^7.12.7",
     "@babel/preset-env": "^7.14.7",
-    "@types/chrome": "^0.0.135",
+    "@types/chrome": "^0.0.199",
     "archiver": "^5.2.0",
     "babel-eslint": "^10.1.0",
     "babel-jest": "^26.6.3",
