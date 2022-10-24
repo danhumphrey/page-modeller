@@ -35,6 +35,7 @@
   "dependencies": {
     "@mdi/js": "^5.8.55",
     "babel-plugin-rewire": "^1.2.0",
+    "caniuse-lite": "^1.0.30001423",
     "lodash": "^4.17.20",
     "scroll-into-view-if-needed": "^2.2.26",
     "simmerjs": "^0.5.6",
