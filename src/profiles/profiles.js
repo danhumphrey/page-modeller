@@ -1,9 +1,11 @@
 import SeleniumWebDriverJavaTemplate from './SeleniumWebDriverJavaTemplate';
+import SeleniumWebDriverPythonTemplate from './SeleniumWebDriverPythonTemplate';
 import SeleniumWebDriverCSharpTemplate from './SeleniumWebDriverCSharpTemplate';
 import RobotFrameworkTemplate from './RobotFrameworkTemplate';
 import PuppeteerTemplate from './PuppeteerTemplate';
 import ProtractorTemplate from './ProtractorTemplate';
 import ProtractorTypescriptTemplate from './ProtractorTypescriptTemplate';
+
 
 export default [
   {
@@ -14,6 +16,11 @@ export default [
   {
     name: 'Selenium WebDriver C#',
     template: SeleniumWebDriverCSharpTemplate,
+    locators: ['id', 'linkText', 'partialLinkText', 'name', 'css', 'xpath', 'className', 'tagName'],
+  },
+  {
+    name: 'Selenium WebDriver Python',
+    template: SeleniumWebDriverPythonTemplate,
     locators: ['id', 'linkText', 'partialLinkText', 'name', 'css', 'xpath', 'className', 'tagName'],
   },
   {
