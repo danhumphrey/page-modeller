@@ -1,6 +1,7 @@
 import SeleniumWebDriverJavaTemplate from './SeleniumWebDriverJavaTemplate';
 import SeleniumWebDriverPythonTemplate from './SeleniumWebDriverPythonTemplate';
 import SeleniumWebDriverCSharpTemplate from './SeleniumWebDriverCSharpTemplate';
+import SeleniumWebDriverJavaPageFactoryTemplate from './SeleniumWebDriverJavaPageFactoryTemplate';
 import RobotFrameworkTemplate from './RobotFrameworkTemplate';
 import PuppeteerTemplate from './PuppeteerTemplate';
 import ProtractorTemplate from './ProtractorTemplate';
@@ -42,5 +43,10 @@ export default [
     name: 'Protractor (Typescript)',
     template: ProtractorTypescriptTemplate,
     locators: ['id', 'linkText', 'partialLinkText', 'name', 'model', 'binding', 'css', 'xpath', 'className', 'tagName'],
-  }
+  },
+  {
+    name: 'Selenium WebDriver Java Page Factory',
+    template: SeleniumWebDriverJavaPageFactoryTemplate,
+    locators: ['id', 'linkText', 'partialLinkText', 'name', 'css', 'xpath', 'className', 'tagName'],
+  },
 ];
