@@ -8,18 +8,19 @@ const renderEntityComment = entity => `
 `;
 
 const transformLocatorName = locatorName => {
-  if (locatorName === 'css') {
-    return 'cssSelector';
-  }
+  // if (locatorName === 'css') {
+  //   return 'cssSelector';
+  // }
   return locatorName;
 };
 
-const renderFindByLocatorStatement = locator => `@FindBy(By.${transformLocatorName(locator.name)}("${locator.locator}"))`;
+// const renderFindByLocatorStatement = locator => `@FindBy(By.${transformLocatorName(locator.name)}("${locator.locator}"))`;
+const renderFindByLocatorStatement = locator => `@FindBy(${transformLocatorName(locator.name)} = "${locator.locator}")`;
 
 const renderGetElementMethod = entity => {
   let output = `
  ${renderFindByLocatorStatement(entity.locators.find(l => l.selected))}
- public WebElement ${entity.name}Element
+ public WebElement ${entity.name}Element;
  `;
   if (entity.tagName === 'SELECT') {
     output += `
