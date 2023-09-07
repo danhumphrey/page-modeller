@@ -167,6 +167,7 @@ export default {
       }
 
       if (!this.$v.editedItemName.noSpaces) {
+        this.editedItem.name = this.editedItem.name.replace(/\s/g, '');
         errors.push('Name cannot contain spaces.');
       }
       return errors;

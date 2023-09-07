@@ -7,8 +7,29 @@ const MAX_NAME_LENGTH = 25;
 const labelNameRule = (element) => {
   const tagName = dom.getTagName(element);
 
-  if (!['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'PROGRESS', 'METER', 'OUTPUT'].includes(tagName)) {
+  if (!['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'PROGRESS', 'METER', 'OUTPUT', 'P-RADIOBUTTON', 'P-DROPDOWNITEM', 'P-DROPDOWN'].includes(tagName)) {
     return false;
+  }
+
+  // get sibiling label tag text with getParent
+  if ('P-RADIOBUTTON' === tagName) {
+    const val = dom.getParent(element).textContent.trim();
+    if (val) {
+      return val || false;
+    }
+  }
+  if ('P-CHECKBOX' === tagName) {
+    const val = dom.getParent(element).textContent.trim();
+    if (val) {
+      return val || false;
+    }
+  }
+
+  if ('P-DROPDOWNITEM' === tagName) {
+    const val = dom.getTextContent.trim();
+    if (val) {
+      return val || false;
+    }
   }
 
   const label = dom.getLabel(element);

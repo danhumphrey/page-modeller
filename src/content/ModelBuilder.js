@@ -7,7 +7,7 @@ import locatorMatches from './locatorMatches';
 
 import profiles from '../profiles/profiles';
 
-const INTERACTIVE_ELEMENTS = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+const INTERACTIVE_ELEMENTS = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'P-RADIOBUTTON', 'P-DROPDOWN', 'P-CHECKBOX'];
 const generateLinkTextLocator = (element, partial = false) => {
   const newLineRegex = /(\r\n|\r|\n)/;
   const linkText = dom.getLinkText(element);

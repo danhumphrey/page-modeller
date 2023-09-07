@@ -13,6 +13,13 @@ const getSameSiblingCount = (element) => {
   return total - 1;
 };
 
+const getParent = (element) => {
+  if (element.parentNode) {
+    return element.parentNode;
+  }
+  return null;
+}
+
 const getElementIndex = (element) => {
   const { childNodes } = element.parentNode;
   let total = 0;
@@ -359,6 +366,7 @@ export default {
   getNgBinding,
   getNgModel,
   getScrollPosition,
+  getParent,
   findElementsById,
   findElementsByName,
   findElementsByLinkText,

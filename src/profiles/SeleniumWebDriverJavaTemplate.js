@@ -14,7 +14,20 @@ const transformLocatorName = locatorName => {
   return locatorName;
 };
 
-const renderFindByLocatorStatement = locator => `driver.findElement(By.${transformLocatorName(locator.name)}("${locator.locator}"));`;
+const transformLocator = locator => {
+  if (locator.includes(' > p-radiobutton')) {
+    return locator.replace(' > p-radiobutton', ' .p-radiobutton-box');
+  }
+  // if (locator.includes(' > p-dropdownitem')) {
+  //   return locator.replace(' > p-dropdownitem', ' .p-dropdown-item');
+  // }
+  // if (locator.includes(' > p-dropdown')) {
+  //   return locator.replace(' > p-dropdown', ' .p-dropdown');
+  // }
+  return locator;
+}
+
+const renderFindByLocatorStatement = locator => `getDriver().findElement(By.${transformLocatorName(locator.name)}("${transformLocator(locator.locator)}"));`;
 
 const renderGetElementMethod = entity => {
   let output = `
@@ -22,7 +35,7 @@ const renderGetElementMethod = entity => {
      return ${renderFindByLocatorStatement(entity.locators.find(l => l.selected))}
  }
 `;
-  if (entity.tagName === 'SELECT') {
+  if (entity.tagName === 'SELECT' || entity.tagName === 'P-DROPDOWN') {
     output += `
  public Select get${entity.name}Select() {
      return new Select(get${entity.name}Element());
@@ -76,6 +89,10 @@ const renderGetAndSetMethods = entity => {
     return '';
   }
 
+  if (entity.tagName === 'P-RADIOBUTTON') {
+    return renderGetAndSetCheckboxRadio(entity);
+  }
+
   if (['INPUT', 'TEXTAREA'].includes(entity.tagName)) {
     if (['checkbox', 'radio'].includes(entity.type)) {
       return renderGetAndSetCheckboxRadio(entity);
@@ -91,7 +108,7 @@ const renderGetAndSetMethods = entity => {
  }
 `;
   }
-  if (entity.tagName === 'SELECT') {
+  if (entity.tagName === 'SELECT' || entity.tagName === 'P-DROPDOWN') {
     return renderGetAndSetSelect(entity);
   }
   return '';
