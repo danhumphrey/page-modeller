@@ -71,9 +71,52 @@ const renderGetAndSetSelect = entity => `
  }
 `;
 
+// Method for p-checkbox and p-radiobutton
+const renderGetAndSetPCheckboxRadio = entity => `
+public boolean get${entity.name}() {
+    WebElement el = get${entity.name}Element().findElement(By.xpath(".//div[@class='p-hidden-accessible']/input"));
+    return "true".equals(el.getAttribute("aria-checked"));
+}
+
+public void set${entity.name}(boolean onOrOff) {
+    WebElement el = get${entity.name}Element().findElement(By.xpath(".//div[@class='p-hidden-accessible']/input"));
+    boolean isSelected = "true".equals(el.getAttribute("aria-checked"));
+    if ((onOrOff && !isSelected) || (!onOrOff && isSelected)) {
+        el.click();
+    }
+}
+`;
+
+// Method for p-dropdown
+const renderGetAndSetPDropdown = `
+public String get${entity.name}Text() {
+    WebElement selectedOption = get${entity.name}Element().findElement(By.xpath(".//span[@class='p-dropdown-label']"));
+    return selectedOption.getText();
+}
+
+public void set${entity.name}ByText(String text) {
+    WebElement dropdown = get${entity.name}Element();
+    dropdown.findElement(By.xpath(".//div[@role='button']")).click(); // Open the dropdown
+    List<WebElement> options = dropdown.findElements(By.cssSelector("ul[role='listbox'] p-dropdownitem > li"));
+    for (WebElement option : options) {
+        if (text.equals(option.getText())) {
+            option.click();
+            return;
+        }
+    }
+}
+`;
+
 const renderGetAndSetMethods = entity => {
   if (isClickable(entity)) {
     return '';
+  }
+  if (['P-CHECKBOX', 'P-RADIOBUTTON'].includes(entity.tagName)) {
+    return renderGetAndSetPCheckboxRadio(entity);
+  }
+  
+  if (entity.tagName === 'P-DROPDOWN') {
+    return renderGetAndSetPDropdown(entity);
   }
 
   if (['INPUT', 'TEXTAREA'].includes(entity.tagName)) {
