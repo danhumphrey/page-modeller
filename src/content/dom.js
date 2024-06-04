@@ -193,7 +193,7 @@ const getCssSelector = (element) => {
   const simmer = new Simmer(element.ownerDocument);
   const ret = simmer(element);
   if (ret === false) {
-    return null;
+    return element.tagName;
   }
   return ret;
 };
