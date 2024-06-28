@@ -25,7 +25,9 @@ const onFocus = (evt) => {
   evt.preventDefault();
   evt.stopPropagation();
   const el = evt.target;
-  el.blur();
+  if (el && el.blur) {
+    el.blur();
+  }
 };
 const onClick = (evt) => {
   evt.preventDefault();

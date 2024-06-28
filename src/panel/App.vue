@@ -120,6 +120,7 @@ export default {
     this.$root.$table = this.$refs.table;
     this.$root.$table.loadOptions();
     this.loadOptions();
+    this.activateProfile(profiles[0].name);
     chrome.storage.sync.get(['activeProfileName', 'options'], (result) => {
       if (result) {
         if (result.options) {
@@ -128,6 +129,8 @@ export default {
           // no options saved, so save defaults
           chrome.runtime.sendMessage({ type: 'saveOptions', data: { options: this.options } });
         }
+
+        console.log(result);
 
         // get the active activeProfile from storage sync or activate the first activeProfile as default
         if (result.activeProfileName) {

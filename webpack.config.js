@@ -7,6 +7,7 @@ const { VueLoaderPlugin } = require('vue-loader');
 
 const config = {
   context: `${__dirname}/src`,
+  devtool: 'cheap-module-source-map',
   entry: {
     background: './background/background.js',
     content: './content/content.js',
@@ -82,19 +83,7 @@ const config = {
         { from: 'panel/panel.html', to: 'panel/panel.html' },
         { from: 'options/options.html', to: 'options.html' },
         { from: '../version.json', to: 'version.json' },
-        {
-          from: 'manifest.json',
-          to: 'manifest.json',
-          transform: (content) => {
-            const jsonContent = JSON.parse(content);
-
-            if (config.mode === 'development') {
-              jsonContent.content_security_policy = "script-src 'self' 'unsafe-eval'; object-src 'self'";
-            }
-
-            return JSON.stringify(jsonContent, null, 2);
-          },
-        },
+        { from: 'manifest.json', to: 'manifest.json'},
       ],
     }),
     new WebpackShellPlugin({
