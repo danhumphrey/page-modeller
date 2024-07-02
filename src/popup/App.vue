@@ -20,7 +20,7 @@
 export default {
   data() {
     return {
-      version: '2.5.0',
+      version: '2.5.1',
       isMac: navigator.userAgent.toUpperCase().includes('MAC'),
     };
   },
