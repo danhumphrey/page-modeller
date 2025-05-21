@@ -35,12 +35,14 @@
                 </v-flex>
                 <v-flex>
                   <v-text-field v-model="currentLocator.locator" :append-icon="'remove_red_eye'">
-                    <v-tooltip left open-delay="1000" slot="append" :disabled="!showTooltips">
-                      <template v-slot:activator="{ on }">
-                        <v-icon v-on="on" class="mr-2 pa-1" @click="showMatchesForLocator(currentLocator)"> {{ mdiEye }} </v-icon>
-                      </template>
-                      <span>View Matched Elements</span>
-                    </v-tooltip>
+                    <template v-slot:append>
+                      <v-tooltip left open-delay="1000" :disabled="!showTooltips">
+                        <template v-slot:activator="{ on }">
+                          <v-icon v-on="on" class="mr-2 pa-1" @click="showMatchesForLocator(currentLocator)"> {{ mdiEye }} </v-icon>
+                        </template>
+                        <span>View Matched Elements</span>
+                      </v-tooltip>
+                    </template>
                   </v-text-field>
                 </v-flex>
               </v-layout>
@@ -48,14 +50,14 @@
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn text @click.native="dialog = false">Cancel</v-btn>
-            <v-btn text @click.native="save">Save</v-btn>
+            <v-btn text @click="dialog = false">Cancel</v-btn>
+            <v-btn text @click="save">Save</v-btn>
           </v-card-actions>
         </v-card>
       </form>
     </v-dialog>
     <v-data-table disable-pagination :items="model == null ? [] : model.entities" :headers="headers" hide-default-footer fixed-header class="elevation-0" mobile-breakpoint="50">
-      <template slot="item" slot-scope="props">
+      <template v-slot:item="props">
         <tr v-on:dblclick="editItem(props.item)" @click="showMatchesForEntity(props.item, true)" class="unselectable" v-bind:class="{ disabled: isInspecting }">
           <td>{{ props.item.name }}</td>
           <td>{{ itemLocator(props.item) }}</td>
@@ -81,7 +83,7 @@
           </td>
         </tr>
       </template>
-      <template slot="no-data">
+      <template v-slot:no-data>
         <tr>
           <td colspan="3">Scan the page or start adding elements to build the model</td>
         </tr>
@@ -104,7 +106,7 @@ export default {
       currentLocator: { required },
     };
   },
-  name: 'Table',
+  name: 'DataTable', // Changed component name
   props: ['isInspecting', 'model', 'showTooltips'],
   data() {
     return {

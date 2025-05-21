@@ -13,6 +13,7 @@
 import { mdiCheckCircle, mdiAlert, mdiAlertCircle, mdiInformation } from '@mdi/js';
 
 export default {
+  name: 'BasePopup', // Added component name
   props: ['darkMode'],
   data: () => ({
     mdiCheckCircle,

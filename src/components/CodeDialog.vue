@@ -11,8 +11,8 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn text @click.native="copy">Copy</v-btn>
-        <v-btn text @click.native="ok">Ok</v-btn>
+        <v-btn text @click="copy">Copy</v-btn>
+        <v-btn text @click="ok">Ok</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -20,6 +20,7 @@
 
 <script>
 export default {
+  name: 'CodeDialog', // Added component name for consistency
   data: () => ({
     dialog: false,
     code: null,
@@ -32,6 +33,10 @@ export default {
       this.code = code;
     },
     ok() {
+      this.dialog = false;
+    },
+    cancel() {
+      // Added cancel method for keydown.esc
       this.dialog = false;
     },
     copy() {

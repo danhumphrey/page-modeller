@@ -2,7 +2,7 @@
   <v-app-bar dense fixed>
     <v-tooltip bottom :disabled="!showTooltips || hasModel || isAdding" open-delay="600">
       <template v-slot:activator="{ on }">
-        <v-btn v-on="on" ref="btn-scan" id="btn-scan" icon :disabled="hasModel || isAdding" v-on:click="scan" v-bind:class="{ active: isScanning }">
+        <v-btn v-on="on" ref="btn-scan" id="btn-scan" icon :disabled="hasModel || isAdding" @click="scan" v-bind:class="{ active: isScanning }">
           <v-icon>{{ mdiFileFind }}</v-icon>
         </v-btn>
       </template>
@@ -11,7 +11,7 @@
 
     <v-tooltip bottom :disabled="!showTooltips || !hasModel || isInspecting" open-delay="600">
       <template v-slot:activator="{ on }">
-        <v-btn v-on="on" icon :disabled="!hasModel || isInspecting" v-on:click="deleteModel">
+        <v-btn v-on="on" icon :disabled="!hasModel || isInspecting" @click="deleteModel">
           <v-icon>{{ mdiDeleteSweep }}</v-icon>
         </v-btn>
       </template>
@@ -28,7 +28,11 @@
             </v-btn>
           </template>
           <v-list>
-            <v-list-item v-for="item in profileList" :key="item.name" @click="selectProfile(item)"> <v-list-item-title v-text="item.name"></v-list-item-title> </v-list-item>
+            <v-list-item v-for="item in profileList" :key="item.name" @click="selectProfile(item)">
+              <v-list-item-title
+                ><span>{{ item.name }}</span></v-list-item-title
+              >
+            </v-list-item>
           </v-list>
         </v-menu>
       </template>
@@ -39,7 +43,7 @@
 
     <v-tooltip bottom :disabled="!showTooltips || isScanning" open-delay="600">
       <template v-slot:activator="{ on }">
-        <v-btn v-on="on" :disabled="isScanning" icon v-on:click="add" v-bind:class="{ active: isAdding }">
+        <v-btn v-on="on" :disabled="isScanning" icon @click="add" v-bind:class="{ active: isAdding }">
           <v-icon>{{ mdiPlaylistPlus }}</v-icon>
         </v-btn>
       </template>
@@ -48,7 +52,7 @@
 
     <v-tooltip bottom :disabled="!showTooltips || (!hasModel && !isInspecting)" open-delay="600">
       <template v-slot:activator="{ on }">
-        <v-btn v-on="on" icon :disabled="!hasModel || isInspecting" v-on:click="generateModel">
+        <v-btn v-on="on" icon :disabled="!hasModel || isInspecting" @click="generateModel">
           <v-icon>{{ mdiCodeTags }}</v-icon>
         </v-btn>
       </template>
@@ -60,7 +64,7 @@
 import { mdiFileFind, mdiDeleteSweep, mdiMenuDown, mdiPlaylistPlus, mdiCodeTags, mdiEye, mdiPencil, mdiDelete } from '@mdi/js';
 
 export default {
-  name: 'Toolbar',
+  name: 'AppToolbar', // Changed component name
   props: ['isInspecting', 'isScanning', 'isAdding', 'hasModel', 'profileList', 'activeProfile', 'showTooltips'],
   data() {
     return {
