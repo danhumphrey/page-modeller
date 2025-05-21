@@ -18,7 +18,7 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn text @click.native="save" :disabled="unchanged">Save</v-btn>
+        <v-btn text @click="save" :disabled="unchanged">Save</v-btn>
       </v-card-actions>
     </v-card>
   </v-app>
@@ -27,7 +27,7 @@
 import defaultOptions from './defaultOptions';
 
 export default {
-  name: 'options',
+  name: 'OptionsApplication', // Changed component name
   components: {},
   data() {
     return {

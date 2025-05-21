@@ -1,4 +1,4 @@
-import Vue from 'vue/dist/vue.runtime.esm';
+import Vue from 'vue';
 import vuetify from '../plugins/vuetify';
 import OptionsApp from './OptionsApp';
 

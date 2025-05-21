@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <Toolbar
+    <AppToolbar
       @scan="scan"
       @add="add"
       @deleteModel="deleteModel"
@@ -14,25 +14,25 @@
       :active-profile="activeProfile"
       :show-tooltips="options.showTooltips"
     />
-    <EntityTable ref="table" :model="model" :is-inspecting="isInspecting" :show-tooltips="options.showTooltips" @emptyModel="emptyModel" /> <Alert ref="alert"></Alert>
-    <Popup ref="popup"></Popup> <Confirm ref="confirm"></Confirm> <CodeDialog ref="code"></CodeDialog>
+    <EntityTable ref="table" :model="model" :is-inspecting="isInspecting" :show-tooltips="options.showTooltips" @emptyModel="emptyModel" /> <BaseAlert ref="alert"></BaseAlert>
+    <BasePopup ref="popup"></BasePopup> <BaseConfirm ref="confirm"></BaseConfirm> <CodeDialog ref="code"></CodeDialog>
   </v-app>
 </template>
 
 <script>
-import Alert from '../components/Alert';
-import Toolbar from './Toolbar';
-import EntityTable from './Table';
+import BaseAlert from '../components/BaseAlert';
+import AppToolbar from './AppToolbar';
+import EntityTable from './DataTable';
 import ModelBuilder from '../content/ModelBuilder';
-import Popup from '../components/Popup';
-import Confirm from '../components/Confirm';
+import BasePopup from '../components/BasePopup';
+import BaseConfirm from '../components/BaseConfirm';
 import profiles from '../profiles/profiles';
 import CodeDialog from '../components/CodeDialog';
 import defaultOptions from '../options/defaultOptions';
 
 export default {
   name: 'app',
-  components: { EntityTable, Toolbar, Alert, Popup, Confirm, CodeDialog },
+  components: { EntityTable, AppToolbar, BaseAlert, BasePopup, BaseConfirm, CodeDialog },
   computed: {
     isInspecting() {
       return this.isAdding || this.isScanning;
