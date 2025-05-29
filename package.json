@@ -42,9 +42,9 @@
     "lodash": "^4.17.21",
     "scroll-into-view-if-needed": "^3.1.0",
     "simmerjs": "^0.5.6",
-    "vue": "3.5.14",
+    "vue": "3.5.16",
     "vuelidate": "^0.7.7",
-    "vuetify": "3.8.5"
+    "vuetify": "3.8.7"
   },
   "devDependencies": {
     "@babel/core": "^7.27.1",
