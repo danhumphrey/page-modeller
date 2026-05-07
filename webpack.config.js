@@ -75,7 +75,7 @@ const config = {
           from: 'icons',
           to: 'icons',
           globOptions: {
-            ignore: ['icon.svg', 'icon_grey.svg', 'icon_128.svg'],
+            ignore: ['**/icon.svg', '**/icon_grey.svg', '**/icon_128.svg'],
           },
         },
         { from: 'popup/popup.html', to: 'popup/popup.html' },
