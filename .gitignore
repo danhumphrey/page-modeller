@@ -7,6 +7,7 @@ node_modules
 /*.log
 /build
 /build-firefox
+/.chrome-for-testing
 /release-chrome
 /release-firefox
 /coverage
