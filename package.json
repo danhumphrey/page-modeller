@@ -89,5 +89,9 @@
   },
   "jest": {
     "testEnvironment": "jsdom"
+  },
+  "overrides": {
+    "postcss": "^8.5.14",
+    "@tootallnate/once": "^3.0.1"
   }
 }
