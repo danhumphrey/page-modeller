@@ -40,9 +40,9 @@
     "lodash": "^4.18.1",
     "scroll-into-view-if-needed": "^2.2.26",
     "simmerjs": "^0.5.6",
-    "vue": "2.6.14",
+    "vue": "3.5.34",
     "vuelidate": "^0.7.6",
-    "vuetify": "2.6.10"
+    "vuetify": "4.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
@@ -83,7 +83,7 @@
     "terser-webpack-plugin": "^5.5.0",
     "trim-newlines": ">=3.0.1",
     "vue-loader": "15.9.8",
-    "vue-template-compiler": "2.6.14",
+    "vue-template-compiler": "2.7.16",
     "webpack": "^5.92.1",
     "webpack-cli": "^5.1.4",
     "webpack-shell-plugin-next": "^2.1.1"
