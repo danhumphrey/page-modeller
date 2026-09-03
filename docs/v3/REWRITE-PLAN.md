@@ -272,10 +272,27 @@ correctness.
   locator engine + IR + verification, inspector overlay (all frames), Playwright-TS generator, side-panel
   UI. Builds clean; unit + engine-fidelity + extension-E2E tests pass; CI + release workflows wired. See
   `v3/README.md` (repo root). *Proves the end-to-end flow.*
+
+  **Scope qualification (assessed 2026-09-04).** Phase 1 was scaffolded on 22 Jun, four days *before*
+  the PRD was written, so it was never built against it. What exists: pick toggle, list of picked
+  elements with editable names, role chip, per-element candidate switching, live Playwright-TS preview,
+  copy. Not yet built: scan (FR-C2), locator test/highlight-with-count (FR-L4), table view + toolbar
+  (FR-M3), interaction-type classification (FR-M4), the other five generators (FR-G1), output modes
+  (FR-G3/FR-G6), settings (FR-S*), DevTools panel surface (FR-U1).
+
+  **Known gap — frames are proven but not plumbed.** The overlay injects into all frames and Spike #5
+  validated `frameLocator` chain assembly, but `v3/entrypoints/sidepanel/App.vue` hardcodes
+  `framePath: []` when a picked element enters the model. Nothing frame-related reaches the generators.
 - **Phase 2 — Generators.** Add Playwright-Python, Selenium Java/C#, Puppeteer. Port unit tests.
 - **Phase 3 — Cross-browser.** Firefox parity; host-agnostic UI across panel/side-panel/sidebar.
 - **Phase 4 — Polish.** Options/settings, persistence, export, dark mode, accessibility of the tool UI.
 - **Phase 5 — (Optional).** LLM-assisted naming enhancement.
+
+> **Sequencing note (open).** The verification approach (§15) requires manual testing on both browsers
+> throughout. The UI is currently side-panel-only and Firefox has no side-panel API, so under the order
+> above Firefox cannot be manually tested until Phase 3. Recommendation: pull the host-agnostic shell
+> (same app mounted in side panel + DevTools panel) to the front, ahead of new features, so every
+> subsequent step is verifiable on both browsers. Not yet decided.
 
 > Frame support (§13) is not a standalone phase — it threads through Phase 1 (picker injects into all
 > frames; IR carries `framePath`) and the generators (Phase 2). Spike #5 gates the cross-origin part.
@@ -355,6 +372,17 @@ the deliberately pure/decoupled architecture (IR + pure generators) and a real-b
 **Proven:** `tests/extension-e2e.spec.ts` loads the built extension into Chromium (persistent context),
 resolves the extension id from its MV3 service worker, opens the popup as a `chrome-extension://` page,
 and asserts the Quasar UI rendered — running under **`--headless=new`** (CI-friendly, no display needed).
+
+**Verification approach — manual testing is the completion gate.** Automated tests are a safety net,
+never the criterion for calling something done. Nothing is complete until it has been exercised by hand
+in a real browser, on real pages, across browsers and varied DOM structures. The devil is in the detail
+here: overlays, sticky headers, shadow roots, frames and unusual markup fail in ways no unit test
+anticipates. This drives the build sequence — a loadable UI first, then functionality added
+incrementally, each increment manually verified before the next begins.
+
+The automation earns its place by doing what hand-testing cannot repeat cheaply: the fidelity spec
+re-runs 43 DOM edge cases against real Playwright on every change, and the extension E2E proves the
+built extension still loads before any manual session starts.
 
 **Constraints (honest):**
 - **The locator engine can't be meaningfully unit-tested in jsdom/happy-dom** — no layout,
