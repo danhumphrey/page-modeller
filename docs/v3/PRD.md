@@ -115,6 +115,30 @@ Candidates beyond parity + agreed v3 additions. Populate as identified; kept sep
   looks like and whether it is actually usable. Revisit if demand shows up in reviews/support.
   If built, keep *which* methods an element gets (semantic) in the generator, and expose only *how each
   reads* (stylistic).
+- **LLM-driven test generation** _(speculative — may never be built; recorded so v3 is architected not
+  to preclude it)_. The user supplies connection details for an LLM of their choice; the LLM consumes
+  the model we already produce — verified locators plus FR-M4 classification — and decides *what tests
+  to write* for the page. The differentiator is the constraint: an LLM writing tests from raw HTML
+  invents selectors, whereas one restricted to a locator set already proven to resolve uniquely cannot,
+  and we own the engine that can verify its output. **LLM-generated locators are explicitly rejected** —
+  Spike #1 was 43/43 with 0 divergences; a model would be slower, non-reproducible and worse.
+  - _Keep open now, at no cost:_ a cleanly serialisable model (the JSON export above is the same
+    substrate), and extension capabilities — scan, add, verify, generate — exposed as typed functions
+    rather than welded into UI handlers. Both are good architecture regardless.
+  - _Do not build now:_ credential storage, provider adapters, egress consent UI.
+  - _If pursued, the real costs are not the LLM:_ API keys in extension storage; CWS/AMO review of an
+    extension that transmits page content to a third party, against listings whose IDs we are
+    deliberately preserving; data egress as an enterprise blocker (users test real, often sensitive
+    applications), which makes local/self-hosted endpoint support — Ollama, LM Studio, corporate
+    proxies — the thing that decides adoptability at work; and NFR-2 needing amendment to
+    "offline by default, network strictly opt-in and additive". Unlike a browser built-in LLM, a
+    network call preserves Firefox support.
+  - _Unknown to spike first:_ this needs **tool use / function calling**, not text completion. Frontier
+    APIs handle it; small local models often do not — i.e. it may work well on a cloud API and poorly on
+    the self-hosted setup enterprise users would require.
+  - _Possible follow-on:_ LLM-assisted naming, once this plumbing exists. Not worth building on its own —
+    it incurs every cost above for cosmetic gain. The deterministic a11y-derived name stays the default.
+
 - **Structured JSON export** of the model — names, classification, ranked locator candidates, frame
   paths. Lets users drive their own code generation without a template system. Cheap to build; note it
   overlaps the "non-code exports" exclusion in §6, so it is a deliberate reconsideration.
