@@ -60,6 +60,21 @@ exploited.
 - Build output is gitignored (`/v3/.output`, `/v3/.wxt`, `/v3/.test-dist`, `/v3/test-results`).
 - `v3/` output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
 
+## Verification — manual testing is the completion gate
+
+**Automated tests are a net, not the criterion for done.** Nothing is complete until it has been
+exercised by hand in a real browser, on real pages, across browsers and varied DOM structures. Do not
+report work finished on the strength of passing unit tests. The failures that matter here — overlays,
+sticky headers, shadow roots, frames, unusual markup — are ones no unit test anticipates.
+
+This drives the build sequence: **a loadable UI first, then functionality added incrementally**, each
+increment manually verified in the browser before the next begins. Prefer a change that can be clicked
+through today over a larger one that cannot.
+
+The automation that does earn its place is the part hand-testing cannot repeat cheaply: the fidelity
+spec re-runs 43 DOM edge cases against real Playwright on every change, and the extension E2E proves the
+built extension still loads before a manual session starts. Keep both green, but neither is the gate.
+
 ## Conventions
 
 - **Docs: succinct.** No verbose prose, no repetition. Less is more.
