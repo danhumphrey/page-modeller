@@ -47,10 +47,10 @@ existing repo and directory `~/projects/page-modeller`, in place (same CWS/AMO l
 | `docs/v3/spikes/SPIKE2-RESULTS.md` | #2 WXT+Vue+Quasar builds & renders, Chrome + Firefox (FF→MV2 by default). |
 | `docs/v3/spikes/SPIKE4-RESULTS.md` | #4 perf — ~14ms median/pick at 11.7k elements; p95 tail ~300ms, memoisable. |
 | `docs/v3/spikes/SPIKE5-RESULTS.md` | #5 frames — 6/6 nested/cross-origin `frameLocator` chains resolve. |
-| `app/` | Phase 1 POC, self-contained (own `package.json`): engine + IR + verification, all-frames overlay, Playwright-TS generator, side panel, unit + fidelity + extension-E2E tests. See `app/README.md`. |
+| `v3/` | Phase 1 POC, self-contained (own `package.json`): engine + IR + verification, all-frames overlay, Playwright-TS generator, side panel, unit + fidelity + extension-E2E tests. See `v3/README.md`. |
 | `src/` (root) | **v2.5.1**, untouched — still what ships. Not v3. |
 
-`app/.github/workflows/` came across with the POC but is **inert** — GitHub only reads `.github/` at the
+`v3/.github/workflows/` came across with the POC but is **inert** — GitHub only reads `.github/` at the
 repo root. Merge it with the existing root CI when v3 is ready to build.
 
 ## State & next step

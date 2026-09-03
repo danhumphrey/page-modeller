@@ -1,7 +1,7 @@
 # Page Modeller v3 — PRD
 
 Ground-up rewrite to replace `page-modeller` v2.5.1. Technical approach validated in `REWRITE-PLAN.md`
-(POC: `app/` at the repo root). This doc owns *what*, not *how*.
+(POC: `v3/` at the repo root). This doc owns *what*, not *how*.
 
 ## 1. Summary
 A cross-browser extension to pick DOM elements (incl. inside frames) and generate verified Page Object

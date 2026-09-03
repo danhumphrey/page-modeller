@@ -14,9 +14,9 @@ node_modules
 Thumbs.db
 .appenv
 
-# v3 (app/) — WXT / Playwright build output
-/app/.output
-/app/.wxt
-/app/.test-dist
-/app/test-results
-/app/playwright-report
+# v3/ — WXT / Playwright build output
+/v3/.output
+/v3/.wxt
+/v3/.test-dist
+/v3/test-results
+/v3/playwright-report

@@ -268,10 +268,10 @@ correctness.
 ## 12. Phased Roadmap
 
 - **Phase 0 — De-risk.** Run spikes #1–#4 (§9). Go/no-go on stack and a11y fidelity.
-- **Phase 1 — Core, Chrome-only.** ✅ **Scaffolded in `app/` (repo root)** — WXT + Vue 3 + Quasar + TS extension:
+- **Phase 1 — Core, Chrome-only.** ✅ **Scaffolded in `v3/` (repo root)** — WXT + Vue 3 + Quasar + TS extension:
   locator engine + IR + verification, inspector overlay (all frames), Playwright-TS generator, side-panel
   UI. Builds clean; unit + engine-fidelity + extension-E2E tests pass; CI + release workflows wired. See
-  `app/README.md` (repo root). *Proves the end-to-end flow.*
+  `v3/README.md` (repo root). *Proves the end-to-end flow.*
 - **Phase 2 — Generators.** Add Playwright-Python, Selenium Java/C#, Puppeteer. Port unit tests.
 - **Phase 3 — Cross-browser.** Firefox parity; host-agnostic UI across panel/side-panel/sidebar.
 - **Phase 4 — Polish.** Options/settings, persistence, export, dark mode, accessibility of the tool UI.
