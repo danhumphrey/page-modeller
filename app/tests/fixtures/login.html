@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Login</title></head>
+<body>
+  <header>
+    <nav aria-label="Primary">
+      <a href="/" data-spike="nav-home">Home</a>
+      <a href="/about" data-spike="nav-about">About</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1 data-spike="page-heading">Sign in to your account</h1>
+
+    <form>
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" data-spike="email-input" />
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" placeholder="Your password" data-spike="password-input" />
+
+      <label>
+        <input type="checkbox" name="remember" data-spike="remember-checkbox" />
+        Remember me
+      </label>
+
+      <button type="submit" data-spike="submit-button">Sign in</button>
+    </form>
+
+    <a href="/forgot" data-spike="forgot-link">Forgot your password?</a>
+
+    <button type="button" aria-label="Close dialog" data-spike="icon-close">
+      <svg width="16" height="16" aria-hidden="true"><path d="M0 0L16 16" /></svg>
+    </button>
+
+    <img src="logo.png" alt="Acme Corporation logo" data-spike="logo-img" />
+  </main>
+</body>
+</html>

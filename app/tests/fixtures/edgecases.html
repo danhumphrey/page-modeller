@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Accname / role edge cases</title>
+  <style>
+    /* CSS-generated label content — Playwright includes it in the accessible name; many
+       accname libraries do not read pseudo-element content. Classic divergence probe. */
+    .with-css-prefix::before { content: "Download "; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  </style>
+</head>
+<body>
+  <main>
+    <!-- 1. aria-label overrides emoji/content -->
+    <button aria-label="Save document" data-spike="aria-label-btn">💾</button>
+
+    <!-- 2. aria-labelledby concatenation across two elements -->
+    <span id="lbl-first">First</span><span id="lbl-last">name</span>
+    <input type="text" aria-labelledby="lbl-first lbl-last" data-spike="labelledby-input" />
+
+    <!-- 3. name from title attribute fallback only -->
+    <input type="text" title="Phone number" data-spike="title-only-input" />
+
+    <!-- 4. name from placeholder fallback only -->
+    <input type="text" placeholder="Enter city" data-spike="placeholder-only-input" />
+
+    <!-- 5. empty alt => presentational image, no accessible name -->
+    <img src="spacer.png" alt="" data-spike="empty-alt-img" />
+
+    <!-- 6. svg exposed as image via role + aria-label -->
+    <svg role="img" aria-label="Search" width="16" height="16" data-spike="svg-img"><path d="M0 0L16 16" /></svg>
+
+    <!-- 7. role override on a div; name from content -->
+    <div role="button" tabindex="0" data-spike="div-button">Click me</div>
+
+    <!-- 8. heading name from concatenated child content -->
+    <h2 data-spike="nested-heading">Hello <strong>World</strong></h2>
+
+    <!-- 9. whitespace normalization in link text -->
+    <a href="/read" data-spike="ws-link">  Read   more  </a>
+
+    <!-- 10. CSS ::before contributes to the accessible name (divergence probe) -->
+    <button class="with-css-prefix" data-spike="css-before-btn">file</button>
+
+    <!-- 11. display:none — inaccessible; Playwright getByRole won't match it -->
+    <button style="display:none" data-spike="hidden-display-btn">Hidden action</button>
+
+    <!-- 12. aria-hidden — removed from a11y tree -->
+    <button aria-hidden="true" data-spike="aria-hidden-btn">Ghost action</button>
+
+    <!-- 13. visibility:hidden -->
+    <input type="text" aria-label="Invisible field" style="visibility:hidden" data-spike="visibility-hidden-input" />
+
+    <!-- 14. submit input: name from value attribute -->
+    <input type="submit" value="Send form" data-spike="submit-value-input" />
+
+    <!-- 15. fieldset/legend => group with name -->
+    <fieldset data-spike="fieldset-group">
+      <legend>Billing details</legend>
+      <input type="text" aria-label="Card" />
+    </fieldset>
+
+    <!-- 16. aria-label overrides visible text on a link -->
+    <a href="/home" aria-label="Go to homepage" data-spike="link-arialabel-overrides">Home</a>
+
+    <!-- 17. accessible name from a visually-hidden labelledby target -->
+    <span id="vh-label" class="visually-hidden">Toggle navigation menu</span>
+    <button aria-labelledby="vh-label" data-spike="vh-labelledby-btn"><span aria-hidden="true">☰</span></button>
+
+    <!-- 18. duplicate accessible name (ambiguous role+name) -->
+    <button data-spike="dup-name-a">Continue</button>
+    <button data-spike="dup-name-b">Continue</button>
+  </main>
+</body>
+</html>

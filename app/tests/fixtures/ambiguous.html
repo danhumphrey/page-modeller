@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Ambiguous</title></head>
+<body>
+  <main>
+    <!-- Two buttons with the SAME accessible name: role+name is NOT unique here.
+         A good engine must detect this and fall back to a unique strategy. -->
+    <section aria-label="First product">
+      <h3>Widget A</h3>
+      <button data-spike="add-a">Add to cart</button>
+    </section>
+
+    <section aria-label="Second product">
+      <h3>Widget B</h3>
+      <button data-spike="add-b">Add to cart</button>
+    </section>
+
+    <!-- Repeated link text -->
+    <a href="/a" data-spike="details-a">Details</a>
+    <a href="/b" data-spike="details-b">Details</a>
+
+    <!-- Unique by id only -->
+    <button id="checkout" data-spike="checkout-btn">Add to cart</button>
+  </main>
+</body>
+</html>

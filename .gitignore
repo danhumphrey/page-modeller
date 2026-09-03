@@ -13,3 +13,10 @@ node_modules
 /coverage
 Thumbs.db
 .appenv
+
+# v3 (app/) — WXT / Playwright build output
+/app/.output
+/app/.wxt
+/app/.test-dist
+/app/test-results
+/app/playwright-report

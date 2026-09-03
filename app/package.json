@@ -1,0 +1,36 @@
+{
+  "name": "page-modeller",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Phase 1 — pick a DOM element and generate a verified Playwright Page Object Model.",
+  "scripts": {
+    "postinstall": "wxt prepare",
+    "dev": "wxt",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip && wxt zip -b firefox",
+    "typecheck": "tsc -p tsconfig.check.json",
+    "test:unit": "vitest run",
+    "bundle:engine": "node scripts/bundle-engine.mjs",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit && npm run bundle:engine && npm run build && playwright test"
+  },
+  "dependencies": {
+    "@quasar/extras": "^1.16.0",
+    "dom-accessibility-api": "^0.7.0",
+    "quasar": "^2.17.0",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@quasar/vite-plugin": "^1.8.0",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "esbuild": "^0.24.0",
+    "sass-embedded": "^1.83.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "vue-tsc": "^2.1.0",
+    "wxt": "^0.19.0"
+  }
+}
