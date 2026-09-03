@@ -101,9 +101,13 @@ Surfaces = side panel (Chrome) + DevTools panel, user choice, Firefox = DevTools
   `isClickable` included `IMG`; role-based classification does not. Accepted.
 - `<div role="button">` and similar now classify correctly as actionable, which `tagName` missed.
 
-**Open:**
-- Selenium value reads: keep `getAttribute("value")` (v2.5.1 behaviour) or move to Selenium 4's
-  `getDomProperty("value")`, which returns the live property rather than the original HTML attribute.
+**Guiding principle — v2.5.1 is not the default.** The existing code is 10-15 years old and carries
+decisions made for a browser landscape that no longer exists. Where current best practice differs from
+what v2.5.1 does, v3 takes current best practice. Parity is a floor for *features*, never a reason to
+carry forward a dated technique. Resolved on that basis:
+- Selenium value reads use `getDomProperty("value")`, not `getAttribute("value")` — the DOM property is
+  the live value; the attribute returns the original HTML and is wrong on any field the user has typed
+  into.
 
 ## 8. Enhancements (backlog)
 Candidates beyond parity + agreed v3 additions. Populate as identified; kept separate from the must-have requirements above.

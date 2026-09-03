@@ -284,15 +284,16 @@ correctness.
   validated `frameLocator` chain assembly, but `v3/entrypoints/sidepanel/App.vue` hardcodes
   `framePath: []` when a picked element enters the model. Nothing frame-related reaches the generators.
 - **Phase 2 — Generators.** Add Playwright-Python, Selenium Java/C#, Puppeteer. Port unit tests.
-- **Phase 3 — Cross-browser.** Firefox parity; host-agnostic UI across panel/side-panel/sidebar.
+- **Phase 3 — Cross-browser.** Remaining Firefox parity. The host-agnostic UI across panel/side-panel/sidebar has moved to the front — see the sequencing note below.
 - **Phase 4 — Polish.** Options/settings, persistence, export, dark mode, accessibility of the tool UI.
 - **Phase 5 — (Optional).** LLM-assisted naming enhancement.
 
-> **Sequencing note (open).** The verification approach (§15) requires manual testing on both browsers
-> throughout. The UI is currently side-panel-only and Firefox has no side-panel API, so under the order
-> above Firefox cannot be manually tested until Phase 3. Recommendation: pull the host-agnostic shell
-> (same app mounted in side panel + DevTools panel) to the front, ahead of new features, so every
-> subsequent step is verifiable on both browsers. Not yet decided.
+> **Sequencing — decided.** The verification approach (§15) requires manual testing on Chrome *and*
+> Firefox throughout, so the phase order above does not apply as written. The **host-agnostic shell
+> comes first** — the same app mounted in a side panel and a DevTools panel, building and loading on
+> both browsers — before any new functionality. Everything after that is added incrementally, each
+> increment manually verifiable on both browsers. Firefox parity is therefore not a late phase; it is
+> the starting condition.
 
 > Frame support (§13) is not a standalone phase — it threads through Phase 1 (picker injects into all
 > frames; IR carries `framePath`) and the generators (Phase 2). Spike #5 gates the cross-origin part.
