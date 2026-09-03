@@ -75,6 +75,18 @@ The automation that does earn its place is the part hand-testing cannot repeat c
 spec re-runs 43 DOM edge cases against real Playwright on every change, and the extension E2E proves the
 built extension still loads before a manual session starts. Keep both green, but neither is the gate.
 
+## v2.5.1 is not the default
+
+The shipping code is 10-15 years old and carries decisions made for a browser landscape that no longer
+exists — `tagName` checks instead of ARIA roles, `getAttribute("value")` instead of `getDomProperty`,
+Sizzle instead of native selectors. **Where current best practice differs from what v2.5.1 does, v3
+takes current best practice.** Parity is a floor for *features*, never a reason to carry a dated
+technique forward.
+
+So don't frame a choice as "keep existing behaviour vs change it" — the existing behaviour has no
+special standing. Establish what is correct now, and flag it only if the change has a user-visible
+consequence worth calling out.
+
 ## Conventions
 
 - **Docs: succinct.** No verbose prose, no repetition. Less is more.
