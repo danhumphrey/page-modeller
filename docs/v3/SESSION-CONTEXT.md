@@ -4,7 +4,7 @@ Reconstructed 2026-09-03. The original session's transcript is **lost** (no `.js
 `~/.claude/projects/`; no backup). This doc replaces it.
 
 The work described here was done in a throwaway POC folder, `~/projects/chrome-llm-test`, and was
-**migrated into this repo on the `v3` branch (2026-09-03)**. Paths below are repo-relative. The spike
+**migrated into this repo on the `v3-rewrite` branch (2026-09-03)**. Paths below are repo-relative. The spike
 *harnesses* were not migrated — their results are in `docs/v3/spikes/`; the POC folder was not a git
 repo, so once deleted it is gone.
 
