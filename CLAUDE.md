@@ -5,19 +5,22 @@
 | | Ships today | The rewrite |
 |---|---|---|
 | Version | **v2.5.1** | **v3** |
-| Branch | `master` | `v3` |
+| Branch | `master` | `v3-rewrite` |
 | Code | `src/` (repo root) | `v3/` |
 | Stack | JS · Vue 2 · Vuetify · Webpack · Sizzle | TS · Vue 3 · Quasar · WXT · Vite |
 
 They are independent trees with separate `package.json`s and toolchains. **Never mix them in one
-change.** v3 work goes on the `v3` branch, inside `v3/`.
+change.** v3 work goes on the `v3-rewrite` branch, inside `v3/`.
 
-> **Until the `v3` branch merges, `v3/` and `docs/v3/` exist only on that branch** — `git checkout v3` before
+Note the branch is `v3-rewrite`, not `v3` — a branch named `v3` would be ambiguous with the `v3/`
+directory in every revision argument (`git log v3`, `git show v3:file`).
+
+> **Until the `v3-rewrite` branch merges, `v3/` and `docs/v3/` exist only on that branch** — `git checkout v3-rewrite` before
 > looking for anything below. This file is on `master` so the orientation is available from either side.
 
 ## v3 — the rewrite
 
-On the `v3` branch. Read `docs/v3/PRD.md` (owns *what*) before changing behaviour, and `docs/v3/REWRITE-PLAN.md` (owns
+On the `v3-rewrite` branch. Read `docs/v3/PRD.md` (owns *what*) before changing behaviour, and `docs/v3/REWRITE-PLAN.md` (owns
 *how*) before changing architecture. `docs/v3/SESSION-CONTEXT.md` is the history — why the project
 exists and what was decided. Spike evidence is in `docs/v3/spikes/`.
 
@@ -59,6 +62,33 @@ exploited.
   the root CI when v3 is ready to build.
 - Build output is gitignored (`/v3/.output`, `/v3/.wxt`, `/v3/.test-dist`, `/v3/test-results`).
 - `v3/` output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
+
+## Verification — manual testing is the completion gate
+
+**Automated tests are a net, not the criterion for done.** Nothing is complete until it has been
+exercised by hand in a real browser, on real pages, across browsers and varied DOM structures. Do not
+report work finished on the strength of passing unit tests. The failures that matter here — overlays,
+sticky headers, shadow roots, frames, unusual markup — are ones no unit test anticipates.
+
+This drives the build sequence: **a loadable UI first, then functionality added incrementally**, each
+increment manually verified in the browser before the next begins. Prefer a change that can be clicked
+through today over a larger one that cannot.
+
+The automation that does earn its place is the part hand-testing cannot repeat cheaply: the fidelity
+spec re-runs 43 DOM edge cases against real Playwright on every change, and the extension E2E proves the
+built extension still loads before a manual session starts. Keep both green, but neither is the gate.
+
+## v2.5.1 is not the default
+
+The shipping code is 10-15 years old and carries decisions made for a browser landscape that no longer
+exists — `tagName` checks instead of ARIA roles, `getAttribute("value")` instead of `getDomProperty`,
+Sizzle instead of native selectors. **Where current best practice differs from what v2.5.1 does, v3
+takes current best practice.** Parity is a floor for *features*, never a reason to carry a dated
+technique forward.
+
+So don't frame a choice as "keep existing behaviour vs change it" — the existing behaviour has no
+special standing. Establish what is correct now, and flag it only if the change has a user-visible
+consequence worth calling out.
 
 ## Conventions
 
