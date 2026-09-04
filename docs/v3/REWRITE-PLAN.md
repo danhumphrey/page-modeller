@@ -295,6 +295,26 @@ correctness.
 > increment manually verifiable on both browsers. Firefox parity is therefore not a late phase; it is
 > the starting condition.
 
+**Next steps, in order.** Each is independently manually verifiable — build it, load it, click it, on
+both browsers, before starting the next.
+
+1. **Host-agnostic shell.** The same app mounted in a Chrome side panel and a DevTools panel, building
+   and loading on Chrome and Firefox. No new functionality — this exists so every later step can be
+   hand-tested on both browsers. Per the sequencing decision above.
+2. **Wire `framePath` through.** Replace the hardcoded `framePath: []` in the side panel; carry the real
+   frame path from the picker into the model and on into the generators. Verify against the Spike #5
+   nested and cross-origin fixtures — the chain assembly is already proven, only the plumbing is
+   missing.
+3. **FR-M4 classification.** Derive the interaction bucket from the computed a11y role
+   (actionable/text/toggle/select/static). Both the generators and the table depend on it, so it comes
+   before either.
+4. **Table view + toolbar (FR-M3).** Replace the current list: Name · Locator `type:value`, per-row
+   highlight/edit/delete, toolbar with scan · add · clear-all · framework selector · view code.
+5. **Scan (FR-C2).** Inspect-pick a root element, add its interactive descendants.
+
+Beyond that, Phase 2 generators (FR-G1) and the output modes (FR-G3/FR-G6) — by which point the
+classification and table exist to drive them.
+
 > Frame support (§13) is not a standalone phase — it threads through Phase 1 (picker injects into all
 > frames; IR carries `framePath`) and the generators (Phase 2). Spike #5 gates the cross-origin part.
 
