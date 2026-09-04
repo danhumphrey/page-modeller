@@ -5,19 +5,22 @@
 | | Ships today | The rewrite |
 |---|---|---|
 | Version | **v2.5.1** | **v3** |
-| Branch | `master` | `v3` |
+| Branch | `master` | `v3-rewrite` |
 | Code | `src/` (repo root) | `v3/` |
 | Stack | JS · Vue 2 · Vuetify · Webpack · Sizzle | TS · Vue 3 · Quasar · WXT · Vite |
 
 They are independent trees with separate `package.json`s and toolchains. **Never mix them in one
-change.** v3 work goes on the `v3` branch, inside `v3/`.
+change.** v3 work goes on the `v3-rewrite` branch, inside `v3/`.
 
-> **Until the `v3` branch merges, `v3/` and `docs/v3/` exist only on that branch** — `git checkout v3` before
+Note the branch is `v3-rewrite`, not `v3` — a branch named `v3` would be ambiguous with the `v3/`
+directory in every revision argument (`git log v3`, `git show v3:file`).
+
+> **Until the `v3-rewrite` branch merges, `v3/` and `docs/v3/` exist only on that branch** — `git checkout v3-rewrite` before
 > looking for anything below. This file is on `master` so the orientation is available from either side.
 
 ## v3 — the rewrite
 
-On the `v3` branch. Read `docs/v3/PRD.md` (owns *what*) before changing behaviour, and `docs/v3/REWRITE-PLAN.md` (owns
+On the `v3-rewrite` branch. Read `docs/v3/PRD.md` (owns *what*) before changing behaviour, and `docs/v3/REWRITE-PLAN.md` (owns
 *how*) before changing architecture. `docs/v3/SESSION-CONTEXT.md` is the history — why the project
 exists and what was decided. Spike evidence is in `docs/v3/spikes/`.
 
