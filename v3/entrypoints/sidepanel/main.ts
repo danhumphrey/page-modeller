@@ -1,7 +1,4 @@
-import { createApp } from 'vue';
-import { Quasar, Notify } from 'quasar';
-import 'quasar/src/css/index.sass';
-import '@quasar/extras/material-icons/material-icons.css';
-import App from './App.vue';
+import { mountPanel } from '@/ui/mount';
+import { sidePanelHost } from '@/host/sidepanel';
 
-createApp(App).use(Quasar, { plugins: { Notify } }).mount('#app');
+mountPanel(sidePanelHost());

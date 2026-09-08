@@ -1,5 +1,10 @@
 # Page Modeller v3 — PRD
 
+> **Behaviour is owned by [`SPEC.md`](SPEC.md), not this file.** This PRD was generated from the locator
+> spike before the tool's actual behaviour was established, and its functional requirements (FR-*) are
+> unreliable — FR-G2 in particular describes class generation the tool does not do. The non-functional
+> requirements and store/release constraints below still hold.
+
 Ground-up rewrite to replace `page-modeller` v2.5.1. Technical approach validated in `REWRITE-PLAN.md`
 (POC: `v3/` at the repo root). This doc owns *what*, not *how*.
 
@@ -23,7 +28,7 @@ Models — with first-class modern **Playwright accessibility locators**. Determ
 | Uniqueness verification | ✅ | **Keep** |
 | Locator engine | Simmer.js + custom XPath | **Replace** — native + `dom-accessibility-api` |
 | Angular locators (ngModel/ngBinding) | ✅ | **Drop** |
-| Surface | DevTools panel | **Both** → side panel (Chrome) + DevTools panel; user choice. Firefox: DevTools panel only |
+| Surface | DevTools panel | **All three** → side panel (Chrome) + sidebar (Firefox) + DevTools panel (both); user choice |
 | Frameworks | Selenium J/C#/Py, Puppeteer, Robot, Protractor | **Change** → see FR-G; drop Robot, Protractor |
 | Settings (tooltips, dark, hidden els, row-click) | ✅ | **Keep** |
 | Frames / iframes | ❌ | **Add** |
@@ -32,7 +37,7 @@ Models — with first-class modern **Playwright accessibility locators**. Determ
 ## 4. Functional requirements
 
 **Surface**
-- FR-U1 Same UI available as a side panel (Chrome) and a DevTools panel; user selects. Firefox: DevTools panel only (no side-panel API).
+- FR-U1 Same UI available as a side panel (Chrome), a sidebar (Firefox `sidebar_action`) and a DevTools panel (both); user selects.
 
 **Capture**
 - FR-C1 **Add**: pick a single element anywhere via DevTools-style overlay (hover highlight + click).
@@ -84,7 +89,7 @@ Models — with first-class modern **Playwright accessibility locators**. Determ
 - NFR-3 Per-pick latency interactive (<~100ms typical DOM).
 - NFR-4 Test pyramid: unit (generators) + engine-fidelity vs real Playwright + extension E2E.
 - NFR-5 Automated build → zip → multi-store submit.
-- NFR-6 Ship as in-place update to existing CWS + AMO listings; preserve extension IDs (CWS item, AMO `gecko.id`). User storage persists across upgrade.
+- NFR-6 Ship as in-place update to existing CWS + AMO listings; preserve extension IDs (CWS item `ejgkdhekcepfgdghejpkmbfjgnioejak`, AMO `gecko.id` — **not yet recorded, read it off the AMO Developer Hub**; `v3/wxt.config.ts` carries a placeholder). MV3 on both browsers, as v2.5.1 already ships. User storage persists across upgrade.
 
 ## 6. Out of scope (v1)
 Action recording/replay · LLM-assisted naming · **user-editable code templates** · object-repository /
@@ -94,7 +99,7 @@ Built-in templates ship fixed and non-editable. Users with their own conventions
 locators-only output (FR-G6). See §8 for why editable templates are deferred rather than dropped.
 
 ## 7. Decisions (resolved)
-Surfaces = side panel (Chrome) + DevTools panel, user choice, Firefox = DevTools only · Selenium Python in v1 · reuse existing CWS/AMO listings + IDs · migrate v2.5.1 settings · scan = inspect-pick root → add interactive descendants; add = pick individual elements · method generation keys on a11y role, not `tagName` (FR-M4) · templates ship fixed, editable templates deferred to §8 · locators-only output is the convention escape hatch (FR-G6).
+Surfaces = side panel (Chrome) + sidebar (Firefox) + DevTools panel (both), user choice · Selenium Python in v1 · reuse existing CWS/AMO listings + IDs · migrate v2.5.1 settings · scan = inspect-pick root → add interactive descendants; add = pick individual elements · method generation keys on a11y role, not `tagName` (FR-M4) · templates ship fixed, editable templates deferred to §8 · locators-only output is the convention escape hatch (FR-G6).
 
 **Behaviour changes from v2.5.1 to be aware of:**
 - `<img>` reclassifies from actionable to static, so images no longer get a `click` method. v2.5.1's

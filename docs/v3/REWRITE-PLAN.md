@@ -281,7 +281,7 @@ correctness.
   (FR-G3/FR-G6), settings (FR-S*), DevTools panel surface (FR-U1).
 
   **Known gap — frames are proven but not plumbed.** The overlay injects into all frames and Spike #5
-  validated `frameLocator` chain assembly, but `v3/entrypoints/sidepanel/App.vue` hardcodes
+  validated `frameLocator` chain assembly, but `v3/ui/App.vue` hardcodes
   `framePath: []` when a picked element enters the model. Nothing frame-related reaches the generators.
 - **Phase 2 — Generators.** Add Playwright-Python, Selenium Java/C#, Puppeteer. Port unit tests.
 - **Phase 3 — Cross-browser.** Remaining Firefox parity. The host-agnostic UI across panel/side-panel/sidebar has moved to the front — see the sequencing note below.
@@ -295,25 +295,55 @@ correctness.
 > increment manually verifiable on both browsers. Firefox parity is therefore not a late phase; it is
 > the starting condition.
 
-**Next steps, in order.** Each is independently manually verifiable — build it, load it, click it, on
-both browsers, before starting the next.
+**Next steps, in order.** Behaviour is owned by [`SPEC.md`](SPEC.md) — read it before building any of
+these. Each step is independently manually verifiable: build it, load it, click it, on both browsers,
+before starting the next.
 
-1. **Host-agnostic shell.** The same app mounted in a Chrome side panel and a DevTools panel, building
-   and loading on Chrome and Firefox. No new functionality — this exists so every later step can be
-   hand-tested on both browsers. Per the sequencing decision above.
-2. **Wire `framePath` through.** Replace the hardcoded `framePath: []` in the side panel; carry the real
-   frame path from the picker into the model and on into the generators. Verify against the Spike #5
-   nested and cross-origin fixtures — the chain assembly is already proven, only the plumbing is
-   missing.
-3. **FR-M4 classification.** Derive the interaction bucket from the computed a11y role
-   (actionable/text/toggle/select/static). Both the generators and the table depend on it, so it comes
-   before either.
-4. **Table view + toolbar (FR-M3).** Replace the current list: Name · Locator `type:value`, per-row
-   highlight/edit/delete, toolbar with scan · add · clear-all · framework selector · view code.
-5. **Scan (FR-C2).** Inspect-pick a root element, add its interactive descendants.
+1. **Host-agnostic shell.** ✅ **Built and hand-verified.** One app (`v3/ui/App.vue`) on three surfaces
+   via a `PanelHost` adapter (`v3/host/`): Chrome side panel, Firefox `sidebar_action`, DevTools panel on
+   both. **MV3 on both browsers** — v2.5.1 already ships MV3 to AMO, so MV2 would be a downgrade on an
+   in-place update. Panel messages are filtered by sender tab. Toolbar click opens the panel.
 
-Beyond that, Phase 2 generators (FR-G1) and the output modes (FR-G3/FR-G6) — by which point the
-classification and table exist to drive them.
+   *DevTools panel registration was intermittent:* WXT emitted the entrypoint as `<script type="module">`,
+   which is deferred and, in dev, fetched from the Vite dev server — so `panels.create` ran late or never.
+   Now a parser-blocking classic script from `public/`, guarded by `scripts/check-manifests.mjs`.
+
+2. **Strip the spike UI.** `v3/ui/App.vue` and `v3/src/generators/` were scaffolded from the locator spike
+   four days before anyone wrote down what the tool does, and they do not match it — a class-name field, an
+   always-visible live preview, a wrapper class the tool does not emit, an inline-edited list instead of a
+   table. Delete rather than adapt. **Survivors: `v3/src/engine/` and `tests/engine.fidelity.spec.ts`** —
+   the only parts measured against real Playwright.
+
+3. **Toolbar + table shell** (SPEC §3, §6). Scan · Delete Model · framework selector · Add Element ·
+   Generate Code with the enablement rules; Name/Locator/Actions table with the empty state. No capture
+   yet — buttons disabled or inert. First clickable increment.
+
+4. **Model lifetime** (SPEC §5). One model per tab, held in memory, swapping on tab change. Small, and
+   everything after it assumes it.
+
+5. **Add Element** (SPEC §4). One-shot pick of any single element → a row. Exercises the whole path:
+   pick → engine → naming → table.
+
+6. **Naming** (SPEC §13). Accessible name first, the word-boundary fix, drop the Angular rules.
+
+7. **View Matched Elements** (SPEC §8). The eye: highlight all, scroll to first, three-state snackbar.
+   Verifies the engine against real pages, so it comes before scan.
+
+8. **Edit dialog** (SPEC §9) and **Delete Model** (SPEC §10).
+
+9. **Scan** (SPEC §4). Container pick, interactive-role descendants, a11y-tree filtered.
+
+10. **Generate Code** (SPEC §11). Selenium Java first — the reference template — with the six fixes.
+
+11. **Playwright** (SPEC §12). Structured locators, ancestor scoping, `exact: true`. The primary target
+    going forward, so it gets its own step rather than riding along with the other generators.
+
+12. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python.
+
+13. **Frames** (SPEC §16), **settings** (SPEC §14), **page-object wrapper** (SPEC §17).
+
+**Release blocker:** `browser_specific_settings.gecko.id` is a placeholder. The real AMO id must replace
+it or an upload creates a second listing instead of updating the existing one (NFR-6).
 
 > Frame support (§13) is not a standalone phase — it threads through Phase 1 (picker injects into all
 > frames; IR carries `framePath`) and the generators (Phase 2). Spike #5 gates the cross-origin part.

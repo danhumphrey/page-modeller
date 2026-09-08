@@ -72,7 +72,8 @@ export default defineContentScript({
       e.stopPropagation();
       const el = e.target as Element;
       const result = generate(el);
-      browser.runtime.sendMessage({ type: 'ELEMENT_PICKED', result });
+      // Rejects when no panel is open; that's fine, drop it.
+      browser.runtime.sendMessage({ type: 'ELEMENT_PICKED', result }).catch(() => {});
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -94,7 +95,7 @@ export default defineContentScript({
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKey, true);
       removeOverlay();
-      browser.runtime.sendMessage({ type: 'PICKING_STOPPED' });
+      browser.runtime.sendMessage({ type: 'PICKING_STOPPED' }).catch(() => {});
     }
 
     browser.runtime.onMessage.addListener((msg: unknown) => {

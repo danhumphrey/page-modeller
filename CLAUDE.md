@@ -20,12 +20,20 @@ directory in every revision argument (`git log v3`, `git show v3:file`).
 
 ## v3 — the rewrite
 
-On the `v3-rewrite` branch. Read `docs/v3/PRD.md` (owns *what*) before changing behaviour, and `docs/v3/REWRITE-PLAN.md` (owns
-*how*) before changing architecture. `docs/v3/SESSION-CONTEXT.md` is the history — why the project
-exists and what was decided. Spike evidence is in `docs/v3/spikes/`.
+On the `v3-rewrite` branch. Read `docs/v3/SPEC.md` (owns *what the tool does*) before changing behaviour,
+and `docs/v3/REWRITE-PLAN.md` (owns *how*) before changing architecture. `docs/v3/SESSION-CONTEXT.md` is
+the history. Spike evidence is in `docs/v3/spikes/`.
 
-**Status:** Phase 0 (de-risk) and Phase 1 (Chrome-only core) are done. **Next is Phase 2 — generators**
-(Playwright-Python, Selenium Java/C#/Python, Puppeteer). Roadmap: `REWRITE-PLAN.md` §12.
+**`docs/v3/PRD.md` is not authoritative for behaviour** — it was generated from the locator spike before
+anyone wrote down what the tool does, and several of its FR-* items describe functionality that does not
+exist (FR-G2's class generation, most obviously). Its NFRs and store/release constraints still hold.
+
+**Status:** the host-agnostic shell is built and hand-verified on both browsers. Behaviour was specced
+from scratch with the author on 2026-09-08 (`SPEC.md`, 18 sections). **Next is stripping the spike UI**,
+then rebuilding to the spec one manually-verifiable increment at a time. Roadmap: `REWRITE-PLAN.md` §12.
+
+The spike UI in `v3/ui/` and `v3/src/generators/` predates the spec and does not match it. Only
+`v3/src/engine/` and its fidelity test survive.
 
 Run everything from `v3/` — it is self-contained:
 
@@ -39,8 +47,9 @@ npm run typecheck # strict TS over the pure core
 
 - **No LLM in the critical path.** Locators are computed deterministically from published a11y specs.
   This was measured, not assumed (`REWRITE-PLAN.md` §1, §11). Fully offline, no network.
-- **Cross-browser.** Chrome + Firefox. WXT emits MV3 for Chrome, MV2 for Firefox. Firefox has no side
-  panel — hence side panel *and* DevTools panel, user's choice.
+- **Cross-browser.** Chrome + Firefox, **MV3 on both** — v2.5.1 already ships MV3 to AMO, so MV2 would be
+  a downgrade on an in-place update. Three surfaces off one host-agnostic app: Chrome side panel,
+  Firefox sidebar (`sidebar_action`), DevTools panel on both.
 - **Ships as an in-place update** to the existing Chrome Web Store and AMO listings. The CWS item ID
   and AMO `gecko.id` must be preserved, and user storage must survive the upgrade.
 - **Locator fidelity is the core contract.** `v3/tests/engine.fidelity.spec.ts` checks generated
@@ -60,6 +69,11 @@ exploited.
 
 - `v3/.github/workflows/` is **inert** — GitHub only reads `.github/` at the repo root. Merge it with
   the root CI when v3 is ready to build.
+- **Root CI is the only CI, and it sees the whole repo.** It runs on every `pull_request`, so anything
+  added anywhere in the tree lands in its path. Root Jest had no ignore patterns and walked into `v3/`,
+  handing TypeScript to a Babel configured for v2.5.1's JS — three suites failed to parse the first time
+  a branch containing `v3/` was PR'd. `/v3/` is now in `testPathIgnorePatterns`; `lint`, `prettier:check`
+  and `build` were already scoped to `src`. Check the root scripts before adding a tree.
 - Build output is gitignored (`/v3/.output`, `/v3/.wxt`, `/v3/.test-dist`, `/v3/test-results`).
 - `v3/` output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
 
