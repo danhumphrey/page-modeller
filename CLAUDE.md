@@ -15,6 +15,10 @@ change.** v3 work goes on the `v3-rewrite` branch, inside `v3/`.
 Note the branch is `v3-rewrite`, not `v3` — a branch named `v3` would be ambiguous with the `v3/`
 directory in every revision argument (`git log v3`, `git show v3:file`).
 
+**Always `gh pr create --base v3-rewrite`.** `gh` defaults the base to the repo's default branch,
+`master`. A v3 branch PR'd that way does not carry one commit — squash-merging it collapses the whole
+`v3-rewrite`..branch difference into `master` (97 files the one time it happened, #75/#76).
+
 > **Until the `v3-rewrite` branch merges, `v3/` and `docs/v3/` exist only on that branch** — `git checkout v3-rewrite` before
 > looking for anything below. This file is on `master` so the orientation is available from either side.
 
