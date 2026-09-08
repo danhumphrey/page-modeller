@@ -71,8 +71,9 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    stacked; a second element with the same name becomes `About2`.
 7. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
 8. **Eye** highlights every match in yellow with a red outline, scrolls the first into view, and reports
-   the count — green for 1, red for 0, amber for more. Highlight clears after ~3s. Clicking it repeatedly
-   replaces the message rather than stacking a counter badge.
+   the count — green for 1, red for 0, amber for more. Highlight clears after ~3s, or at once on
+   **Close**. Clicking it repeatedly replaces the message rather than stacking a counter badge, and the
+   new highlight survives the replacement.
 9. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
    still opens the editor.
 10. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,

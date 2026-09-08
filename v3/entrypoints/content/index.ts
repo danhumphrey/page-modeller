@@ -155,6 +155,7 @@ export default defineContentScript({
       const m = msg as Message;
       if (m.type === 'START_PICKING') start();
       else if (m.type === 'STOP_PICKING') stop();
+      else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
       else if (m.type === 'HIGHLIGHT') {
         // The panel sends this to the main frame only (frameId: 0). This script
         // runs in every frame, and tabs.sendMessage delivers just the first

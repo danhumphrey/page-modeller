@@ -188,6 +188,11 @@ function deleteModel() {
 // clicks piled up a "4". Each check should replace the last one's answer.
 let dismissMatchCount: (() => void) | undefined;
 
+function clearHighlight() {
+  if (tabId.value == null) return;
+  void browser.tabs.sendMessage(tabId.value, { type: 'CLEAR_HIGHLIGHT' }, { frameId: 0 }).catch(() => {});
+}
+
 async function highlight(id: string) {
   const el = elements.value.find((e) => e.id === id);
   if (!el || tabId.value == null) return;
@@ -223,7 +228,12 @@ async function highlight(id: string) {
     group: false,
     timeout: 3000,
     position: 'bottom',
-    actions: [{ label: 'Close', color: 'white' }],
+    // Close takes the highlight with it, so the page is never left marked up
+    // with no explanation. Only on the explicit action: onDismiss would also
+    // fire when this notification is *replaced* by the next eye click, wiping
+    // the highlight that click had just applied. Natural expiry needs no
+    // handler — both timers are 3s.
+    actions: [{ label: 'Close', color: 'white', handler: clearHighlight }],
   });
 }
 

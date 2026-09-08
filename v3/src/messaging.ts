@@ -10,7 +10,9 @@ export type PanelToContent =
   | { type: 'START_PICKING'; mode: PickMode }
   | { type: 'STOP_PICKING' }
   // View Matched Elements (SPEC §8). Replies with HighlightResult.
-  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate };
+  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate }
+  // Clear the highlight early — the user dismissed the match count.
+  | { type: 'CLEAR_HIGHLIGHT' };
 
 /** Reply to HIGHLIGHT: how many elements the locator actually matched. */
 export interface HighlightResult {

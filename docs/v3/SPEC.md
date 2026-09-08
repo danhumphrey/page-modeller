@@ -133,9 +133,10 @@ Adding Playwright changes the per-framework type list, not the model's shape.
 ## 8. View Matched Elements (the eye)
 
 Runs the locator live against the page: highlights **every** match (yellow fill, red outline), scrolls
-the **first** match into view, and reports the count in a snackbar. Highlight clears after ~3s.
-Available from the table row *and* from inside the Edit dialog, so a locator can be tested before
-saving. **[settled]**
+the **first** match into view, and reports the count in a snackbar. Highlight clears after ~3s, or
+immediately on **Close** — dismissing the count takes the highlight with it, so the page is never left
+marked up with no explanation. Available from the table row *and* from inside the Edit dialog, so a
+locator can be tested before saving. **[settled]**
 
 | Matches | Icon | Message |
 |---|---|---|
