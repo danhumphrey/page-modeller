@@ -40,11 +40,30 @@ does not exist in Playwright). The user knows their target before they start.
 
 ## 4. Capture
 
-**The overlay labels what you are about to pick** — the computed role, then the accessible name, with
-the tag shown only when it differs from the role: `button "Save"`, `button (div) "Log in"`, or plain
-`div` for a wrapper. It previews the locator rather than naming the tag, which matters because a wrapper
-`<div>` and the `<div role="button">` inside it have the same bounding box and both used to read `div`.
-**[settled]**
+**The overlay labels what you are about to pick**, as a breadcrumb of the nesting ending in the target:
+
+```
+body › main › div › button (div) "Continue to checkout"
+```
+
+Ancestors are role-or-tag only; the target carries its computed role, then the accessible name, with its
+tag shown only when it differs from the role. It previews the locator rather than naming the tag. Capped
+at three ancestors, elided with `…` beyond that. **[settled]**
+
+**Arrow keys move the target up and down the chain** — ↑ to the parent, ↓ back towards the element under
+the cursor; moving the mouse starts again from there. **Enter commits the target**, as does a click —
+whichever is currently targeted, not what is under the pointer. Enter matters because hands are already
+on the arrows by then, and because the Add Element button still has focus: an unhandled Enter would
+re-activate it and cancel the pick.
+The mouse alone cannot reliably hit a nested element: a wrapper `<div>` and the `<div role="button">`
+inside it share a bounding box, so selecting the wrapper meant finding a sliver of padding. Arrow keys
+are swallowed while picking even at the ends of the chain, so the page cannot scroll out from under a
+pick. ↑ stops at `<body>`. **[settled]**
+
+The panel handles these keys too, and only while picking: after clicking Add Element focus is in the
+panel, so the page never receives the keydown — the same reason the panel also handles Escape. It stands
+aside when the keystroke belongs to a control, since the framework dropdown is reachable while the model
+is still empty.
 
 **Scan Page** — pick a *container*: the whole page or any subsection (typically a `div` or `form`). Its
 **interactive descendants** enter the model. Non-interactive elements (`p`, `span`, …) are skipped. The
@@ -106,8 +125,15 @@ assumptions: it is per *window*, it follows the active tab, and it outlives navi
 | Close the **last panel watching a tab** | that tab's model is dropped |
 | Both surfaces open | **the same model**, and a pick in one appears in the other |
 
-A model can therefore never be displayed against a page it was not built from. Nothing is persisted to
-storage; a model is session work, not a saved artifact.
+A model can therefore never be displayed against a page it was not built from. A model is session work,
+not a saved artifact: it is held in `chrome.storage.session`, which lives in memory, is cleared when the
+browser closes, and is never written to disk.
+
+**Not in the background's own memory**, which is where it started. An MV3 service worker is terminated
+after 30 seconds of inactivity, and since Chrome 114 an open port does not reset that timer — so every
+model silently vanished after half a minute of not clicking, and appeared to come back only because
+restarting the browser gave you a fresh worker. Panels reconnect their port when the worker restarts,
+or the background stops knowing which tab each panel is on.
 
 **The background owns it, and panels are views** — they render what it broadcasts and mutate it by
 sending commands. Held in a panel it was one model per *panel*: a sidebar and a DevTools panel on the
@@ -230,7 +256,12 @@ CANCEL / SAVE. **[settled]**
 
 ## 10. Delete Model
 
-Confirm dialog — *"Really delete the model?"* — YES / CANCEL. **[settled]**
+Confirm dialog — *"Really delete the model?"* — YES / CANCEL, with **Yes** styled as destructive.
+Same for deleting a single element. **[settled]**
+
+Both set their button colours explicitly: Quasar's dialog plugin defaults to `isDark() ? 'amber' :
+'primary'`, which made a delete confirm yellow on a dark panel and gave it the same weight as any other
+dialog.
 
 ## 11. Generate Code
 

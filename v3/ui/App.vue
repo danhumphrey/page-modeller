@@ -136,10 +136,40 @@ function stopPicking() {
   isAdding.value = isScanning.value = false;
 }
 
+/**
+ * Keys that belong to picking, handled here as well as in the page. After
+ * clicking Add Element focus is in the panel, so the page never sees them —
+ * which is why the arrows did nothing at first.
+ */
 function onPanelKey(e: KeyboardEvent) {
-  if (e.key !== 'Escape' || !isPicking()) return;
-  e.preventDefault();
-  stopPicking();
+  if (!isPicking() || tabId.value == null) return;
+
+  // Only when the keystroke is not meant for something else. The listener is on
+  // the capture phase, so without this it would swallow the arrows used to move
+  // through the framework dropdown — which is reachable while picking, since
+  // the model is still empty.
+  const target = e.target as HTMLElement | null;
+  if (target?.closest('input, textarea, select, [contenteditable="true"], [role="listbox"], [role="menu"], .q-menu')) return;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    stopPicking();
+    return;
+  }
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    // Swallowed even at the ends of the chain, so the panel does not scroll.
+    e.preventDefault();
+    send(tabId.value, { type: 'MOVE_TARGET', direction: e.key === 'ArrowUp' ? 'up' : 'down' });
+    return;
+  }
+
+  if (e.key === 'Enter') {
+    // Must be intercepted, not merely forwarded: the Add Element button still
+    // has focus after being clicked, so an unhandled Enter would re-activate it
+    // and cancel the pick instead of committing it.
+    e.preventDefault();
+    send(tabId.value, { type: 'PICK_TARGET' });
+  }
 }
 
 /**
@@ -174,6 +204,24 @@ function onRuntimeMessage(msg: unknown) {
 // go (SPEC §5). Disconnect happens on its own when the page unloads, which is
 // what covers closing the sidebar or closing DevTools.
 let port: { disconnect(): void; postMessage(msg: unknown): void } | undefined;
+let closing = false;
+
+/**
+ * The port also drops when Chrome terminates the service worker, which it does
+ * after 30 seconds of inactivity — and since Chrome 114 an open port does not
+ * hold it open. Reconnect, or the panel stops being counted and the background
+ * never learns which tab it is on.
+ */
+function connectToBackground() {
+  const opened = browser.runtime.connect({ name: PANEL_PORT });
+  port = opened;
+  opened.onDisconnect.addListener(() => {
+    port = undefined;
+    if (closing) return;
+    connectToBackground();
+  });
+  reportViewing();
+}
 
 /** Tell the background which tab this panel is showing (SPEC §5). */
 function reportViewing() {
@@ -181,9 +229,8 @@ function reportViewing() {
 }
 
 onMounted(async () => {
-  port = browser.runtime.connect({ name: PANEL_PORT });
   tabId.value = await host.getTabId();
-  reportViewing();
+  connectToBackground();
   if (tabId.value != null) toBackground({ type: 'GET_MODEL', tabId: tabId.value });
   // The content script listens for Escape too, but after clicking Add Element
   // focus is in the panel, so the page never sees the keydown. Cover both.
@@ -192,6 +239,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  closing = true;
   window.removeEventListener('keydown', onPanelKey, true);
   browser.runtime.onMessage.removeListener(onRuntimeMessage);
   port?.disconnect();
@@ -269,25 +317,35 @@ function showMatchCount(count: number) {
   });
 }
 
+/**
+ * Both confirms are destructive, so the affirmative action reads as such.
+ *
+ * The colours are explicit because Quasar's dialog plugin defaults to
+ * `isDark() ? 'amber' : 'primary'` — which made both buttons yellow against the
+ * dark panel, and gave a delete confirm the same weight as any other dialog.
+ */
+function confirmDestructive(title: string, message: string) {
+  return $q.dialog({
+    title,
+    message,
+    cancel: { label: 'Cancel', flat: true, color: 'grey' },
+    ok: { label: 'Yes', flat: true, color: 'negative' },
+  });
+}
+
 function removeElement(id: string) {
   const el = model.value.elements.find((e) => e.id === id);
   if (!el || tabId.value == null) return;
-  $q.dialog({
-    title: 'Delete Element',
-    message: `Really delete ${el.name}?`,
-    cancel: true,
-    ok: { label: 'Yes', flat: true },
-  }).onOk(() => toBackground({ type: 'DELETE_ELEMENT', tabId: tabId.value!, id }));
+  confirmDestructive('Delete Element', `Really delete ${el.name}?`).onOk(() =>
+    toBackground({ type: 'DELETE_ELEMENT', tabId: tabId.value!, id })
+  );
 }
 
 function deleteModel() {
   if (tabId.value == null) return;
-  $q.dialog({
-    title: 'Delete Model',
-    message: 'Really delete the model?',
-    cancel: true,
-    ok: { label: 'Yes', flat: true },
-  }).onOk(() => toBackground({ type: 'DELETE_MODEL', tabId: tabId.value! }));
+  confirmDestructive('Delete Model', 'Really delete the model?').onOk(() =>
+    toBackground({ type: 'DELETE_MODEL', tabId: tabId.value! })
+  );
 }
 
 function notYet(what: string) {

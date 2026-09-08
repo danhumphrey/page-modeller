@@ -1,5 +1,5 @@
 import { generate, resolveCandidate } from '@/src/engine/candidates';
-import { describeElement } from '@/src/engine/describe';
+import { describeBrief, describeElement } from '@/src/engine/describe';
 import { isMessage, type Message } from '@/src/messaging';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
@@ -12,6 +12,8 @@ export default defineContentScript({
     let box: HTMLDivElement | null = null;
     let label: HTMLDivElement | null = null;
     let current: Element | null = null;
+    /** Last element under the cursor; the floor for walking back down. */
+    let hovered: Element | null = null;
 
     const Z = '2147483647';
 
@@ -47,14 +49,57 @@ export default defineContentScript({
       box?.remove();
       label?.remove();
       box = label = null;
-      current = null;
+      current = hovered = null;
+    }
+
+    /** How many ancestors the breadcrumb shows before eliding. */
+    const CRUMB_DEPTH = 3;
+
+    /**
+     * The chain from a few ancestors down to the target, target emphasised.
+     *
+     * Two jobs: say where you are in the nesting, and make it obvious that
+     * wrappers exist at all — before this there was no way to know a
+     * same-sized parent was there until you accidentally hit it.
+     *
+     * Built as elements rather than innerHTML: the text comes from the page.
+     */
+    function renderBreadcrumb(el: Element) {
+      const chain: Element[] = [];
+      for (let cur: Element | null = el.parentElement; cur && cur !== document.documentElement; cur = cur.parentElement) {
+        chain.unshift(cur);
+      }
+      const shown = chain.slice(-CRUMB_DEPTH);
+
+      label!.replaceChildren();
+      if (chain.length > shown.length) label!.appendChild(crumb('…', false));
+      for (const ancestor of shown) {
+        label!.appendChild(crumb(describeBrief(ancestor), false));
+      }
+      label!.appendChild(crumb(describeElement(el), true));
+    }
+
+    function crumb(text: string, isTarget: boolean): HTMLSpanElement {
+      const span = document.createElement('span');
+      span.textContent = text;
+      Object.assign(span.style, {
+        opacity: isTarget ? '1' : '0.55',
+        fontWeight: isTarget ? '600' : '400',
+      } as CSSStyleDeclaration);
+      if (label!.childNodes.length > 0) {
+        const sep = document.createElement('span');
+        sep.textContent = ' › ';
+        sep.style.opacity = '0.4';
+        label!.appendChild(sep);
+      }
+      return span;
     }
 
     function highlight(el: Element) {
       ensureOverlay();
       const r = el.getBoundingClientRect();
       Object.assign(box!.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-      label!.textContent = describeElement(el);
+      renderBreadcrumb(el);
       label!.style.left = `${r.left}px`;
       label!.style.top = `${Math.max(0, r.top - 18)}px`;
     }
@@ -109,26 +154,81 @@ export default defineContentScript({
     const onMove = (e: MouseEvent) => {
       if (!active) return;
       const el = e.target as Element | null;
-      if (!el || el === current) return;
+      if (!el || el === hovered) return;
+      // Moving the mouse abandons any arrow-key walk and starts again from
+      // whatever is under the cursor.
+      hovered = el;
       current = el;
       highlight(el);
     };
 
-    const onClick = (e: MouseEvent) => {
-      if (!active) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const el = e.target as Element;
-      const result = generate(el);
+    /** Commit the current target. Shared by clicking and by Enter. */
+    function pickCurrent() {
+      if (!active || !current) return;
+      const result = generate(current);
       // Both modes are one-shot (SPEC §4) — stop before reporting, so the
       // overlay is gone by the time the panel re-renders.
       stop({ notify: false });
       // Rejects when no panel is open; that's fine, drop it.
       browser.runtime.sendMessage({ type: 'ELEMENT_PICKED', result }).catch(() => {});
+    }
+
+    const onClick = (e: MouseEvent) => {
+      if (!active) return;
+      e.preventDefault();
+      e.stopPropagation();
+      // The CURRENT target, not e.target: the arrows may have walked away from
+      // the element under the cursor, and that is the whole point of them.
+      if (!current) current = e.target as Element;
+      pickCurrent();
     };
 
+    /** The child of `of` that contains `hovered`, for walking back down. */
+    function childTowardsHovered(of: Element): Element | null {
+      if (!hovered || of === hovered) return null;
+      let cur: Element | null = hovered;
+      while (cur && cur.parentElement && cur.parentElement !== of) cur = cur.parentElement;
+      return cur?.parentElement === of ? cur : null;
+    }
+
+    /**
+     * Walk the target up or down the DOM. The mouse alone cannot reliably hit a
+     * nested element: a wrapper <div> and the <div role="button"> inside it
+     * share a bounding box, so selecting the wrapper meant finding a sliver of
+     * padding.
+     */
+    function moveTarget(direction: 'up' | 'down') {
+      if (!active || !current) return;
+      const next =
+        direction === 'up'
+          ? // Stop at <body>: <html> is never a useful target.
+            current.parentElement && current.parentElement !== document.documentElement
+            ? current.parentElement
+            : null
+          : childTowardsHovered(current);
+      if (!next) return;
+      current = next;
+      highlight(next);
+    }
+
     const onKey = (e: KeyboardEvent) => {
-      if (active && e.key === 'Escape') stop();
+      if (!active) return;
+      if (e.key === 'Escape') return stop();
+
+      if (e.key === 'Enter') {
+        // Hands are already on the arrows; Enter is the obvious commit.
+        e.preventDefault();
+        e.stopPropagation();
+        return pickCurrent();
+      }
+
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+      // Swallow the key even at the ends of the chain, so the page does not
+      // scroll out from under a pick that is mid-flight.
+      e.preventDefault();
+      e.stopPropagation();
+      moveTarget(e.key === 'ArrowUp' ? 'up' : 'down');
     };
 
     function start() {
@@ -159,6 +259,8 @@ export default defineContentScript({
       if (m.type === 'START_PICKING') start();
       else if (m.type === 'STOP_PICKING') stop();
       else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
+      else if (m.type === 'MOVE_TARGET') moveTarget(m.direction);
+      else if (m.type === 'PICK_TARGET') pickCurrent();
       else if (m.type === 'HIGHLIGHT') {
         // This script runs in every frame, but only the top one answers — a
         // sub-frame with no matches would otherwise report 0 over the top

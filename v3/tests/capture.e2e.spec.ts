@@ -32,8 +32,12 @@ test.afterAll(async () => {
  * accumulate across tests in one persistent context, and tabs.query({url})
  * would otherwise return an earlier test's tab.
  */
-async function openFixture(sw: { evaluate: (fn: never, arg?: unknown) => Promise<unknown> }, caseName: string) {
-  const url = `http://localhost:${PORT}/login.html?case=${caseName}`;
+async function openFixture(
+  sw: { evaluate: (fn: never, arg?: unknown) => Promise<unknown> },
+  caseName: string,
+  file = 'login.html'
+) {
+  const url = `http://localhost:${PORT}/${file}?case=${caseName}`;
   const page = await context.newPage();
   await page.goto(url);
   const tabId = (await (sw as unknown as { evaluate: (f: (u: string) => Promise<number>, a: string) => Promise<number> }).evaluate(
@@ -514,31 +518,122 @@ test('the overlay label previews the locator, not just the tag', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
 
-  const url = `http://localhost:${PORT}/widgets.html`;
-  const page = await context.newPage();
-  await page.goto(url);
-  const tabId: number = await sw.evaluate(async (u) => (await chrome.tabs.query({ url: u }))[0].id!, url);
-
+  const { page, tabId } = await openFixture(sw as never, 'label', 'widgets.html');
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
   const label = page.locator('[data-page-modeller="label"]');
 
-  // Role first, then the accessible name — the label previews what getByRole
-  // will match on.
+  // The label is a breadcrumb ending in the target; the chain itself is covered
+  // by the arrow-key test. Here it is the target's description that matters:
+  // role first, then the accessible name, previewing what getByRole matches on.
   await page.getByRole('button', { name: 'Save' }).hover();
-  await expect(label).toHaveText('button "Save"');
+  await expect(label).toHaveText(/› button "Save"$/);
 
   // Tag shown only when it differs from the role. This is the case it was
   // written for: a <div role="button"> and the plain <div> wrapping it have the
   // same bounding box and both used to read just "div".
   await page.getByRole('button', { name: 'Continue to checkout' }).hover();
-  await expect(label).toHaveText('button (div) "Continue to checkout"');
+  await expect(label).toHaveText(/› button \(div\) "Continue to checkout"$/);
 
   // The wrapper is now plainly distinguishable from the control inside it.
   await page.locator('.cta-wrapper').hover({ position: { x: 2, y: 2 } });
-  await expect(label).toHaveText('div');
+  await expect(label).toHaveText(/› div$/);
 
   // Formatting details — truncation, role="none", missing names — are covered
   // by tests/unit/describe.test.ts against the same function. This test exists
   // for the thing only a real browser can show: that hovering two elements with
   // identical bounding boxes now tells them apart.
+});
+
+test('arrow keys walk the target up and down the DOM', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'arrows', 'widgets.html');
+
+  await sw.evaluate(() => {
+    const g = globalThis as unknown as { __picks: unknown[]; __collecting?: boolean };
+    g.__picks = [];
+    if (g.__collecting) return;
+    g.__collecting = true;
+    chrome.runtime.onMessage.addListener((m) => g.__picks.push(m));
+  });
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+
+  const label = page.locator('[data-page-modeller="label"]');
+  await page.getByRole('button', { name: 'Continue to checkout' }).hover();
+  // Ancestors are role-or-tag only; the target carries its accessible name.
+  await expect(label).toHaveText('body › main › div › button (div) "Continue to checkout"');
+
+  // Up moves to the wrapper — the element that needed a 2px sliver of padding
+  // to hit with the mouse.
+  await page.keyboard.press('ArrowUp');
+  await expect(label).toHaveText('body › main › div');
+
+  // Down walks back towards the element under the cursor.
+  await page.keyboard.press('ArrowDown');
+  await expect(label).toHaveText('body › main › div › button (div) "Continue to checkout"');
+
+  // The panel drives the same move over a message, because after clicking Add
+  // Element focus is in the panel and the page never sees the keydown.
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'MOVE_TARGET', direction: 'up' }), tabId);
+  await expect(label).toHaveText('body › main › div');
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'MOVE_TARGET', direction: 'down' }), tabId);
+  await expect(label).toHaveText('body › main › div › button (div) "Continue to checkout"');
+
+  // Enter commits the walked-to target: hands are already on the arrows, and
+  // the Add Element button still has focus, so an unhandled Enter would
+  // re-activate it and cancel the pick.
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string }[] }).__picks)).length)
+    .toBe(1);
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = picks[0].result as { tag: string; role: string | null };
+  expect(result.tag, 'picked the wrapper, not the button under the cursor').toBe('div');
+  expect(result.role).toBeNull();
+});
+
+test('the model lives outside the service worker, not in it', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'session-storage');
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(
+    ([name, id]) => {
+      chrome.runtime.connect({ name: name as string }).postMessage({ tabId: id as number });
+    },
+    ['page-modeller-panel', tabId] as [string, number]
+  );
+
+  await panel.evaluate(
+    (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'START_PICKING', mode: 'add' } }),
+    tabId
+  );
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  // Chrome terminates the worker after 30s of inactivity, and since Chrome 114
+  // an open port does not hold it open. A model in worker memory simply
+  // vanished — which is why it "came back" after restarting the browser.
+  // storage.session survives that: in memory, cleared when the browser closes,
+  // never written to disk, so SPEC §5 still holds.
+  await expect
+    .poll(async () =>
+      panel.evaluate(async (id) => {
+        const stored = (await chrome.storage.session.get('models')) as {
+          models?: Record<string, { elements: { name: string }[] }>;
+        };
+        return stored.models?.[id]?.elements.map((e) => e.name);
+      }, tabId)
+    )
+    .toEqual(['SignIn']);
 });

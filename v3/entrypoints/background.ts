@@ -22,11 +22,16 @@ export default defineBackground(() => {
   console.log('[Page Modeller] background ready', import.meta.env.MODE, import.meta.env.BROWSER);
 
   const store = new ModelStore(defaultFrameworkId);
-  let idSeq = 0;
 
   /** Every panel gets the model; each ignores tabs that are not its own. */
   function publish(tabId: number, model: TabModel) {
     browser.runtime.sendMessage({ type: 'MODEL', tabId, model }).catch(() => {});
+  }
+
+  /** Apply a change and tell every panel. The store is async now: it lives in
+   *  storage.session, because the worker itself does not survive 30s idle. */
+  async function change(tabId: number, mutate: (model: TabModel) => void) {
+    publish(tabId, await store.mutate(tabId, mutate));
   }
 
   browser.tabs.onRemoved.addListener((tabId) => store.clear(tabId));
@@ -35,13 +40,12 @@ export default defineBackground(() => {
   // The background has to notice: a DevTools panel cannot read the tab's URL.
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (!changeInfo.url) return;
-    const model = store.get(tabId);
-    if (model.url == null) return;
-    const stale = model.url !== changeInfo.url;
-    if (stale === model.stale) return;
-    // Navigating back to where it was built makes it current again.
-    model.stale = stale;
-    publish(tabId, model);
+    const url = changeInfo.url;
+    void store.mutate(tabId, (model) => {
+      if (model.url == null) return;
+      // Navigating back to where it was built makes it current again.
+      model.stale = model.url !== url;
+    }).then((model) => publish(tabId, model));
   });
 
   // A model with no panel watching it is abandoned work (SPEC §5). Each panel
@@ -73,9 +77,11 @@ export default defineBackground(() => {
         console.log('[Page Modeller] panel closed; was watching tab', wasOn, stillWatched ? '— still watched' : '— dropping model');
       }
       if (wasOn == null || stillWatched) return;
-      store.clear(wasOn);
-      // Any panel still listening shows an empty table rather than stale rows.
-      publish(wasOn, store.get(wasOn));
+      void store
+        .clear(wasOn)
+        .then(() => store.get(wasOn))
+        // Any panel still listening shows an empty table rather than stale rows.
+        .then((model) => publish(wasOn, model));
     });
   });
 
@@ -88,18 +94,21 @@ export default defineBackground(() => {
       case 'ELEMENT_PICKED': {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
-        const model = store.get(tabId);
-        // The page the model belongs to, recorded when the first element lands.
-        if (model.url == null) model.url = sender.tab?.url ?? null;
-        model.elements.push({
-          ...m.result,
-          id: `el-${idSeq++}`,
-          name: uniqueName(m.result.suggestedName, usedNames(model)),
-          // Not the engine's preferredIndex: that is framework-agnostic, and
-          // would hand a Selenium model a Playwright-only locator.
-          selectedIndex: chooseCandidate(m.result.candidates, model.frameworkId),
+        const url = sender.tab?.url ?? null;
+        void change(tabId, (model) => {
+          // The page the model belongs to, recorded when the first element lands.
+          if (model.url == null) model.url = url;
+          model.elements.push({
+            ...m.result,
+            // Unique within the model rather than a worker-lifetime counter:
+            // the worker restarts, and the counter would restart with it.
+            id: `el-${Date.now().toString(36)}-${model.elements.length}`,
+            name: uniqueName(m.result.suggestedName, usedNames(model)),
+            // Not the engine's preferredIndex: that is framework-agnostic, and
+            // would hand a Selenium model a Playwright-only locator.
+            selectedIndex: chooseCandidate(m.result.candidates, model.frameworkId),
+          });
         });
-        publish(tabId, model);
         // Picking is one-shot (SPEC §4); tell the panels so they can un-arm.
         browser.runtime.sendMessage({ type: 'FROM_TAB', tabId, message: { type: 'PICKING_STOPPED' } }).catch(() => {});
         return;
@@ -124,37 +133,33 @@ export default defineBackground(() => {
         return;
       }
       case 'GET_MODEL':
-        publish(m.tabId, store.get(m.tabId));
+        void store.get(m.tabId).then((model) => publish(m.tabId, model));
         return;
-      case 'DELETE_ELEMENT': {
-        const model = store.get(m.tabId);
-        model.elements = model.elements.filter((e) => e.id !== m.id);
-        publish(m.tabId, model);
+      case 'DELETE_ELEMENT':
+        void change(m.tabId, (model) => {
+          model.elements = model.elements.filter((e) => e.id !== m.id);
+        });
         return;
-      }
-      case 'UPDATE_ELEMENT': {
-        const model = store.get(m.tabId);
-        const el = model.elements.find((e) => e.id === m.id);
-        if (!el) return;
-        el.name = m.name;
-        el.selectedIndex = m.selectedIndex;
-        // Absent means "use the generated candidate again", so it must be
-        // deleted rather than set to undefined — the model is serialised.
-        if (m.override) el.override = m.override;
-        else delete el.override;
-        publish(m.tabId, model);
+      case 'UPDATE_ELEMENT':
+        void change(m.tabId, (model) => {
+          const el = model.elements.find((e) => e.id === m.id);
+          if (!el) return;
+          el.name = m.name;
+          el.selectedIndex = m.selectedIndex;
+          // Absent means "use the generated candidate again", so it must be
+          // deleted rather than set to undefined — the model is serialised.
+          if (m.override) el.override = m.override;
+          else delete el.override;
+        });
         return;
-      }
       case 'DELETE_MODEL':
-        store.clear(m.tabId);
-        publish(m.tabId, store.get(m.tabId));
+        void store.clear(m.tabId).then(() => store.get(m.tabId)).then((model) => publish(m.tabId, model));
         return;
-      case 'SET_FRAMEWORK': {
-        const model = store.get(m.tabId);
-        model.frameworkId = m.frameworkId;
-        publish(m.tabId, model);
+      case 'SET_FRAMEWORK':
+        void change(m.tabId, (model) => {
+          model.frameworkId = m.frameworkId;
+        });
         return;
-      }
     }
   });
 

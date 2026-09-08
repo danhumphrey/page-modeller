@@ -73,6 +73,10 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    Generate Code visibly disabled while the model is empty (SPEC §3).
 4. **Add Element** → hover highlights → click adds one row, then picking *stops* (SPEC §4). Clicking
    again without pressing Add must not add a second row.
+   - The label is a breadcrumb ending in the target: `body › main › div › button (div) "Log in"`.
+   - **↑ / ↓** walk the target up and down the nesting; moving the mouse starts again from the cursor.
+     **Enter** or a click picks the walked-to element, not what is under the pointer. The page must not
+     scroll, and Enter must not re-trigger the Add Element button.
 5. **Escape** cancels Add Element — both with focus in the panel and with focus in the page.
 6. The row's name and locator look right, **on one line** — Name, Locator and Actions across, not
    stacked; a second element with the same name becomes `About2`.

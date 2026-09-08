@@ -347,14 +347,10 @@ before starting the next.
    superset generator below — but the dialog offers the full framework list, so the model has to be
    able to hold a hand-typed one.
 
-9. **Ancestor navigation while picking** (SPEC §4). Arrow keys walk the target up and down the DOM,
-   with a breadcrumb of the chain replacing the single overlay label. The mouse alone cannot reliably
-   hit a nested element: a wrapper `<div>` and the `<div role="button">` inside it share a bounding box,
-   and selecting the wrapper meant finding a 2px sliver of padding.
-
-   **Before Scan, deliberately.** Scan's whole job is picking a *container*, and containers are exactly
-   the nested, same-box elements this fixes — building Scan first would ship a feature whose primary
-   interaction is the one we know is broken.
+9. **Ancestor navigation while picking** (SPEC §4). ✅ **Done** — arrow keys walk the target up and
+   down the DOM, with a breadcrumb of the chain replacing the single overlay label. Sequenced before
+   Scan deliberately: Scan's job is picking a *container*, and containers are exactly the nested,
+   same-box elements this fixes.
 
 10. **Scan** (SPEC §4). Container pick, interactive-role descendants, a11y-tree filtered.
 

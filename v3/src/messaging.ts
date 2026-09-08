@@ -10,6 +10,12 @@ export type PickMode = 'add' | 'scan';
 export type PanelToContent =
   | { type: 'START_PICKING'; mode: PickMode }
   | { type: 'STOP_PICKING' }
+  // Walk the pick target up or down the DOM (SPEC §4). Sent by the panel
+  // because focus is there after clicking Add Element, so the page never sees
+  // the keydown — the same reason the panel also handles Escape.
+  | { type: 'MOVE_TARGET'; direction: 'up' | 'down' }
+  // Commit the current target — Enter, for when the arrows are being used.
+  | { type: 'PICK_TARGET' }
   // View Matched Elements (SPEC §8). Answered by HIGHLIGHT_RESULT, not by a
   // reply — see the note on ContentToPanel below.
   | { type: 'HIGHLIGHT'; candidate: LocatorCandidate }

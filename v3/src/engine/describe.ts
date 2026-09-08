@@ -12,6 +12,13 @@ import { safeName, safeRole } from './candidates';
 
 const MAX_NAME = 30;
 
+/** Role or tag only — for ancestors in the breadcrumb, where names are noise. */
+export function describeBrief(el: Element): string {
+  const raw = safeRole(el);
+  const role = raw && raw !== 'none' && raw !== 'presentation' ? raw : '';
+  return role || el.localName;
+}
+
 export function describeElement(el: Element): string {
   const raw = safeRole(el);
   // `none` and `presentation` remove an element from the accessibility tree,
