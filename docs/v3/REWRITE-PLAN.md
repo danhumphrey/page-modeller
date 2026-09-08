@@ -369,10 +369,18 @@ before starting the next.
 in DevTools' own DOM tree (Chrome 18 / Firefox 56, so no compatibility concern). Attractive because that
 tree already solves nesting, shadow DOM and collapsed subtrees — the things the overlay struggles with.
 
-Two reasons it is not scheduled. `devtools.*` exists only in the DevTools panel, so it would be a button
-the sidebar cannot have; and `inspectedWindow.eval` runs in the page world while the engine lives in the
-content script's, with `useContentScriptContext` being Chrome-only — the portable bridge is to tag `$0`
-with a temporary attribute and have the content script find it.
+**It only makes sense feeding the sidebar, not a DevTools panel.** DevTools panels are mutually
+exclusive tabs: you are on Elements or on Page Modeller, never both, so selecting in the tree and then
+switching tabs to press Add is worse than the overlay.
+
+The `devtools` page is not a panel, though — `devtools.html` runs the whole time DevTools is open,
+whichever tab is showing. So it can listen for `onSelectionChanged` while Elements is active and feed
+the **sidebar**, which is visible alongside it. That is the one arrangement where this beats the
+overlay, and it needs DevTools and the sidebar open together.
+
+Remaining wrinkle: `inspectedWindow.eval` runs in the page world while the engine lives in the content
+script's, and `useContentScriptContext` is Chrome-only — the portable bridge is to tag `$0` with a
+temporary attribute and have the content script find it.
 
 A sidebar pane in the Elements panel (`createSidebarPane`) was rejected outright: it would be a second
 copy of the table we already have, somewhere worse. There is no way to add an item to the Elements
