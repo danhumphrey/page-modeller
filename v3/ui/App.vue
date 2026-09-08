@@ -99,32 +99,29 @@ function stopPicking() {
   isAdding.value = isScanning.value = false;
 }
 
-async function send(target: number, msg: PanelToContent): Promise<boolean> {
-  try {
-    // Vue wraps reactive state in Proxies, and anything read out of `elements`
-    // is one. Firefox serialises messages with the structured clone algorithm,
-    // which throws DataCloneError on a Proxy; Chrome's path tolerates it. So a
-    // message carrying model data — HIGHLIGHT — failed on Firefox while
-    // START_PICKING, whose payload is a plain literal, worked on the same page.
-    // Messages are plain data, so a JSON round-trip is an exact copy.
-    await browser.tabs.sendMessage(target, JSON.parse(JSON.stringify(msg)) as PanelToContent);
-    return true;
-  } catch (err) {
-    // Surface the reason: the notice below is a guess at the cause, and the
-    // real message is the only way to tell a missing content script from a
-    // messaging fault.
-    console.error('[Page Modeller] sendMessage failed', msg.type, err);
-    // No content script: a browser-internal page, the web store, or a tab that
-    // was already open when the extension loaded.
-    $q.notify({
-      message: 'Page Modeller can’t reach this page. Reload the tab, or try a normal http(s) page.',
-      icon: 'block',
-      color: 'negative',
-      timeout: 3000,
-      position: 'bottom',
-    });
-    return false;
-  }
+/**
+ * Panel → page, always via the background.
+ *
+ * `browser.tabs` is UNDEFINED in a Firefox DevTools panel: a devtools page is
+ * granted only devtools.*, runtime.* and a few others. Calling tabs.sendMessage
+ * there throws "can't access property sendMessage, tabs is undefined", which
+ * the panel reported as an unreachable page. Chrome tolerates the direct call,
+ * so this failed on one surface of one browser.
+ *
+ * Relaying through the background works everywhere, and using it for all three
+ * surfaces keeps one path rather than a working one and a broken one. Delivery
+ * failures come back as TAB_UNREACHABLE — the panel cannot see the
+ * background's rejection.
+ */
+function send(target: number, msg: PanelToContent) {
+  // Vue wraps reactive state in Proxies, and anything read out of `elements` is
+  // one. Firefox serialises messages with structured clone, which throws
+  // DataCloneError on a Proxy; Chrome's path tolerates it. Messages are plain
+  // data, so a JSON round-trip is an exact copy.
+  const message = JSON.parse(JSON.stringify(msg)) as PanelToContent;
+  void browser.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: target, message }).catch((err) => {
+    console.error('[Page Modeller] relay send failed', msg.type, err);
+  });
 }
 
 async function toggleAdd() {
