@@ -355,7 +355,9 @@ before starting the next.
 10. **Scan** (SPEC §4). ✅ **Done** — container pick, interactive descendants, a11y-tree filtered,
     honouring `modelHiddenElements`. Awaiting hand-test.
 
-11. **Generate Code** (SPEC §11). Selenium Java first — the reference template — with the six fixes.
+11. **Generate Code** (SPEC §11). ✅ **Selenium Java done** — the reference template, with the six
+    fixes. `src/generators/classify.ts` maps role to bucket and is shared by every generator to come;
+    `ui/CodeDialog.vue` is the read-only view with Copy. Awaiting hand-test.
 
 12. **Playwright** (SPEC §12). Structured locators, ancestor scoping, `exact: true`. The primary target
     going forward, so it gets its own step rather than riding along with the other generators.

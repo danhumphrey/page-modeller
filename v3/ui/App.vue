@@ -11,7 +11,7 @@
         @scan="toggleScan"
         @add="toggleAdd"
         @delete-model="deleteModel"
-        @generate="notYet('Generate Code')"
+        @generate="showCode = true"
       />
     </q-header>
 
@@ -38,6 +38,8 @@
           @remove="removeElement"
         />
 
+        <CodeDialog v-if="showCode" :model="model" @close="showCode = false" />
+
         <EditElementDialog
           v-if="editing"
           :key="editing.id"
@@ -60,6 +62,7 @@ import { browser } from 'wxt/browser';
 import AppToolbar from './AppToolbar.vue';
 import ModelTable, { type ModelRow } from './ModelTable.vue';
 import EditElementDialog from './EditElementDialog.vue';
+import CodeDialog from './CodeDialog.vue';
 import { defaultFrameworkId } from '@/src/frameworks';
 import { displayLocator } from '@/src/locators/display';
 import { activeCandidate, emptyModel, type ModelElement, type TabModel } from '@/src/model';
@@ -86,6 +89,7 @@ const model = ref<TabModel>(emptyModel(defaultFrameworkId));
 const isScanning = ref(false);
 const isAdding = ref(false);
 const editing = ref<ModelElement | undefined>();
+const showCode = ref(false);
 
 const rows = computed<ModelRow[]>(() =>
   model.value.elements.map((el) => ({

@@ -11,6 +11,13 @@
   </style>
 </head>
 <body>
+  <!-- Fixture navigation, for hand-testing. Deliberately outside <main>
+       so it does not change the breadcrumb of anything inside it, and
+       labelled with filenames so no link text can collide with a tagged
+       element's accessible name. -->
+  <nav aria-label="Fixtures" style="font: 12px/1.6 ui-monospace, monospace; padding: 6px 8px; border-bottom: 1px solid #ddd; margin-bottom: 12px">
+    fixtures: <a href="login.html">login</a> · <a href="widgets.html">widgets</a> · <strong>edgecases</strong> · <a href="ambiguous.html">ambiguous</a>
+  </nav>
   <main>
     <!-- 1. aria-label overrides emoji/content -->
     <button aria-label="Save document" data-spike="aria-label-btn">💾</button>

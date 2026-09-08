@@ -95,6 +95,8 @@ describe('build-generated identifiers', () => {
     ['leading underscore', '<div data-t class="_2xK9f"></div>'],
     ['no vowels', '<div data-t class="Xtvsq51"></div>'],
     ['hashed id', '<div data-t id="Xtvsq51"></div>'],
+    ['React 18 useId', '<div data-t id=":r6:"></div>'],
+    ['React 19 useId', '<div data-t id="_r_6_"></div>'],
   ] as const;
 
   for (const [label, html] of rejected) {

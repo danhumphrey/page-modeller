@@ -304,11 +304,12 @@ Classification is by **computed a11y role**, not `tagName`. Five buckets: **[set
 | Bucket | Roles | Methods (Selenium Java shown) |
 |---|---|---|
 | **actionable** | button, link, menuitem, tab, option | `click{Name}()` |
-| **text** | textbox, searchbox, spinbutton | `get{Name}()` · `set{Name}(String)` |
-| **toggle** | checkbox, radio, switch | `get{Name}(): boolean` · `set{Name}(boolean)` |
+| **text** | textbox, searchbox, spinbutton | `get{Name}()` · `set{Name}(String)` · `set{Name}(String, boolean clearFirst)` |
+| **toggle** | checkbox, switch | `is{Name}Checked()` · `set{Name}(boolean)` |
 | **select (single)** | combobox | `get{Name}Select()` · `get{Name}Text()` · `get{Name}Value()` · `set{Name}ByValue()` · `set{Name}ByText()` |
 | **select (multi)** | listbox | `get{Name}Select()` · `get{Name}Texts()` · `get{Name}Values()` · `set{Name}ByValues(...)` · `set{Name}ByTexts(...)` · `deselectAll{Name}()` |
-| **static** | everything else | `get{Name}()` → text |
+| **radio** | radio | `is{Name}Selected()` · `select{Name}()` |
+| **static** | everything else | `get{Name}()` → text, or `get{Name}AltText()` for an image |
 
 Every element also gets a banner comment and `get{Name}Element()`.
 
@@ -320,11 +321,16 @@ Every element also gets a banner comment and `get{Name}Element()`.
    `<a>` with no `href` was treated as a link when it has no link role.
 2. **`getDomProperty("value")`, not `getAttribute("value")`.** The attribute is the *initial* value; it
    does not change as the user types. Selenium 4.5+ exposes the live DOM property.
-3. **`clear()` before `sendKeys()`.** The setter appended to existing content.
+3. **`clear()` before `sendKeys()`.** The setter appended to existing content. Clearing is the default,
+   not the only option: `set{Name}(value)` clears, `set{Name}(value, clearFirst)` does not have to.
+   Swapping one hard-coded behaviour for the other would just be a different wrong default. Languages
+   with default arguments express this as one method; Java needs the overload.
 4. **`img` is static, not clickable.** It was in both `isClickable` and `isInteractive`, so images got
    `click{Name}()` and no text accessor. The accessor must read **`alt`** (or the accessible name) —
    `getText()` returns an empty string for an image.
-5. **Radio `set(false)` was a no-op.** Clicking a checked radio does not uncheck it.
+5. **Radio `set(false)` was a no-op.** Clicking a checked radio does not uncheck it, so a radio gets
+   `is{Name}Selected()` and `select{Name}()` — selecting is the only verb that means anything — rather
+   than a `set{Name}(boolean)` half of which silently did nothing.
 
 6. **Multi-selects were silently wrong.** On a `<select multiple>`, `selectByValue()` *adds* to the
    selection rather than replacing it, so the generated `set{Name}ByValue()` left prior selections in
@@ -360,7 +366,13 @@ Also: the templates emit a stray leading space on every line.
 
 ### Locator lists per framework
 
-Selenium Java / C# / Python: `id, linkText, partialLinkText, name, css, xpath, className, tagName`.
+Selenium Java / C# / Python: `name, id, linkText, partialLinkText, css, xpath, className, tagName`.
+
+**`name` ahead of `id`, unlike v2.5.1.** A name is author-chosen and essentially never
+framework-generated; ids are generated constantly — React's `useId` gave Facebook's password field
+`id="_r_6_"` alongside `name="pass"`. It is not only form controls that carry one — `<a>`, `<iframe>`,
+`<map>` and `<object>` do too — but wherever it exists it was written by hand, which is the point. A
+shared name (a radio group) is never chosen, because a candidate must resolve uniquely (§7).
 Puppeteer: `css, xpath`. Robot Framework and Protractor are dropped.
 
 Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
@@ -475,7 +487,7 @@ alone rather than becoming `SubmitButtonButton`. Read per pick, so the setting t
 name anyone would choose, and it changes on the next build of the site under test. Detected by known
 CSS-in-JS shapes (emotion, styled-components, CSS Modules, leading-underscore hashes, React `useId`) and
 by a run of four or more consonants, which real words and abbreviations — `btn`, `nav`, `col` — stay
-under. Deliberately conservative in the cheap direction: a false positive only falls through to the next
+under. React's `useId` is covered in both its forms: `:r6:` / `«r6»` from React 18, `_r_6_` from 19. Deliberately conservative in the cheap direction: a false positive only falls through to the next
 rule, while a false negative ships a name that rots. **[settled]**
 
 De-dupe by counter: a second `About` becomes `About2`.

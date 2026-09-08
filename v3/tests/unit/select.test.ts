@@ -45,6 +45,28 @@ describe('chooseCandidate', () => {
     expect(kindFor('selenium-python')).toBe('id');
   });
 
+  it('prefers name over id for a form control', () => {
+    // Facebook's password field: id="_r_6_" from React's useId, name="pass".
+    // A name is semantic and submitted with the form, so it is almost never
+    // generated; ids are generated constantly.
+    const field: RankedCandidate[] = [
+      { candidate: { kind: 'id', value: 'pass-field' }, predictedCount: 1 },
+      { candidate: { kind: 'name', value: 'pass' }, predictedCount: 1 },
+      { candidate: { kind: 'css', value: 'input[type=password]' }, predictedCount: 1 },
+    ];
+    expect(field[chooseCandidate(field, 'selenium-java')].candidate.kind).toBe('name');
+  });
+
+  it('falls back to id when a name is shared, as in a radio group', () => {
+    // Safe to prefer name precisely because a candidate is only chosen when it
+    // resolves uniquely.
+    const radio: RankedCandidate[] = [
+      { candidate: { kind: 'id', value: 'plan-pro' }, predictedCount: 1 },
+      { candidate: { kind: 'name', value: 'plan' }, predictedCount: 3 },
+    ];
+    expect(radio[chooseCandidate(radio, 'selenium-java')].candidate.kind).toBe('id');
+  });
+
   it('prefers a unique candidate over an earlier ambiguous one', () => {
     const ambiguous: RankedCandidate[] = [
       { candidate: { kind: 'id', value: 'dup' }, predictedCount: 3 },

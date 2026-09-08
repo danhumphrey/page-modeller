@@ -118,9 +118,14 @@ test('highlighting reports its count as a message, and Close clears it', async (
       .map((m) => m.count))
     .toEqual([1]);
 
-  // A locator matching several elements highlights all of them.
-  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: 'a' } }), tabId);
-  await expect(marks).toHaveCount(3);
+  // A locator matching several elements highlights all of them. Scoped to the
+  // fixture's own markup: a bare `a` also catches the fixture navigation, and
+  // the count would then move whenever a fixture gains a link.
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: 'header a' } }),
+    tabId
+  );
+  await expect(marks).toHaveCount(2);
 
   // Close dismisses the highlight, not just the message.
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'CLEAR_HIGHLIGHT' }), tabId);

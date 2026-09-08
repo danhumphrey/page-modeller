@@ -16,8 +16,20 @@ export interface Framework {
 // Playwright's own ordering, testId first as the most change-resistant.
 const PLAYWRIGHT_TYPES = ['testId', 'role', 'label', 'placeholder', 'text', 'altText', 'title', 'css', 'xpath'] as const;
 
-// Selenium's native By strategies.
-const SELENIUM_TYPES = ['id', 'linkText', 'partialLinkText', 'name', 'css', 'xpath', 'className', 'tagName'] as const;
+// Selenium's native By strategies, in order of preference.
+//
+// `name` ahead of `id`, unlike v2.5.1. A name is author-chosen and essentially
+// never framework-generated, while ids are generated constantly — React's useId
+// gave Facebook's password field `id="_r_6_"` alongside `name="pass"`.
+//
+// It is not only form controls: `<a>`, `<iframe>`, `<map>` and `<object>` carry
+// a name too. That is fine — wherever it exists it was written by hand, which
+// is the whole point. A legacy `<a name="top">` is usually an anchor target
+// with no text, so it has no linkText to lose to.
+//
+// Safe even for a radio group, whose members share a name: a candidate is only
+// chosen when it resolves uniquely (SPEC §7).
+const SELENIUM_TYPES = ['name', 'id', 'linkText', 'partialLinkText', 'css', 'xpath', 'className', 'tagName'] as const;
 
 export const frameworks: readonly Framework[] = [
   { id: 'playwright-ts', label: 'Playwright (TypeScript)', locatorTypes: PLAYWRIGHT_TYPES },
