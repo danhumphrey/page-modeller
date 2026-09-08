@@ -198,7 +198,10 @@ CANCEL / SAVE. **[settled]**
 - **Type** offers the full framework list (§7). Switching to a type the engine generated fills the
   fields in; switching to one it did not leaves them blank to type.
 - The **eye** tests what is currently in the fields, not what is saved, so a locator can be checked
-  before committing to it.
+  before committing to it. It is **disabled, along with Save, while a required field is blank** — blank
+  does not mean "match anything": an empty `label` matches every control with no accessible name.
+  `getByRole`'s accessible name is the one optional field, since `getByRole('navigation')` is a real
+  locator.
 - A hand-edited locator that happens to equal a generated one is stored as that **selection** rather
   than an override, so it keeps tracking the engine's own verification.
 - `exact: true` survives editing. The dialog does not expose `exact`, so dropping it on save would

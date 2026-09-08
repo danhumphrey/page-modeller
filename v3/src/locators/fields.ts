@@ -11,6 +11,13 @@ export interface LocatorField {
   /** Key in the built candidate. */
   key: string;
   label: string;
+  /**
+   * Blank is meaningful for this field. Only `getByRole`'s name qualifies —
+   * `getByRole('navigation')` is a real locator. Everywhere else an empty value
+   * makes a locator that matches whatever happens to have nothing there: an
+   * empty `label` matches every control with no accessible name.
+   */
+  optional?: boolean;
 }
 
 const ONE = (key: string, label: string): LocatorField[] => [{ key, label }];
@@ -19,7 +26,7 @@ const FIELDS: Record<LocatorKind, LocatorField[]> = {
   testId: ONE('value', 'Test ID'),
   role: [
     { key: 'role', label: 'Role' },
-    { key: 'name', label: 'Accessible name' },
+    { key: 'name', label: 'Accessible name', optional: true },
   ],
   label: ONE('text', 'Label'),
   placeholder: ONE('text', 'Placeholder'),
@@ -35,6 +42,11 @@ const FIELDS: Record<LocatorKind, LocatorField[]> = {
   linkText: ONE('text', 'Link text'),
   partialLinkText: ONE('text', 'Partial link text'),
 };
+
+/** True when every field the type needs has a value. */
+export function isComplete(kind: LocatorKind, values: Record<string, string>): boolean {
+  return fieldsFor(kind).every((f) => f.optional || (values[f.key] ?? '').trim() !== '');
+}
 
 export function fieldsFor(kind: LocatorKind): LocatorField[] {
   return FIELDS[kind] ?? ONE('value', 'Value');

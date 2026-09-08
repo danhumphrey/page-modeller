@@ -43,7 +43,15 @@
             @keydown.enter="save"
           />
 
-          <q-btn flat dense round icon="visibility" data-testid="edit-highlight" @click="$emit('highlight', candidate)">
+          <q-btn
+            flat
+            dense
+            round
+            icon="visibility"
+            :disable="!locatorComplete"
+            data-testid="edit-highlight"
+            @click="$emit('highlight', candidate)"
+          >
             <q-tooltip>View Matched Elements</q-tooltip>
           </q-btn>
         </div>
@@ -51,7 +59,14 @@
 
       <q-card-actions align="right">
         <q-btn v-close-popup flat no-caps label="Cancel" data-testid="edit-cancel" />
-        <q-btn flat no-caps label="Save" :disable="nameError !== ''" data-testid="edit-save" @click="save" />
+        <q-btn
+          flat
+          no-caps
+          label="Save"
+          :disable="nameError !== '' || !locatorComplete"
+          data-testid="edit-save"
+          @click="save"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -61,7 +76,7 @@
 import { ref, computed, watch } from 'vue';
 import { frameworkById } from '@/src/frameworks';
 import { activeCandidate, type ModelElement } from '@/src/model';
-import { buildCandidate, fieldsFor, valuesOf, type LocatorKind } from '@/src/locators/fields';
+import { buildCandidate, fieldsFor, isComplete, valuesOf, type LocatorKind } from '@/src/locators/fields';
 import type { LocatorCandidate } from '@/src/engine/types';
 
 const props = defineProps<{
@@ -91,6 +106,13 @@ const fields = computed(() => fieldsFor(kind.value));
 const candidate = computed(() => buildCandidate(kind.value, values.value));
 
 /**
+ * An incomplete locator is not testable or saveable. Blank does not mean "match
+ * anything" — an empty `label` matches every control with no accessible name,
+ * which is how it reported 8 matches for a field the user had not filled in.
+ */
+const locatorComplete = computed(() => isComplete(kind.value, values.value));
+
+/**
  * Switching type reuses the generated candidate of that kind when there is one,
  * and blanks the fields when there is not — the generated set is a convenience,
  * never a constraint (SPEC §7).
@@ -109,7 +131,7 @@ const nameError = computed(() => {
 });
 
 function save() {
-  if (nameError.value) return;
+  if (nameError.value || !locatorComplete.value) return;
   // An edited locator that matches a generated one is stored as that selection
   // rather than an override, so it keeps tracking the engine's own verification.
   const index = props.element.candidates.findIndex(

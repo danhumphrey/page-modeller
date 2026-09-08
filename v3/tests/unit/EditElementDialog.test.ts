@@ -123,6 +123,44 @@ describe('EditElementDialog', () => {
     expect((w.emitted('save')![0][0] as { override: { exact: boolean } }).override.exact).toBe(true);
   });
 
+  describe('an incomplete locator is neither testable nor saveable', () => {
+    it('blocks a blank required field', async () => {
+      // Blank does not mean "match anything": an empty `label` matches every
+      // control with no accessible name, which reported 8 matches for a field
+      // the user had not filled in.
+      const w = render();
+      (w.vm as unknown as { kind: string }).kind = 'label';
+      await w.vm.$nextTick();
+      expect(vm(w).locatorComplete).toBe(false);
+      (w.vm as unknown as { save: () => void }).save();
+      expect(w.emitted('save')).toBeUndefined();
+    });
+
+    it('allows a blank accessible name, which getByRole permits', async () => {
+      // getByRole('navigation') is a real locator.
+      const w = render();
+      (w.vm as unknown as { values: Record<string, string> }).values.name = '';
+      await w.vm.$nextTick();
+      expect(vm(w).locatorComplete).toBe(true);
+    });
+
+    it('blocks a blank role even though the name is optional', async () => {
+      const w = render();
+      (w.vm as unknown as { values: Record<string, string> }).values.role = '';
+      await w.vm.$nextTick();
+      expect(vm(w).locatorComplete).toBe(false);
+    });
+
+    it('treats whitespace as blank', async () => {
+      const w = render();
+      (w.vm as unknown as { kind: string }).kind = 'css';
+      await w.vm.$nextTick();
+      (w.vm as unknown as { values: Record<string, string> }).values.value = '   ';
+      await w.vm.$nextTick();
+      expect(vm(w).locatorComplete).toBe(false);
+    });
+  });
+
   it('refuses to save an invalid name', async () => {
     const w = render();
     (w.vm as unknown as { name: string }).name = '';
