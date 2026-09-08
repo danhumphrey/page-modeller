@@ -22,6 +22,11 @@ export default defineConfig({
     description: 'Pick a DOM element and generate a verified Playwright Page Object Model.',
     // `sidePanel` is Chromium-only and is rejected by Firefox; WXT adds it to
     // the Chrome build itself when it sees the sidepanel entrypoint.
+    // The side panel API is Chrome 114+, and it is the highest floor anything
+    // here has — without this the store would offer the extension to browsers
+    // where the panel silently does not exist. Firefox's floor is declared as
+    // gecko.strict_min_version below.
+    minimum_chrome_version: '114',
     // `storage` covers storage.session, where the per-tab models live (SPEC §5)
     // — the service worker is terminated after 30s idle and cannot hold them —
     // and storage.sync for settings (SPEC §14).
