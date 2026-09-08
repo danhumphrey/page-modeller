@@ -352,7 +352,8 @@ before starting the next.
    Scan deliberately: Scan's job is picking a *container*, and containers are exactly the nested,
    same-box elements this fixes.
 
-10. **Scan** (SPEC §4). Container pick, interactive-role descendants, a11y-tree filtered.
+10. **Scan** (SPEC §4). ✅ **Done** — container pick, interactive descendants, a11y-tree filtered,
+    honouring `modelHiddenElements`. Awaiting hand-test.
 
 11. **Generate Code** (SPEC §11). Selenium Java first — the reference template — with the six fixes.
 

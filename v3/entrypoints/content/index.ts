@@ -1,6 +1,7 @@
 import { generate, resolveCandidate } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
-import { isMessage, type Message } from '@/src/messaging';
+import { collectInteractive } from '@/src/engine/interactive';
+import { isMessage, type Message, type PickMode } from '@/src/messaging';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
 // on click, run the locator engine and report the result to the side panel.
@@ -9,6 +10,9 @@ export default defineContentScript({
   allFrames: true,
   main() {
     let active = false;
+    /** 'add' takes the element itself; 'scan' takes its interactive children. */
+    let mode: PickMode = 'add';
+    let includeHidden = false;
     let box: HTMLDivElement | null = null;
     let label: HTMLDivElement | null = null;
     let current: Element | null = null;
@@ -165,12 +169,20 @@ export default defineContentScript({
     /** Commit the current target. Shared by clicking and by Enter. */
     function pickCurrent() {
       if (!active || !current) return;
-      const result = generate(current);
+      const target = current;
       // Both modes are one-shot (SPEC §4) — stop before reporting, so the
       // overlay is gone by the time the panel re-renders.
       stop({ notify: false });
+
+      // Scan takes the container's interactive descendants, never the container
+      // itself: you are modelling what is inside the section you chose.
+      const message =
+        mode === 'scan'
+          ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map(generate) }
+          : { type: 'ELEMENT_PICKED', result: generate(target) };
+
       // Rejects when no panel is open; that's fine, drop it.
-      browser.runtime.sendMessage({ type: 'ELEMENT_PICKED', result }).catch(() => {});
+      browser.runtime.sendMessage(message).catch(() => {});
     }
 
     const onClick = (e: MouseEvent) => {
@@ -256,7 +268,11 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener((msg: unknown) => {
       if (!isMessage(msg)) return;
       const m = msg as Message;
-      if (m.type === 'START_PICKING') start();
+      if (m.type === 'START_PICKING') {
+        mode = m.mode;
+        includeHidden = m.includeHidden;
+        start();
+      }
       else if (m.type === 'STOP_PICKING') stop();
       else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
       else if (m.type === 'MOVE_TARGET') moveTarget(m.direction);

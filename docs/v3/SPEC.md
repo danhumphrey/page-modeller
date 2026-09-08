@@ -74,8 +74,7 @@ non-interactive elements get into the model.
 
 Both modes are **one-shot**: selecting an element stops picking. No continuous capture. **[settled]**
 
-**What scan includes.** Descendants with an **interactive role**, filtered by
-`modelHiddenElements` (§14): **[settled]**
+**What scan includes.** Descendants that are **interactive**, filtered by `modelHiddenElements` (§14): **[settled]**
 
 | `modelHiddenElements` | Scan includes |
 |---|---|
@@ -83,8 +82,16 @@ Both modes are **one-shot**: selecting an element stops picking. No continuous c
 | **on** | every interactive-role descendant, regardless of a11y-tree exposure |
 
 Off is the same rule Playwright's `getByRole` applies by default (`includeHidden: false`), so the scan
-filter and the locator semantics agree by construction. Interactive-ness is already role-derived, so one
-rule covers both concerns.
+filter and the locator semantics agree by construction.
+
+**Interactive means the four buckets of §11** — actionable, text, toggle, select — so anything a scan
+collects is something the generator can write methods for. `static` is deliberately excluded, or a scan
+of a page would return every heading, paragraph and image on it; those go in one at a time with Add.
+
+**Plus form controls that HTML-AAM gives no role at all.** `input[type=password]` is the one that
+matters: it has no ARIA role, so a role-only rule skips it, and a scan of a login form that misses the
+password field is plainly broken. The date and time family, colour and file pickers are in the same
+position. `type=hidden` is excluded — never rendered, never interactive.
 
 **Note that "what Playwright includes" is two rules, not one.** `getByRole` uses ARIA tree exclusion;
 `:visible` and actionability use *"non-empty bounding box and does not have `visibility:hidden`"*. They

@@ -8,7 +8,10 @@ import type { TabModel } from './model';
 // 'scan' takes a container and is not wired up yet.
 export type PickMode = 'add' | 'scan';
 export type PanelToContent =
-  | { type: 'START_PICKING'; mode: PickMode }
+  // `includeHidden` is the modelHiddenElements setting (SPEC §14), passed in
+  // rather than read in the page: the panel already has it, and a content
+  // script reading storage would need its own access level.
+  | { type: 'START_PICKING'; mode: PickMode; includeHidden: boolean }
   | { type: 'STOP_PICKING' }
   // Walk the pick target up or down the DOM (SPEC §4). Sent by the panel
   // because focus is there after clicking Add Element, so the page never sees
@@ -32,6 +35,9 @@ export type PanelToContent =
 // plainly reachable.
 export type ContentToPanel =
   | { type: 'ELEMENT_PICKED'; result: ElementResult }
+  // A scan's haul, in one message rather than N: the background adds them in a
+  // single model update, so the table does not animate in row by row.
+  | { type: 'ELEMENTS_PICKED'; results: ElementResult[] }
   | { type: 'PICKING_STOPPED' }
   | { type: 'HIGHLIGHT_RESULT'; count: number };
 

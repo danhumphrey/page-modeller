@@ -98,10 +98,14 @@ export default defineBackground(() => {
 
     switch (m.type) {
       // ---- from a content script ----
-      case 'ELEMENT_PICKED': {
+      case 'ELEMENT_PICKED':
+      case 'ELEMENTS_PICKED': {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
         const url = sender.tab?.url ?? null;
+        // One path for a single pick and a scan's haul, so both name and rank
+        // identically — a scan is just Add, many times over.
+        const results = m.type === 'ELEMENTS_PICKED' ? m.results : [m.result];
         // Read before mutating: the change callback is synchronous, and naming
         // depends on a setting the user can change at any time (SPEC §13).
         void loadSettings().then((settings) =>
@@ -109,16 +113,24 @@ export default defineBackground(() => {
             // The page the model belongs to, recorded when the first element
             // lands.
             if (model.url == null) model.url = url;
-            model.elements.push({
-              ...m.result,
-              // Unique within the model rather than a worker-lifetime counter:
-              // the worker restarts, and the counter would restart with it.
-              id: `el-${Date.now().toString(36)}-${model.elements.length}`,
-              name: uniqueName(settings.appendTypeToName ? withTypeSuffix(m.result.suggestedName, m.result.role) : m.result.suggestedName, usedNames(model)),
-              // Not the engine's preferredIndex: that is framework-agnostic,
-              // and would hand a Selenium model a Playwright-only locator.
-              selectedIndex: chooseCandidate(m.result.candidates, model.frameworkId),
-            });
+            // usedNames is derived from the model, so it is recomputed as each
+            // element lands — otherwise a scan of ten "Delete" buttons would
+            // name them all the same.
+            for (const result of results) {
+              model.elements.push({
+                ...result,
+                // Unique within the model rather than a worker-lifetime
+                // counter: the worker restarts, and so would the counter.
+                id: `el-${Date.now().toString(36)}-${model.elements.length}`,
+                name: uniqueName(
+                  settings.appendTypeToName ? withTypeSuffix(result.suggestedName, result.role) : result.suggestedName,
+                  usedNames(model)
+                ),
+                // Not the engine's preferredIndex: that is framework-agnostic,
+                // and would hand a Selenium model a Playwright-only locator.
+                selectedIndex: chooseCandidate(result.candidates, model.frameworkId),
+              });
+            }
           })
         );
         // Picking is one-shot (SPEC §4); tell the panels so they can un-arm.

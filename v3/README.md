@@ -81,28 +81,30 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    - **↑ / ↓** walk the target up and down the nesting; moving the mouse starts again from the cursor.
      **Enter** or a click picks the walked-to element, not what is under the pointer. The page must not
      scroll, and Enter must not re-trigger the Add Element button.
-5. **Escape** cancels Add Element — both with focus in the panel and with focus in the page.
-6. The row's name and locator look right, **on one line** — Name, Locator and Actions across, not
+5. **Scan Page** → pick a container (arrow keys help: clicking the middle of a form lands on an input)
+   → its interactive descendants arrive as rows, the container itself does not, and Scan then greys out
+   because it is once per model.
+6. **Escape** cancels Add Element — both with focus in the panel and with focus in the page.
+7. The row's name and locator look right, **on one line** — Name, Locator and Actions across, not
    stacked; a second element with the same name becomes `About2`.
-7. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
-8. **Eye** highlights every match in yellow with a red outline, scrolls the first into view, and reports
+8. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
+9. **Eye** highlights every match in yellow with a red outline, scrolls the first into view, and reports
    the count — green for 1, red for 0, amber for more. Highlight clears after ~3s, or at once on
    **Close**. Clicking it repeatedly replaces the message rather than stacking a counter badge, and the
    new highlight survives the replacement.
-9. **Edit** (pencil or double-click): name validation rejects blank, spaced and duplicate names;
+10. **Edit** (pencil or double-click): name validation rejects blank, spaced and duplicate names;
    switching type fills the fields from a generated locator or blanks them; the eye tests what is
    typed; Save updates the row in **both** surfaces.
-10. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
+11. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
    still opens the editor.
-11. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
+12. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
     rows, and a pick in either appears in both. Close one; the model survives in the other. Close them
     all and reopen; that tab's model is gone. Check this with a second tab modelled too — closing one
     tab's panels must not touch the other's.
-12. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
+13. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
    switch to B, add something different, switch back — A must be intact.
-13. **Navigate within a tab** with a model built: a banner names the page it was built on and offers
+14. **Navigate within a tab** with a model built: a banner names the page it was built on and offers
     Delete Model. Navigate back and the banner clears.
-14. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
 15. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
