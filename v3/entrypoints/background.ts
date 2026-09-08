@@ -30,6 +30,19 @@ export default defineBackground(() => {
 
   browser.tabs.onRemoved.addListener((tabId) => store.clear(tabId));
 
+  // A model kept across a navigation may no longer describe the page (SPEC §5).
+  // The background has to notice: a DevTools panel cannot read the tab's URL.
+  browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (!changeInfo.url) return;
+    const model = store.get(tabId);
+    if (model.url == null) return;
+    const stale = model.url !== changeInfo.url;
+    if (stale === model.stale) return;
+    // Navigating back to where it was built makes it current again.
+    model.stale = stale;
+    publish(tabId, model);
+  });
+
   // A model with no panel watching it is abandoned work (SPEC §5). Each panel
   // holds a port and reports which tab it is showing; when a panel closes, the
   // tab it was on loses its model unless another panel is still on that tab.
@@ -75,6 +88,8 @@ export default defineBackground(() => {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
         const model = store.get(tabId);
+        // The page the model belongs to, recorded when the first element lands.
+        if (model.url == null) model.url = sender.tab?.url ?? null;
         model.elements.push({
           ...m.result,
           id: `el-${idSeq++}`,

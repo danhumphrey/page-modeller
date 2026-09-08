@@ -418,3 +418,47 @@ test('a roaming sidebar closing on one tab leaves the other tab\'s model', async
     )
     .toEqual(['SignIn']);
 });
+
+test('a model kept across a navigation is marked stale (SPEC §5)', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'stale');
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  const latest = async () =>
+    (await panel.evaluate(() => (window as unknown as { __msgs: { type: string; model?: { stale: boolean; url: string | null } }[] }).__msgs))
+      .filter((m) => m.type === 'MODEL')
+      .at(-1)?.model;
+
+  await panel.evaluate(
+    (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'START_PICKING', mode: 'add' } }),
+    tabId
+  );
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  // The model records the page it was built on.
+  await expect.poll(async () => (await latest())?.url).toContain('login.html?case=stale');
+  expect((await latest())?.stale).toBe(false);
+
+  // Navigating away marks it, so the panel can say why every row will miss.
+  await page.goto(`http://localhost:${PORT}/widgets.html`);
+  await expect.poll(async () => (await latest())?.stale).toBe(true);
+
+  // Navigating back makes it current again — it describes this page once more.
+  await page.goto(`http://localhost:${PORT}/login.html?case=stale`);
+  await expect.poll(async () => (await latest())?.stale).toBe(false);
+});

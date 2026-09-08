@@ -16,6 +16,18 @@
 
     <q-page-container>
       <q-page>
+        <!-- SPEC §5: a model is kept across a navigation, so it can end up
+             describing a page that is no longer loaded. Say so, rather than
+             leaving the user to wonder why the eye reports 0 for every row. -->
+        <div v-if="model.stale" class="stale-banner" data-testid="stale-banner">
+          <q-icon name="warning" size="18px" />
+          <div class="stale-text">
+            Built on a different page.
+            <span class="stale-url" :title="model.url ?? ''">{{ model.url }}</span>
+          </div>
+          <q-btn flat dense no-caps size="sm" label="Delete Model" data-testid="stale-delete" @click="deleteModel" />
+        </div>
+
         <ModelTable
           :elements="rows"
           :click-to-highlight="settings.clickTableRowsToViewMatchedElements"
@@ -282,3 +294,31 @@ function notYet(what: string) {
   notice('notYet', { message: `${what} — not built yet`, icon: 'construction', timeout: 1500 });
 }
 </script>
+
+<style scoped>
+.stale-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px var(--pm-gutter);
+  background: var(--pm-warning-bg);
+  color: var(--pm-warning-fg);
+  border-bottom: 1px solid var(--pm-rule);
+  font-size: 12px;
+}
+
+.stale-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* A URL is long and the panel is narrow; the full value is on the title. */
+.stale-url {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+</style>
