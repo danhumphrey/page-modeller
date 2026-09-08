@@ -6,7 +6,11 @@ describe('displayLocator', () => {
     expect(displayLocator({ kind: 'role', role: 'button', name: 'Sign in', exact: true }, 'playwright-ts')).toBe(
       "getByRole('button', { name: 'Sign in', exact: true })"
     );
-    expect(displayLocator({ kind: 'testId', value: 'submit' }, 'playwright-python')).toBe("getByTestId('submit')");
+    // Playwright Python is the same decisions in Python spelling.
+    expect(displayLocator({ kind: 'testId', value: 'submit' }, 'playwright-python')).toBe('get_by_test_id("submit")');
+    expect(displayLocator({ kind: 'role', role: 'button', name: "It's here", exact: true }, 'playwright-python')).toBe(
+      'get_by_role("button", name="It\'s here", exact=True)'
+    );
   });
 
   it('renders exact faithfully rather than forcing it', () => {

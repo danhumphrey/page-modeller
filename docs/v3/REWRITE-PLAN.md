@@ -371,8 +371,12 @@ before starting the next.
     object of constructor-assigned `readonly` fields; its per-element action wrappers are gone, because
     a `Locator` is already the action API. Awaiting hand-test.
 
-14. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python. Each supplies both
-    shapes.
+14. **Remaining generators** ✅ **Done** — Selenium C#/Python, Playwright Python, Puppeteer, each with
+    both shapes. `src/generators/selenium.ts` picks the `By` strategy once for all three Selenium
+    languages; `src/generators/names.ts` holds the case conversions. Awaiting hand-test.
+
+    **Puppeteer output is not verified against a real Puppeteer** — it is not a dependency here, so
+    nothing resolves the generated string the way the fidelity spec now does for Playwright.
 
 15. **Frames** (SPEC §16) and the **page-object wrapper** (SPEC §17).
 

@@ -6,6 +6,7 @@
 import type { LocatorCandidate } from '../engine/types';
 
 const q = (s: string) => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+const qq = (s: string) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 /** The Playwright call this candidate becomes. */
 export function playwrightExpr(c: LocatorCandidate): string {
@@ -42,6 +43,40 @@ export function playwrightExpr(c: LocatorCandidate): string {
   }
 }
 
+/**
+ * The Playwright Python call this candidate becomes.
+ *
+ * Same decisions as `playwrightExpr`, different spelling: snake_case methods,
+ * keyword arguments, `True`, and double quotes (Black's default).
+ */
+export function playwrightPyExpr(c: LocatorCandidate): string {
+  const exact = (e: boolean | undefined) => (e ? ', exact=True' : '');
+  switch (c.kind) {
+    case 'testId':
+      return `get_by_test_id(${qq(c.value)})`;
+    case 'role':
+      if (c.name === undefined) return `get_by_role(${qq(c.role)})`;
+      return `get_by_role(${qq(c.role)}, name=${qq(c.name)}${exact(c.exact)})`;
+    case 'label':
+      return `get_by_label(${qq(c.text)}${exact(c.exact)})`;
+    case 'placeholder':
+      return `get_by_placeholder(${qq(c.text)}${exact(c.exact)})`;
+    case 'text':
+      return `get_by_text(${qq(c.text)}${exact(c.exact)})`;
+    case 'altText':
+      return `get_by_alt_text(${qq(c.text)}${exact(c.exact)})`;
+    case 'title':
+      return `get_by_title(${qq(c.text)}${exact(c.exact)})`;
+    case 'css':
+      return `locator(${qq(c.value)})`;
+    case 'xpath':
+      // See playwrightExpr: the prefix is not optional.
+      return `locator(${qq(`xpath=${c.value}`)})`;
+    default:
+      return typeValue(c);
+  }
+}
+
 /** `type: value`, for frameworks whose locators are a flat pair. */
 export function typeValue(c: LocatorCandidate): string {
   switch (c.kind) {
@@ -69,5 +104,7 @@ export function typeValue(c: LocatorCandidate): string {
 }
 
 export function displayLocator(c: LocatorCandidate, frameworkId: string): string {
-  return frameworkId.startsWith('playwright') ? playwrightExpr(c) : typeValue(c);
+  if (frameworkId === 'playwright-python') return playwrightPyExpr(c);
+  if (frameworkId.startsWith('playwright')) return playwrightExpr(c);
+  return typeValue(c);
 }

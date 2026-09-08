@@ -290,17 +290,30 @@ model.
 
 | Framework | Shapes |
 |---|---|
-| Selenium (all languages) | **Methods** (default) · Locators only |
-| Playwright (all languages) | **Page object** (default) · Locators only |
-| Puppeteer | **Locators only** |
+| Selenium — Java, C#, Python | **Methods** (default) · Locators only |
+| Playwright — TypeScript, Python | **Page object** (default) · Locators only |
+| Puppeteer | **Page object** (default) · Locators only |
+
+Shape ids are shared, so `Locators only` means the same thing in every framework. The choice is not
+remembered between openings of the dialog. **[inferred]**
 
 **Locators only** exists for every framework: locator declarations and nothing else, for the many teams
 with their own page-object conventions. Our locators, none of our opinions — and the one output still
 useful when the surrounding structure is wrong for them.
 
+Each language declares them the way that language declares locators:
+
 ```java
-private final By emailAddress = By.name("email");
-private final By signIn = By.id("go");
+private final By emailAddress = By.name("email");         // Java
+```
+```csharp
+private readonly By _emailAddress = By.Name("email");     // C#, underscore per .NET convention
+```
+```python
+EMAIL_ADDRESS = (By.NAME, "email")                        # Python — a locator is a tuple
+```
+```ts
+const emailAddress = page.getByLabel('Email address', { exact: true });   // Playwright
 ```
 
 User-supplied templates are deliberately **not** offered. Two shapes cover the split that matters —
@@ -392,6 +405,21 @@ elements. Revisit if a real DOM turns up that needs better. **[settled]**
 through the element rather than a dedicated API. **[inferred]**
 
 Also: the templates emit a stray leading space on every line.
+
+### Language idiom, not translation **[settled]**
+
+Same decisions, each language's spelling. Where a language has a feature Java lacks, the output uses
+it rather than carrying Java's workaround across:
+
+| | Java | C# | Python |
+|---|---|---|---|
+| clear-before-type | two overloads | `bool clearFirst = true` | `clear_first=True` |
+| varargs | `String...` | `params string[]` | `*values` |
+| read a property | `getText()` | `.Text` | `.text` |
+| collections | `stream().map().collect()` | `.Select().ToList()` | list comprehension |
+| braces / layout | K&R | Allman | PEP 8, two blank lines |
+
+C# `checked` is a keyword, so the toggle setter takes `isChecked`.
 
 ### Locator lists per framework
 
