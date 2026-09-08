@@ -325,10 +325,10 @@ before starting the next.
 6. **Naming** (SPEC §13). ✅ **Done** — `src/engine/naming.ts`, split so `baseName` runs in the page and
    `uniqueName` in the panel.
 
-   **Gap: the engine only generates Playwright strategies.** No `id`, `name`, `linkText`,
-   `partialLinkText`, `className` or `tagName`, so selecting a Selenium target today yields `css:` for
-   everything. Needs a superset generator with per-framework filtering, as v2.5.1 had. Do this before
-   step 10.
+   ✅ **Superset generator done.** The engine emits Selenium's `id`, `name`, `className`, `tagName`,
+   `linkText` and `partialLinkText` alongside the Playwright strategies, and `src/locators/select.ts`
+   picks the first candidate the chosen framework can express. The fidelity spec verifies the new kinds
+   against Playwright's equivalent selectors.
 
 7. **View Matched Elements** (SPEC §8). ✅ **Done** — the eye: highlight all, scroll to first,
    three-state snackbar. Awaiting hand-test.

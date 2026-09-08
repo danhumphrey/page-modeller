@@ -3,6 +3,7 @@ import { isMessage, PANEL_PORT, type Message, type PanelViewing } from '@/src/me
 import { ModelStore, usedNames, type TabModel } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
 import { defaultFrameworkId } from '@/src/frameworks';
+import { chooseCandidate } from '@/src/locators/select';
 
 // Background service worker / event page.
 //
@@ -94,7 +95,9 @@ export default defineBackground(() => {
           ...m.result,
           id: `el-${idSeq++}`,
           name: uniqueName(m.result.suggestedName, usedNames(model)),
-          selectedIndex: m.result.preferredIndex >= 0 ? m.result.preferredIndex : 0,
+          // Not the engine's preferredIndex: that is framework-agnostic, and
+          // would hand a Selenium model a Playwright-only locator.
+          selectedIndex: chooseCandidate(m.result.candidates, model.frameworkId),
         });
         publish(tabId, model);
         // Picking is one-shot (SPEC §4); tell the panels so they can un-arm.

@@ -1,6 +1,6 @@
 import { computeAccessibleName, getRole } from 'dom-accessibility-api';
 import type { LocatorCandidate, ElementResult, RankedCandidate } from './types';
-import { baseName } from './naming';
+import { baseName, looksGenerated } from './naming';
 
 const norm = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
 
@@ -256,6 +256,35 @@ export function generate(el: Element): ElementResult {
   if (!NON_TEXT.has(el.tagName)) {
     const text = norm(el.textContent);
     if (text && text.length <= 80) out.push({ kind: 'text', text, exact: true });
+  }
+
+  // ---- Selenium's By strategies ----
+  //
+  // Generated for every element regardless of the chosen framework: the model
+  // holds the superset and the framework decides which are expressible. Without
+  // these, a Selenium target had nothing but css and xpath, and would happily
+  // select a `role` locator Selenium cannot write.
+  const id = el.getAttribute('id');
+  if (id && !looksGenerated(id)) out.push({ kind: 'id', value: id });
+
+  const nameAttr = el.getAttribute('name');
+  if (nameAttr) out.push({ kind: 'name', value: nameAttr });
+
+  // By.className takes ONE class name, so each is its own candidate. Capped,
+  // and build-generated names skipped, or a CSS-in-JS page yields a dropdown of
+  // hashes that change on their next deploy.
+  for (const cls of Array.from(el.classList).filter((c) => !looksGenerated(c)).slice(0, 3)) {
+    out.push({ kind: 'className', value: cls });
+  }
+
+  out.push({ kind: 'tagName', value: el.localName });
+
+  if (el.localName === 'a') {
+    const linkText = norm(el.textContent);
+    if (linkText) {
+      out.push({ kind: 'linkText', text: linkText });
+      out.push({ kind: 'partialLinkText', text: linkText });
+    }
   }
 
   out.push({ kind: 'css', value: cssFor(el) });

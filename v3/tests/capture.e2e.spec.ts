@@ -462,3 +462,50 @@ test('a model kept across a navigation is marked stale (SPEC §5)', async () => 
   await page.goto(`http://localhost:${PORT}/login.html?case=stale`);
   await expect.poll(async () => (await latest())?.stale).toBe(false);
 });
+
+test('a pick under Selenium never selects a Playwright-only locator', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'selenium');
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  type Published = { type: string; model?: { elements: { selectedIndex: number; candidates: { candidate: { kind: string } }[] }[] } };
+  const selectedKinds = async () => {
+    const model = (await panel.evaluate(() => (window as unknown as { __msgs: Published[] }).__msgs))
+      .filter((m) => m.type === 'MODEL')
+      .at(-1)?.model;
+    return model?.elements.map((e) => e.candidates[e.selectedIndex]?.candidate.kind);
+  };
+
+  await panel.evaluate(
+    (id) => chrome.runtime.sendMessage({ type: 'SET_FRAMEWORK', tabId: id, frameworkId: 'selenium-java' }),
+    tabId
+  );
+  await panel.evaluate(
+    (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'START_PICKING', mode: 'add' } }),
+    tabId
+  );
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  // Selenium's By strategies only. Before this, a Selenium model selected
+  // getByRole, showed it as "role: … — …", and the eye certified it, because
+  // our resolver understands roles even though Selenium cannot express them.
+  const seleniumTypes = ['id', 'linkText', 'partialLinkText', 'name', 'css', 'xpath', 'className', 'tagName'];
+  await expect.poll(selectedKinds).toHaveLength(1);
+  const [kind] = (await selectedKinds())!;
+  expect(seleniumTypes, `selected ${kind}`).toContain(kind);
+});

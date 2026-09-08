@@ -151,6 +151,15 @@ Empty state: *"Scan the page or start adding elements to build the model"*.
 
 ## 7. Locators
 
+**The engine generates a superset** — every strategy it can find, Playwright's and Selenium's alike —
+and the framework decides which are expressible. The candidate an element *starts on* is the first, in
+the framework's own order of preference, that the framework can express and that resolves uniquely.
+
+This matters more than it sounds. Without it a Selenium model selected `getByRole`, displayed it as
+`role: heading — Google`, and the eye reported *1 element matches* — because the in-page resolver
+understands roles even though Selenium cannot express one. A green tick on a locator that cannot exist
+in the target framework is worse than no check at all. **[settled]**
+
 Each element carries the set of locators that were **generated and matched** for it. The type dropdown
 offers the **full framework list**, not just the generated ones — selecting a type with no generated
 value leaves the value field **blank** for the user to type. The generated set is a convenience, never a
@@ -305,6 +314,8 @@ Puppeteer: `css, xpath`. Robot Framework and Protractor are dropped.
 
 Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
 engine's existing ranking, testId first as the most change-resistant.
+
+These lists are also the **order of preference** for choosing an element's starting locator (§7).
 
 ## 12. Playwright
 
