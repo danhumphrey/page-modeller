@@ -185,32 +185,36 @@ export default defineContentScript({
       return cur?.parentElement === of ? cur : null;
     }
 
+    /**
+     * Walk the target up or down the DOM. The mouse alone cannot reliably hit a
+     * nested element: a wrapper <div> and the <div role="button"> inside it
+     * share a bounding box, so selecting the wrapper meant finding a sliver of
+     * padding.
+     */
+    function moveTarget(direction: 'up' | 'down') {
+      if (!active || !current) return;
+      const next =
+        direction === 'up'
+          ? // Stop at <body>: <html> is never a useful target.
+            current.parentElement && current.parentElement !== document.documentElement
+            ? current.parentElement
+            : null
+          : childTowardsHovered(current);
+      if (!next) return;
+      current = next;
+      highlight(next);
+    }
+
     const onKey = (e: KeyboardEvent) => {
       if (!active) return;
       if (e.key === 'Escape') return stop();
-
-      // Arrow keys walk the target up and down the DOM. The mouse alone cannot
-      // reliably hit a nested element: a wrapper <div> and the
-      // <div role="button"> inside it share a bounding box, so selecting the
-      // wrapper meant finding a sliver of padding.
-      let next: Element | null = null;
-      if (e.key === 'ArrowUp') {
-        const parent = current?.parentElement;
-        // Stop at <body>: <html> is never a useful target.
-        if (parent && parent !== document.documentElement) next = parent;
-      } else if (e.key === 'ArrowDown') {
-        next = current ? childTowardsHovered(current) : null;
-      } else {
-        return;
-      }
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
 
       // Swallow the key even at the ends of the chain, so the page does not
       // scroll out from under a pick that is mid-flight.
       e.preventDefault();
       e.stopPropagation();
-      if (!next) return;
-      current = next;
-      highlight(next);
+      moveTarget(e.key === 'ArrowUp' ? 'up' : 'down');
     };
 
     function start() {
@@ -241,6 +245,7 @@ export default defineContentScript({
       if (m.type === 'START_PICKING') start();
       else if (m.type === 'STOP_PICKING') stop();
       else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
+      else if (m.type === 'MOVE_TARGET') moveTarget(m.direction);
       else if (m.type === 'HIGHLIGHT') {
         // This script runs in every frame, but only the top one answers — a
         // sub-frame with no matches would otherwise report 0 over the top

@@ -136,10 +136,31 @@ function stopPicking() {
   isAdding.value = isScanning.value = false;
 }
 
+/**
+ * Keys that belong to picking, handled here as well as in the page. After
+ * clicking Add Element focus is in the panel, so the page never sees them —
+ * which is why the arrows did nothing at first.
+ */
 function onPanelKey(e: KeyboardEvent) {
-  if (e.key !== 'Escape' || !isPicking()) return;
-  e.preventDefault();
-  stopPicking();
+  if (!isPicking() || tabId.value == null) return;
+
+  // Only when the keystroke is not meant for something else. The listener is on
+  // the capture phase, so without this it would swallow the arrows used to move
+  // through the framework dropdown — which is reachable while picking, since
+  // the model is still empty.
+  const target = e.target as HTMLElement | null;
+  if (target?.closest('input, textarea, select, [contenteditable="true"], [role="listbox"], [role="menu"], .q-menu')) return;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    stopPicking();
+    return;
+  }
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    // Swallowed even at the ends of the chain, so the panel does not scroll.
+    e.preventDefault();
+    send(tabId.value, { type: 'MOVE_TARGET', direction: e.key === 'ArrowUp' ? 'up' : 'down' });
+  }
 }
 
 /**

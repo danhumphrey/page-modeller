@@ -573,6 +573,13 @@ test('arrow keys walk the target up and down the DOM', async () => {
   await page.keyboard.press('ArrowDown');
   await expect(label).toHaveText('body › main › div › button (div) "Continue to checkout"');
 
+  // The panel drives the same move over a message, because after clicking Add
+  // Element focus is in the panel and the page never sees the keydown.
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'MOVE_TARGET', direction: 'up' }), tabId);
+  await expect(label).toHaveText('body › main › div');
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'MOVE_TARGET', direction: 'down' }), tabId);
+  await expect(label).toHaveText('body › main › div › button (div) "Continue to checkout"');
+
   // Clicking picks the walked-to target, not what is under the pointer.
   await page.keyboard.press('ArrowUp');
   await page.getByRole('button', { name: 'Continue to checkout' }).click();

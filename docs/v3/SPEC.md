@@ -57,6 +57,11 @@ inside it share a bounding box, so selecting the wrapper meant finding a sliver 
 are swallowed while picking even at the ends of the chain, so the page cannot scroll out from under a
 pick. ↑ stops at `<body>`. **[settled]**
 
+The panel handles these keys too, and only while picking: after clicking Add Element focus is in the
+panel, so the page never receives the keydown — the same reason the panel also handles Escape. It stands
+aside when the keystroke belongs to a control, since the framework dropdown is reachable while the model
+is still empty.
+
 **Scan Page** — pick a *container*: the whole page or any subsection (typically a `div` or `form`). Its
 **interactive descendants** enter the model. Non-interactive elements (`p`, `span`, …) are skipped. The
 container itself is not added, only children. Scan is **once per model**; Add is how you extend it.
