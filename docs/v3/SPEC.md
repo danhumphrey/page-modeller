@@ -341,7 +341,10 @@ Four agreed changes: **[settled]**
    boundaries — hence `TableofContents` and `DocumentUploadandQuery`. Case first, then strip:
    `TableOfContents`, `DocumentUploadAndQuery`.
 2. **Use the computed accessible name** (`dom-accessibility-api`) in place of the hand-rolled label /
-   `aria-label` / text-content rules, which are a partial reimplementation of accname.
+   `aria-label` rules, which are a partial reimplementation of accname. **The text-content rule stays**,
+   ranked just below it: accname derives a name from content only for roles that support it, so a plain
+   `<span>` or `<div>` computes to nothing — and those are exactly what Add Element captures (§4).
+   Capped at 80 characters, since a container's `textContent` can be most of the page.
 3. **Rank the accessible name above `name` and `id`.** Today a button with `id="btn-1"` and text
    "Submit" is named `Btn1`; what a human calls the element should win.
 4. **Drop the ng-model and ng-binding rules.**

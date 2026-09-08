@@ -70,9 +70,26 @@ function tagIndexName(el: Element): string {
   return `${tag}${index}`;
 }
 
+/**
+ * Visible text, for elements the accessible name cannot describe.
+ *
+ * accname only derives a name from content for roles that support it, so a
+ * plain <span> or <div> — exactly what Add Element is for (SPEC §4) — computes
+ * to nothing and would fall through to `Span97`. Capped, because a container's
+ * textContent can be most of the page, and truncating that produces a name as
+ * useless as the tag index it replaced.
+ */
+const MAX_TEXT_SOURCE = 80;
+
+function textContent(el: Element): string {
+  const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+  return text.length > 0 && text.length <= MAX_TEXT_SOURCE ? text : '';
+}
+
 /** Ordered; the first to return a non-empty string wins. */
 const rules: Array<(el: Element) => string> = [
   accessibleName,
+  textContent,
   (el) => attr(el, 'placeholder'),
   (el) => (el.tagName === 'BUTTON' || ['submit', 'reset'].includes((el as HTMLInputElement).type) ? attr(el, 'value') : ''),
   (el) => attr(el, 'name'),
