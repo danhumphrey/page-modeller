@@ -15,7 +15,7 @@
 
     <q-page-container>
       <q-page>
-        <ModelTable :elements="rows" @highlight="notYet('View Matched Elements')" @edit="notYet('Edit')" @remove="removeElement" />
+        <ModelTable :elements="rows" @highlight="highlight" @edit="notYet('Edit')" @remove="removeElement" />
       </q-page>
     </q-page-container>
   </q-layout>
@@ -31,7 +31,7 @@ import { defaultFrameworkId } from '@/src/frameworks';
 import { displayLocator } from '@/src/locators/display';
 import { ModelStore, activeCandidate, type ModelElement } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
-import { isMessage, type ContentToPanel, type PickMode } from '@/src/messaging';
+import { isMessage, type ContentToPanel, type HighlightResult, type PickMode } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 
 const $q = useQuasar();
@@ -166,6 +166,48 @@ function deleteModel() {
   }).onOk(() => {
     store.clear(tabId.value!);
     syncFromStore();
+  });
+}
+
+/**
+ * View Matched Elements (SPEC §8): run the locator live, highlight every match
+ * in the page, and report the count. Exactly one match is the whole point of
+ * the model, so the three outcomes are visually distinct.
+ */
+async function highlight(id: string) {
+  const el = elements.value.find((e) => e.id === id);
+  if (!el || tabId.value == null) return;
+
+  let count = 0;
+  try {
+    const res = (await browser.tabs.sendMessage(tabId.value, { type: 'HIGHLIGHT', candidate: activeCandidate(el) }, { frameId: 0 })) as
+      | HighlightResult
+      | undefined;
+    count = res?.count ?? 0;
+  } catch {
+    $q.notify({
+      message: 'Page Modeller can’t reach this page. Reload the tab, or try a normal http(s) page.',
+      icon: 'block',
+      color: 'negative',
+      timeout: 3000,
+      position: 'bottom',
+    });
+    return;
+  }
+
+  const tone =
+    count === 1
+      ? { icon: 'check_circle', color: 'positive' }
+      : count === 0
+        ? { icon: 'error', color: 'negative' }
+        : { icon: 'warning', color: 'warning' };
+
+  $q.notify({
+    ...tone,
+    message: `${count} element${count === 1 ? '' : 's'} match${count === 1 ? 'es' : ''} that locator`,
+    timeout: 3000,
+    position: 'bottom',
+    actions: [{ label: 'Close', color: 'white' }],
   });
 }
 

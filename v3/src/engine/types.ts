@@ -6,10 +6,10 @@ export type LocatorCandidate =
   | { kind: 'testId'; value: string }
   | { kind: 'role'; role: string; name?: string; exact?: boolean }
   | { kind: 'label'; text: string; exact?: boolean }
-  | { kind: 'placeholder'; text: string }
+  | { kind: 'placeholder'; text: string; exact?: boolean }
   | { kind: 'text'; text: string; exact?: boolean }
-  | { kind: 'altText'; text: string }
-  | { kind: 'title'; text: string }
+  | { kind: 'altText'; text: string; exact?: boolean }
+  | { kind: 'title'; text: string; exact?: boolean }
   | { kind: 'css'; value: string }
   | { kind: 'xpath'; value: string };
 

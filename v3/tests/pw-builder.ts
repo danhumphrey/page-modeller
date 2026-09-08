@@ -14,13 +14,13 @@ export function buildLocator(page: Page, c: LocatorCandidate): Locator {
     case 'label':
       return page.getByLabel(c.text, { exact: c.exact });
     case 'placeholder':
-      return page.getByPlaceholder(c.text);
+      return page.getByPlaceholder(c.text, { exact: c.exact });
     case 'text':
       return page.getByText(c.text, { exact: c.exact });
     case 'altText':
-      return page.getByAltText(c.text);
+      return page.getByAltText(c.text, { exact: c.exact });
     case 'title':
-      return page.getByTitle(c.text);
+      return page.getByTitle(c.text, { exact: c.exact });
     case 'css':
       return page.locator(c.value);
     case 'xpath':

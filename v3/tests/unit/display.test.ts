@@ -9,8 +9,13 @@ describe('displayLocator', () => {
     expect(displayLocator({ kind: 'testId', value: 'submit' }, 'playwright-python')).toBe("getByTestId('submit')");
   });
 
-  it('always emits exact: true for a named role (SPEC §12)', () => {
-    expect(playwrightExpr({ kind: 'role', role: 'link', name: 'About' })).toContain('exact: true');
+  it('renders exact faithfully rather than forcing it', () => {
+    // SPEC §12 says generated candidates always carry exact: true — that is the
+    // engine's guarantee, not the renderer's. A hand-edited locator may
+    // deliberately want Playwright's substring default, and must render as such
+    // or the table would lie about what the test will do.
+    expect(playwrightExpr({ kind: 'role', role: 'link', name: 'About', exact: true })).toContain('exact: true');
+    expect(playwrightExpr({ kind: 'role', role: 'link', name: 'About' })).toBe("getByRole('link', { name: 'About' })");
   });
 
   it('renders other frameworks as type: value', () => {

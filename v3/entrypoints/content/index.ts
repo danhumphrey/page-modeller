@@ -1,4 +1,4 @@
-import { generate } from '@/src/engine/candidates';
+import { generate, resolveCandidate } from '@/src/engine/candidates';
 import { isMessage, type Message } from '@/src/messaging';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
@@ -58,6 +58,51 @@ export default defineContentScript({
       label!.style.top = `${Math.max(0, r.top - 18)}px`;
     }
 
+    // ---- View Matched Elements (SPEC §8) ----
+    //
+    // Yellow fill, red outline, on every match. Boxes are position:fixed against
+    // the viewport, so they go stale if the page scrolls — acceptable for a
+    // 3s lifetime, and the same trade v2.5.1 made.
+    let marks: HTMLDivElement[] = [];
+    let markTimer: ReturnType<typeof setTimeout> | undefined;
+    const HIGHLIGHT_MS = 3000;
+
+    function clearMarks() {
+      for (const m of marks) m.remove();
+      marks = [];
+      if (markTimer) clearTimeout(markTimer);
+      markTimer = undefined;
+    }
+
+    function highlightAll(targets: Element[]) {
+      clearMarks();
+      if (targets.length === 0) return;
+
+      // Scroll the FIRST match into view before measuring, or every box after
+      // it would be positioned against the pre-scroll viewport.
+      targets[0].scrollIntoView({ block: 'center', inline: 'nearest' });
+
+      for (const t of targets) {
+        const r = t.getBoundingClientRect();
+        const mark = document.createElement('div');
+        Object.assign(mark.style, {
+          position: 'fixed',
+          pointerEvents: 'none',
+          zIndex: Z,
+          left: `${r.left}px`,
+          top: `${r.top}px`,
+          width: `${r.width}px`,
+          height: `${r.height}px`,
+          background: 'rgba(255, 235, 59, 0.45)',
+          outline: '2px solid #d32f2f',
+          outlineOffset: '-1px',
+        } as CSSStyleDeclaration);
+        document.documentElement.appendChild(mark);
+        marks.push(mark);
+      }
+      markTimer = setTimeout(clearMarks, HIGHLIGHT_MS);
+    }
+
     const onMove = (e: MouseEvent) => {
       if (!active) return;
       const el = e.target as Element | null;
@@ -105,11 +150,21 @@ export default defineContentScript({
       if (notify) browser.runtime.sendMessage({ type: 'PICKING_STOPPED' }).catch(() => {});
     }
 
-    browser.runtime.onMessage.addListener((msg: unknown) => {
+    browser.runtime.onMessage.addListener((msg: unknown, _sender: unknown, sendResponse: (r: unknown) => void) => {
       if (!isMessage(msg)) return;
       const m = msg as Message;
       if (m.type === 'START_PICKING') start();
       else if (m.type === 'STOP_PICKING') stop();
+      else if (m.type === 'HIGHLIGHT') {
+        // The panel sends this to the main frame only (frameId: 0). This script
+        // runs in every frame, and tabs.sendMessage delivers just the first
+        // reply — so a frame with no matches could answer for one that has
+        // them. Cross-frame highlighting arrives with frame support (SPEC §16).
+        const targets = resolveCandidate(document, m.candidate);
+        highlightAll(targets);
+        sendResponse({ count: targets.length });
+        return true;
+      }
     });
   },
 });

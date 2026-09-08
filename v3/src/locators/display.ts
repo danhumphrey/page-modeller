@@ -14,17 +14,18 @@ export function playwrightExpr(c: LocatorCandidate): string {
       return `getByTestId(${q(c.value)})`;
     case 'role':
       // exact: true always — see SPEC §12 name matching.
-      return c.name === undefined ? `getByRole(${q(c.role)})` : `getByRole(${q(c.role)}, { name: ${q(c.name)}, exact: true })`;
+      if (c.name === undefined) return `getByRole(${q(c.role)})`;
+      return `getByRole(${q(c.role)}, { name: ${q(c.name)}${c.exact ? ', exact: true' : ''} })`;
     case 'label':
-      return `getByLabel(${q(c.text)}, { exact: true })`;
+      return `getByLabel(${q(c.text)}${c.exact ? ', { exact: true }' : ''})`;
     case 'placeholder':
-      return `getByPlaceholder(${q(c.text)})`;
+      return `getByPlaceholder(${q(c.text)}${c.exact ? ', { exact: true }' : ''})`;
     case 'text':
-      return `getByText(${q(c.text)}, { exact: true })`;
+      return `getByText(${q(c.text)}${c.exact ? ', { exact: true }' : ''})`;
     case 'altText':
-      return `getByAltText(${q(c.text)})`;
+      return `getByAltText(${q(c.text)}${c.exact ? ', { exact: true }' : ''})`;
     case 'title':
-      return `getByTitle(${q(c.text)})`;
+      return `getByTitle(${q(c.text)}${c.exact ? ', { exact: true }' : ''})`;
     case 'css':
     case 'xpath':
       return `locator(${q(c.value)})`;

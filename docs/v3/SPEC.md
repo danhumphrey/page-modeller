@@ -143,6 +143,21 @@ saving. **[settled]**
 | 0 | red error | *0 elements match that locator* |
 | >1 | amber warning | *N elements match that locator* |
 
+**The count has to be the count the generated test will get.** The in-page resolver is our own
+approximation of Playwright's matching, and the eye reports from it, so any drift means showing the user
+a number their test will not reproduce. Three behaviours this forces, all found by asserting every
+candidate against real Playwright rather than reasoning about it:
+
+- **`exact` is honoured.** `exact: true` is case-sensitive whole-string; the default is case-insensitive
+  substring. Whitespace is normalised either way — exact match still trims, and matching by text collapses
+  runs and turns line breaks into spaces. Generated candidates always set `exact: true` (§12), but a
+  hand-edited locator may not, and the resolver must follow the locator rather than the convention.
+- **Role candidates exclude elements hidden from the accessibility tree**, since `getByRole` defaults to
+  `includeHidden: false`. The same ARIA tree exclusion as §4.
+- **Text candidates match the innermost element only.** Playwright matches the smallest element
+  containing the text, so an ancestor whose text comes entirely from a matching descendant does not
+  count — otherwise a `<fieldset>` matches alongside its `<legend>`.
+
 ## 9. Edit dialog
 
 Title **Edit Element**. Fields: **Name** · locator **type** dropdown · editable locator **value** · eye.

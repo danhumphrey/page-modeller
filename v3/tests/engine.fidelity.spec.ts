@@ -24,6 +24,20 @@ test('locator engine matches real Playwright resolution', async ({ page }) => {
         result: window.__spike.generate(el) as ElementResult,
       }));
 
+      // Every candidate's predicted count must equal Playwright's real count.
+      // The engine's in-page resolver is our own approximation of Playwright
+      // semantics — text matching, `exact`, whitespace normalisation — and the
+      // eye (SPEC §8) reports from it. If the two drift, the count the user is
+      // shown is not the count their test will get.
+      for (const { candidate, predictedCount } of result.candidates) {
+        const actual = await buildLocator(page, candidate).count();
+        if (actual !== predictedCount) {
+          failures.push(
+            `${fixture}/${spikeId}: ${candidate.kind} predicted ${predictedCount}, Playwright resolved ${actual}`
+          );
+        }
+      }
+
       if (result.preferredIndex < 0) {
         failures.push(`${fixture}/${spikeId}: no unique candidate`);
         continue;
