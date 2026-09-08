@@ -89,10 +89,7 @@
     "webpack-shell-plugin-next": "^2.1.1"
   },
   "jest": {
-    "testEnvironment": "jsdom",
-    "testPathIgnorePatterns": ["/node_modules/", "/v3/"],
-    "modulePathIgnorePatterns": ["/v3/"],
-    "coveragePathIgnorePatterns": ["/node_modules/", "/v3/"]
+    "testEnvironment": "jsdom"
   },
   "overrides": {
     "postcss": "^8.5.14",
