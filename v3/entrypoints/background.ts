@@ -9,10 +9,17 @@ import { isMessage, type Message } from '@/src/messaging';
 // content script directly. Every surface goes through here, so there is one
 // path rather than one per host.
 export default defineBackground(() => {
+  // Printed on startup so it is obvious which build is actually running. Both
+  // browsers show background output in their browser console, unlike a DevTools
+  // panel page, whose logs do not reliably surface anywhere convenient.
+  console.log('[Page Modeller] background ready', import.meta.env.MODE, import.meta.env.BROWSER);
+
   browser.runtime.onMessage.addListener((msg: unknown) => {
     if (!isMessage(msg)) return;
     const m = msg as Message;
     if (m.type !== 'RELAY_TO_TAB') return;
+
+    if (import.meta.env.DEV) console.log('[Page Modeller] relay', m.message.type, '→ tab', m.tabId);
 
     browser.tabs.sendMessage(m.tabId, m.message).catch((err) => {
       // No content script: a browser-internal page, the add-on store, or a tab
