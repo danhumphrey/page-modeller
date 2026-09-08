@@ -20,6 +20,9 @@ import { loadSettings } from '@/src/settings';
 //     background always sees the sender, and stamps it.
 //   * A model held in a panel is one model per *panel*: a sidebar and a
 //     DevTools panel on the same tab showed different rows.
+/** Where Support goes — the repository, as in v2.5.1. */
+const SUPPORT_URL = 'https://github.com/danhumphrey/page-modeller';
+
 export default defineBackground(() => {
   console.log('[Page Modeller] background ready', import.meta.env.MODE, import.meta.env.BROWSER);
 
@@ -173,6 +176,31 @@ export default defineBackground(() => {
         });
         return;
     }
+  });
+
+  // Right-clicking the toolbar icon (SPEC §15). v2.5.1 carried Support and
+  // Options in a popup; the popup is gone, because a click should open the
+  // panel rather than a menu, and this is where those links belong instead.
+  //
+  // Created on install rather than on every worker start: menu items are kept
+  // by the browser, and the worker is restarted constantly.
+  const MENU = {
+    options: 'Options',
+    support: 'Support',
+  };
+
+  browser.runtime.onInstalled.addListener(() => {
+    // removeAll first, or re-creating a known id throws on update.
+    browser.contextMenus.removeAll(() => {
+      for (const [id, title] of Object.entries(MENU)) {
+        browser.contextMenus.create({ id, title, contexts: ['action'] });
+      }
+    });
+  });
+
+  browser.contextMenus.onClicked.addListener((info) => {
+    if (info.menuItemId === 'options') void browser.runtime.openOptionsPage();
+    else if (info.menuItemId === 'support') void browser.tabs.create({ url: SUPPORT_URL });
   });
 
   if (import.meta.env.FIREFOX) {

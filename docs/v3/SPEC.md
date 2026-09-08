@@ -516,8 +516,12 @@ platform-aware shortcut (`Command+Option+I` on Mac, `Control+Shift+I` elsewhere)
 the GitHub repo, **OPTIONS** → `runtime.openOptionsPage()`.
 
 Its reason for existing — DevTools being the only surface — is gone in v3. **The popup is dropped: the
-toolbar click opens the panel** (side panel on Chrome, sidebar toggle on Firefox). Support moves into the
-panel; Options stays reachable via the browser's own extension menu. **[settled]**
+toolbar click opens the panel** (side panel on Chrome, sidebar toggle on Firefox), because a click
+should get you working rather than show you a menu. **[settled]**
+
+**Right-clicking the toolbar icon carries what the popup did** — **Options** and **Support** — via
+`contextMenus` with `contexts: ['action']`. The items are created on install rather than on every worker
+start: the browser keeps them, and the worker is restarted constantly. **[settled]**
 
 ## 16. Frames
 
