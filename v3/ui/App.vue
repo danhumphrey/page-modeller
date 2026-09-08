@@ -3,6 +3,9 @@
     <q-header elevated class="bg-primary">
       <q-toolbar>
         <q-toolbar-title class="text-subtitle1">Page Modeller</q-toolbar-title>
+        <q-chip dense square size="sm" color="white" text-color="primary" class="q-mr-sm" data-testid="surface-label">
+          {{ host.label }}
+        </q-chip>
         <q-btn
           :color="picking ? 'negative' : 'white'"
           :text-color="picking ? 'white' : 'primary'"
@@ -74,17 +77,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, inject, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { browser } from 'wxt/browser';
 import { deriveName } from '@/src/engine/naming';
 import type { ElementModel } from '@/src/engine/types';
 import { isMessage, type ContentToPanel } from '@/src/messaging';
+import { hostKey } from '@/host/types';
 import { generators, defaultGenerator, type PomModel } from '@/src/generators';
 import { candidateExpr } from '@/src/generators/playwright-ts';
 
 const $q = useQuasar();
+const host = inject(hostKey)!;
 const picking = ref(false);
+// The tab the panel is driving. Held as state, not queried per message, so the
+// runtime listener below can reject traffic from other tabs synchronously.
+const tabId = ref<number | undefined>();
 const className = ref('GeneratedPage');
 const elements = ref<ElementModel[]>([]);
 const generator = computed(() => generators[defaultGenerator]);
@@ -95,21 +103,41 @@ function candidateOptions(el: ElementModel) {
   return el.candidates.map((c, i) => ({ label: candidateExpr(c.candidate), value: i }));
 }
 
-async function activeTabId(): Promise<number | undefined> {
-  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-  return tab?.id;
+onMounted(async () => {
+  tabId.value = await host.getTabId();
+});
+
+host.onTabChanged((next) => {
+  // Leave the old tab's picker off rather than stranded in pick mode.
+  if (picking.value && tabId.value != null) void send(tabId.value, 'STOP_PICKING');
+  picking.value = false;
+  tabId.value = next;
+});
+
+async function send(target: number, type: 'START_PICKING' | 'STOP_PICKING'): Promise<boolean> {
+  try {
+    await browser.tabs.sendMessage(target, { type });
+    return true;
+  } catch {
+    // No content script: a browser-internal page, the web store, or a tab that
+    // was already open when the extension loaded.
+    $q.notify({
+      message: 'Page Modeller can\u2019t reach this page. Reload the tab, or try a normal http(s) page.',
+      icon: 'block',
+      color: 'negative',
+      timeout: 3000,
+      position: 'bottom',
+    });
+    return false;
+  }
 }
 
 async function togglePick() {
-  const tabId = await activeTabId();
-  if (tabId == null) return;
-  if (picking.value) {
-    await browser.tabs.sendMessage(tabId, { type: 'STOP_PICKING' });
-    picking.value = false;
-  } else {
-    await browser.tabs.sendMessage(tabId, { type: 'START_PICKING' });
-    picking.value = true;
-  }
+  const target = tabId.value ?? (await host.getTabId());
+  tabId.value = target;
+  if (target == null) return;
+  const next = !picking.value;
+  if (await send(target, next ? 'START_PICKING' : 'STOP_PICKING')) picking.value = next;
 }
 
 function remove(id: string) {
@@ -118,8 +146,9 @@ function remove(id: string) {
 
 let idSeq = 0;
 
-browser.runtime.onMessage.addListener((msg: unknown) => {
+browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: number } }) => {
   if (!isMessage(msg)) return;
+  if (sender.tab?.id !== tabId.value) return;
   const m = msg as ContentToPanel;
   if (m.type === 'ELEMENT_PICKED') {
     const name = deriveName(m.result, usedNames);
