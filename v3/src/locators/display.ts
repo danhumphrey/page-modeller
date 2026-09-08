@@ -27,8 +27,13 @@ export function playwrightExpr(c: LocatorCandidate): string {
     case 'title':
       return `getByTitle(${q(c.text)}${c.exact ? ', { exact: true }' : ''})`;
     case 'css':
-    case 'xpath':
       return `locator(${q(c.value)})`;
+    case 'xpath':
+      // The `xpath=` prefix is not optional. Playwright only infers XPath from
+      // a leading `//` or `..`, and the engine's fallback path starts with a
+      // single `/` — `locator('/html[1]/body[1]/div[2]')` is parsed as CSS and
+      // throws "Unexpected token /".
+      return `locator(${q(`xpath=${c.value}`)})`;
     default:
       // Selenium's By strategies have no Playwright call. They should not reach
       // a Playwright model, but if one is hand-typed and the framework changes,
