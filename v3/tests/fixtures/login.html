@@ -2,6 +2,13 @@
 <html lang="en">
 <head><meta charset="utf-8"><title>Login</title></head>
 <body>
+  <!-- Fixture navigation, for hand-testing. Deliberately outside <main>
+       so it does not change the breadcrumb of anything inside it, and
+       labelled with filenames so no link text can collide with a tagged
+       element's accessible name. -->
+  <nav aria-label="Fixtures" style="font: 12px/1.6 ui-monospace, monospace; padding: 6px 8px; border-bottom: 1px solid #ddd; margin-bottom: 12px">
+    fixtures: <strong>login</strong> · <a href="widgets.html">widgets</a> · <a href="edgecases.html">edgecases</a> · <a href="ambiguous.html">ambiguous</a>
+  </nav>
   <header>
     <nav aria-label="Primary">
       <a href="/" data-spike="nav-home">Home</a>

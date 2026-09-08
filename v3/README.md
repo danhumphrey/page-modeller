@@ -122,7 +122,7 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
 17. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
-engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a
+engine was validated on — each links to the others, so you can move between them while testing — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a
 mismatch there is a real signal. Optional; the fidelity spec covers them automatically. They're bare
 markup, so the failures that matter — overlays, sticky headers, shadow roots, frames — only show up on
 real sites.
