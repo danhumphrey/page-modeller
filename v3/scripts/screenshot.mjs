@@ -21,7 +21,7 @@ for (const s of SURFACES) {
   const page = await ctx.newPage();
   await page.setViewportSize({ width: s.width, height: s.height });
   await page.goto(`chrome-extension://${id}/${s.page}`);
-  await page.waitForSelector('[data-testid="pick-toggle"]');
+  await page.waitForSelector('[data-testid="btn-scan"]');
   await page.screenshot({ path: s.out });
   await page.close();
   console.log(`wrote ${s.out}`);

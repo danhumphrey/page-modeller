@@ -1,193 +1,58 @@
 <template>
   <q-layout view="hHh lpR fFf">
-    <q-header elevated class="bg-primary">
-      <q-toolbar>
-        <q-toolbar-title class="text-subtitle1">Page Modeller</q-toolbar-title>
-        <q-chip dense square size="sm" color="white" text-color="primary" class="q-mr-sm" data-testid="surface-label">
-          {{ host.label }}
-        </q-chip>
-        <q-btn
-          :color="picking ? 'negative' : 'white'"
-          :text-color="picking ? 'white' : 'primary'"
-          :icon="picking ? 'stop' : 'ads_click'"
-          :label="picking ? 'Stop' : 'Pick element'"
-          dense
-          no-caps
-          data-testid="pick-toggle"
-          @click="togglePick"
-        />
-      </q-toolbar>
+    <q-header elevated>
+      <AppToolbar
+        v-model:framework-id="frameworkId"
+        :has-model="elements.length > 0"
+        :is-scanning="isScanning"
+        :is-adding="isAdding"
+        @scan="notYet('Scan')"
+        @add="notYet('Add Element')"
+        @delete-model="notYet('Delete Model')"
+        @generate="notYet('Generate Code')"
+      />
     </q-header>
 
     <q-page-container>
-      <q-page padding>
-        <q-input v-model="className" dense outlined label="Class name" class="q-mb-md" data-testid="class-name" />
-
-        <div v-if="elements.length === 0" class="text-grey text-center q-pa-lg" data-testid="empty-state">
-          Click <strong>Pick element</strong>, then click elements on the page to model them.
-        </div>
-
-        <q-list v-else bordered separator class="rounded-borders q-mb-md">
-          <q-item v-for="el in elements" :key="el.id">
-            <q-item-section>
-              <q-input v-model="el.name" dense borderless class="text-weight-medium" />
-              <div class="row items-center q-gutter-xs q-mt-xs">
-                <q-chip v-if="el.role" dense size="sm" color="blue-1" text-color="primary">{{ el.role }}</q-chip>
-                <q-select
-                  v-model="el.selectedIndex"
-                  :options="candidateOptions(el)"
-                  emit-value
-                  map-options
-                  dense
-                  options-dense
-                  borderless
-                  class="col"
-                />
-              </div>
-            </q-item-section>
-            <q-item-section side top>
-              <q-btn flat round dense size="sm" icon="close" @click="remove(el.id)" />
-            </q-item-section>
-          </q-item>
-        </q-list>
-
-        <q-card flat bordered>
-          <q-card-section class="row items-center q-py-sm">
-            <div class="text-overline">{{ generator.label }}</div>
-            <q-space />
-            <q-btn
-              flat
-              dense
-              icon="content_copy"
-              label="Copy"
-              no-caps
-              :disable="elements.length === 0"
-              data-testid="copy-code"
-              @click="copyCode"
-            />
-          </q-card-section>
-          <q-separator />
-          <q-card-section class="q-pa-none">
-            <pre class="code" data-testid="code-output">{{ generatedCode }}</pre>
-          </q-card-section>
-        </q-card>
+      <q-page>
+        <ModelTable
+          :elements="elements"
+          @highlight="notYet('View Matched Elements')"
+          @edit="notYet('Edit')"
+          @remove="notYet('Delete')"
+        />
       </q-page>
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted } from 'vue';
+import { ref, inject } from 'vue';
 import { useQuasar } from 'quasar';
-import { browser } from 'wxt/browser';
-import { deriveName } from '@/src/engine/naming';
-import type { ElementModel } from '@/src/engine/types';
-import { isMessage, type ContentToPanel } from '@/src/messaging';
+import AppToolbar from './AppToolbar.vue';
+import ModelTable, { type ModelRow } from './ModelTable.vue';
+import { defaultFrameworkId } from '@/src/frameworks';
 import { hostKey } from '@/host/types';
-import { generators, defaultGenerator, type PomModel } from '@/src/generators';
-import { candidateExpr } from '@/src/generators/playwright-ts';
 
+// Shell only (REWRITE-PLAN §12 step 3): toolbar and table, no capture yet. The
+// per-tab session model (SPEC §5) and Add Element (SPEC §4) come next, and
+// `elements` becomes that model.
 const $q = useQuasar();
 const host = inject(hostKey)!;
-const picking = ref(false);
-// The tab the panel is driving. Held as state, not queried per message, so the
-// runtime listener below can reject traffic from other tabs synchronously.
-const tabId = ref<number | undefined>();
-const className = ref('GeneratedPage');
-const elements = ref<ElementModel[]>([]);
-const generator = computed(() => generators[defaultGenerator]);
 
-const usedNames = new Set<string>();
+const frameworkId = ref(defaultFrameworkId);
+const elements = ref<ModelRow[]>([]);
+const isScanning = ref(false);
+const isAdding = ref(false);
 
-function candidateOptions(el: ElementModel) {
-  return el.candidates.map((c, i) => ({ label: candidateExpr(c.candidate), value: i }));
+function notYet(what: string) {
+  $q.notify({ message: `${what} — not built yet`, icon: 'construction', timeout: 1500, position: 'bottom' });
 }
 
-onMounted(async () => {
-  tabId.value = await host.getTabId();
+// Keeps the host adapter live so tab switching is exercised while hand-testing;
+// the model it will swap arrives with SPEC §5.
+host.onTabChanged(() => {
+  isScanning.value = false;
+  isAdding.value = false;
 });
-
-host.onTabChanged((next) => {
-  // Leave the old tab's picker off rather than stranded in pick mode.
-  if (picking.value && tabId.value != null) void send(tabId.value, 'STOP_PICKING');
-  picking.value = false;
-  tabId.value = next;
-});
-
-async function send(target: number, type: 'START_PICKING' | 'STOP_PICKING'): Promise<boolean> {
-  try {
-    await browser.tabs.sendMessage(target, { type });
-    return true;
-  } catch {
-    // No content script: a browser-internal page, the web store, or a tab that
-    // was already open when the extension loaded.
-    $q.notify({
-      message: 'Page Modeller can\u2019t reach this page. Reload the tab, or try a normal http(s) page.',
-      icon: 'block',
-      color: 'negative',
-      timeout: 3000,
-      position: 'bottom',
-    });
-    return false;
-  }
-}
-
-async function togglePick() {
-  const target = tabId.value ?? (await host.getTabId());
-  tabId.value = target;
-  if (target == null) return;
-  const next = !picking.value;
-  if (await send(target, next ? 'START_PICKING' : 'STOP_PICKING')) picking.value = next;
-}
-
-function remove(id: string) {
-  elements.value = elements.value.filter((e) => e.id !== id);
-}
-
-let idSeq = 0;
-
-browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: number } }) => {
-  if (!isMessage(msg)) return;
-  if (sender.tab?.id !== tabId.value) return;
-  const m = msg as ContentToPanel;
-  if (m.type === 'ELEMENT_PICKED') {
-    const name = deriveName(m.result, usedNames);
-    elements.value.push({
-      ...m.result,
-      id: `el-${idSeq++}`,
-      name,
-      selectedIndex: m.result.preferredIndex >= 0 ? m.result.preferredIndex : 0,
-      framePath: [],
-    });
-  } else if (m.type === 'PICKING_STOPPED') {
-    picking.value = false;
-  }
-});
-
-const generatedCode = computed(() => {
-  const model: PomModel = {
-    className: className.value,
-    elements: elements.value.map((el) => ({
-      name: el.name,
-      candidate: el.candidates[el.selectedIndex]?.candidate ?? el.candidates[0].candidate,
-      role: el.role,
-    })),
-  };
-  return generator.value.generate(model);
-});
-
-async function copyCode() {
-  await navigator.clipboard.writeText(generatedCode.value);
-  $q.notify({ message: 'Copied to clipboard', icon: 'content_copy', timeout: 1200, position: 'bottom' });
-}
 </script>
-
-<style scoped>
-.code {
-  margin: 0;
-  padding: 12px;
-  font: 12px/1.5 ui-monospace, SFMono-Regular, monospace;
-  white-space: pre;
-  overflow-x: auto;
-}
-</style>

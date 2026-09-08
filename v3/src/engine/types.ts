@@ -33,13 +33,3 @@ export interface ElementResult {
 export interface FrameStep {
   frame: LocatorCandidate;
 }
-
-/** A picked element as held in the side-panel session model. */
-export interface ElementModel extends ElementResult {
-  id: string;
-  /** Derived property/method name (see naming.ts). */
-  name: string;
-  /** Index into `candidates` the user has chosen (defaults to preferredIndex). */
-  selectedIndex: number;
-  framePath: FrameStep[];
-}

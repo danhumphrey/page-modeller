@@ -308,15 +308,14 @@ before starting the next.
    which is deferred and, in dev, fetched from the Vite dev server — so `panels.create` ran late or never.
    Now a parser-blocking classic script from `public/`, guarded by `scripts/check-manifests.mjs`.
 
-2. **Strip the spike UI.** `v3/ui/App.vue` and `v3/src/generators/` were scaffolded from the locator spike
+2. **Strip the spike UI.** ✅ **Done.** `v3/ui/App.vue` and `v3/src/generators/` were scaffolded from the locator spike
    four days before anyone wrote down what the tool does, and they do not match it — a class-name field, an
    always-visible live preview, a wrapper class the tool does not emit, an inline-edited list instead of a
    table. Delete rather than adapt. **Survivors: `v3/src/engine/` and `tests/engine.fidelity.spec.ts`** —
    the only parts measured against real Playwright.
 
-3. **Toolbar + table shell** (SPEC §3, §6). Scan · Delete Model · framework selector · Add Element ·
-   Generate Code with the enablement rules; Name/Locator/Actions table with the empty state. No capture
-   yet — buttons disabled or inert. First clickable increment.
+3. **Toolbar + table shell** (SPEC §3, §6). ✅ **Done** — `ui/AppToolbar.vue`, `ui/ModelTable.vue`,
+   `src/frameworks.ts`. Enablement rules wired; buttons acknowledge and do nothing. Awaiting hand-test.
 
 4. **Model lifetime** (SPEC §5). One model per tab, held in memory, swapping on tab change. Small, and
    everything after it assumes it.
