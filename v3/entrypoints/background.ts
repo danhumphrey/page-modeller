@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { isMessage, type Message } from '@/src/messaging';
+import { isMessage, PANEL_PORT, type Message } from '@/src/messaging';
 import { ModelStore, usedNames, type TabModel } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
 import { defaultFrameworkId } from '@/src/frameworks';
@@ -29,6 +29,30 @@ export default defineBackground(() => {
   }
 
   browser.tabs.onRemoved.addListener((tabId) => store.clear(tabId));
+
+  // A model with no panel attached is abandoned work, so the last panel closing
+  // ends the session and drops everything. Ports are how the background can
+  // tell: onDisconnect fires when the page goes away, which covers closing the
+  // sidebar, closing DevTools, and the tab hosting them being closed.
+  //
+  // Deliberately not per-tab. A side panel follows the active tab, so a
+  // per-tab port would drop tab A's model the moment you looked at tab B —
+  // switching away and back must not lose work (SPEC §5).
+  const panels = new Set<{ onDisconnect: { addListener(cb: () => void): void } }>();
+
+  browser.runtime.onConnect.addListener((port) => {
+    if (port.name !== PANEL_PORT) return;
+    panels.add(port);
+    port.onDisconnect.addListener(() => {
+      panels.delete(port);
+      if (panels.size > 0) return;
+      const dropped = store.tabIds();
+      store.clearAll();
+      // Anything still listening should show an empty table rather than stale
+      // rows, in the window before it too goes away.
+      for (const tabId of dropped) publish(tabId, store.get(tabId));
+    });
+  });
 
   browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: number } }) => {
     if (!isMessage(msg)) return;

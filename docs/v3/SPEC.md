@@ -97,6 +97,7 @@ assumptions: it is per *window*, it follows the active tab, and it outlives navi
 | Navigate within a tab | model kept — may be stale |
 | Close the tab | that model is gone |
 | Close a panel | model survives; the other surface still has it |
+| Close the **last** panel | session over — every model is dropped |
 | Both surfaces open | **the same model**, and a pick in one appears in the other |
 
 A model can therefore never be displayed against a page it was not built from. Nothing is persisted to
@@ -110,6 +111,13 @@ sidebar should not lose the work.
 
 The framework selection lives in the model for the same reason: two surfaces rendering one model in
 different frameworks would show different locators for the same row.
+
+**A model with no panel attached is abandoned work**, so closing the last panel ends the session and
+drops everything. Panels hold a `runtime.connect` port for their lifetime and the background counts
+them; `onDisconnect` covers closing the sidebar, closing DevTools, and the tab hosting them going away.
+The count is deliberately global rather than per tab — a side panel follows the active tab, so a per-tab
+port would drop tab A's model the moment you looked at tab B, and switching away and back must not lose
+work.
 
 Because scan is once-per-model (§4), a model kept across a navigation blocks scanning the new page until
 it is deleted, so the panel needs to say the model has gone stale.

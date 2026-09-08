@@ -37,7 +37,7 @@ import ModelTable, { type ModelRow } from './ModelTable.vue';
 import { defaultFrameworkId } from '@/src/frameworks';
 import { displayLocator } from '@/src/locators/display';
 import { activeCandidate, emptyModel, type TabModel } from '@/src/model';
-import { isMessage, type BackgroundToPanel, type PanelToBackground, type PanelToContent } from '@/src/messaging';
+import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, type PanelToContent } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 import { defaultSettings } from '@/src/settings';
 
@@ -143,7 +143,14 @@ function onRuntimeMessage(msg: unknown) {
   }
 }
 
+// Held open for the panel's lifetime. The background counts these to know when
+// the last panel has closed, at which point the session is over and the models
+// go (SPEC §5). Disconnect happens on its own when the page unloads, which is
+// what covers closing the sidebar or closing DevTools.
+let port: { disconnect(): void } | undefined;
+
 onMounted(async () => {
+  port = browser.runtime.connect({ name: PANEL_PORT });
   tabId.value = await host.getTabId();
   if (tabId.value != null) toBackground({ type: 'GET_MODEL', tabId: tabId.value });
   // The content script listens for Escape too, but after clicking Add Element
@@ -155,6 +162,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onPanelKey, true);
   browser.runtime.onMessage.removeListener(onRuntimeMessage);
+  port?.disconnect();
 });
 
 host.onTabChanged((next) => {

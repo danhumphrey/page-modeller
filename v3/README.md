@@ -84,7 +84,8 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
 9. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
    still opens the editor.
 10. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
-    rows, and a pick in either appears in both. Close one; the model survives in the other.
+    rows, and a pick in either appears in both. Close one; the model survives in the other. Close them
+    all and reopen; the model is gone, because the session ended.
 11. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
    switch to B, add something different, switch back — A must be intact.
 12. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).

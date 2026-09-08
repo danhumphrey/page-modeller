@@ -63,4 +63,13 @@ export class ModelStore {
   clear(tabId: number): void {
     this.byTab.delete(tabId);
   }
+
+  /** Every model. Used when the last panel closes — the session is over. */
+  clearAll(): void {
+    this.byTab.clear();
+  }
+
+  tabIds(): number[] {
+    return [...this.byTab.keys()];
+  }
 }

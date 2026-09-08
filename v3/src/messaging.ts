@@ -38,6 +38,12 @@ export type ContentToPanel =
 // panel could not reach the page at all. Relaying through the background is the
 // documented route, and using it everywhere keeps one code path instead of a
 // per-surface branch.
+/**
+ * Port name every panel connects on. The background counts these to know when
+ * the last panel has closed and the session is over (SPEC §5).
+ */
+export const PANEL_PORT = 'page-modeller-panel';
+
 export type PanelToBackground =
   | { type: 'RELAY_TO_TAB'; tabId: number; message: PanelToContent }
   // Model commands. The background owns the model (SPEC §5), so panels ask for
