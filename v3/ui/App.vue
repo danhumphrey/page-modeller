@@ -7,52 +7,154 @@
         :is-scanning="isScanning"
         :is-adding="isAdding"
         @scan="notYet('Scan')"
-        @add="notYet('Add Element')"
-        @delete-model="notYet('Delete Model')"
+        @add="toggleAdd"
+        @delete-model="deleteModel"
         @generate="notYet('Generate Code')"
       />
     </q-header>
 
     <q-page-container>
       <q-page>
-        <ModelTable
-          :elements="elements"
-          @highlight="notYet('View Matched Elements')"
-          @edit="notYet('Edit')"
-          @remove="notYet('Delete')"
-        />
+        <ModelTable :elements="rows" @highlight="notYet('View Matched Elements')" @edit="notYet('Edit')" @remove="removeElement" />
       </q-page>
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref, inject } from 'vue';
+import { ref, computed, inject, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
+import { browser } from 'wxt/browser';
 import AppToolbar from './AppToolbar.vue';
 import ModelTable, { type ModelRow } from './ModelTable.vue';
 import { defaultFrameworkId } from '@/src/frameworks';
+import { displayLocator } from '@/src/locators/display';
+import { ModelStore, activeCandidate, type ModelElement } from '@/src/model';
+import { uniqueName } from '@/src/engine/naming';
+import { isMessage, type ContentToPanel, type PickMode } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 
-// Shell only (REWRITE-PLAN §12 step 3): toolbar and table, no capture yet. The
-// per-tab session model (SPEC §5) and Add Element (SPEC §4) come next, and
-// `elements` becomes that model.
 const $q = useQuasar();
 const host = inject(hostKey)!;
 
 const frameworkId = ref(defaultFrameworkId);
-const elements = ref<ModelRow[]>([]);
+const tabId = ref<number | undefined>();
 const isScanning = ref(false);
 const isAdding = ref(false);
+
+// One model per tab (SPEC §5). `elements` is a shallow copy of the active tab's
+// list so Vue tracks it; the store owns the real thing.
+const store = new ModelStore();
+const elements = ref<ModelElement[]>([]);
+
+function syncFromStore() {
+  elements.value = tabId.value == null ? [] : [...store.get(tabId.value).elements];
+}
+
+const rows = computed<ModelRow[]>(() =>
+  elements.value.map((el) => ({
+    id: el.id,
+    name: el.name,
+    locator: displayLocator(activeCandidate(el), frameworkId.value),
+  }))
+);
+
+onMounted(async () => {
+  tabId.value = await host.getTabId();
+  syncFromStore();
+});
+
+host.onTabChanged(async (next) => {
+  if (isPicking() && tabId.value != null) void send(tabId.value, { type: 'STOP_PICKING' });
+  isScanning.value = isAdding.value = false;
+  tabId.value = next;
+  syncFromStore();
+});
+
+const isPicking = () => isScanning.value || isAdding.value;
+
+async function send(target: number, msg: { type: 'START_PICKING'; mode: PickMode } | { type: 'STOP_PICKING' }): Promise<boolean> {
+  try {
+    await browser.tabs.sendMessage(target, msg);
+    return true;
+  } catch {
+    // No content script: a browser-internal page, the web store, or a tab that
+    // was already open when the extension loaded.
+    $q.notify({
+      message: 'Page Modeller can’t reach this page. Reload the tab, or try a normal http(s) page.',
+      icon: 'block',
+      color: 'negative',
+      timeout: 3000,
+      position: 'bottom',
+    });
+    return false;
+  }
+}
+
+async function toggleAdd() {
+  const target = tabId.value ?? (await host.getTabId());
+  tabId.value = target;
+  if (target == null) return;
+  const next = !isAdding.value;
+  const ok = await send(target, next ? { type: 'START_PICKING', mode: 'add' } : { type: 'STOP_PICKING' });
+  if (ok) isAdding.value = next;
+}
+
+let idSeq = 0;
+
+browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: number } }) => {
+  if (!isMessage(msg)) return;
+  // Only this panel's tab. Without it, a DevTools panel would absorb every
+  // other tab's picks.
+  if (sender.tab?.id !== tabId.value || tabId.value == null) return;
+  const m = msg as ContentToPanel;
+
+  if (m.type === 'ELEMENT_PICKED') {
+    const model = store.get(tabId.value);
+    model.elements.push({
+      ...m.result,
+      id: `el-${idSeq++}`,
+      name: uniqueName(m.result.suggestedName, model.usedNames),
+      selectedIndex: m.result.preferredIndex >= 0 ? m.result.preferredIndex : 0,
+    });
+    // Picking is one-shot (SPEC §4); the content script has already stopped.
+    isAdding.value = isScanning.value = false;
+    syncFromStore();
+  } else if (m.type === 'PICKING_STOPPED') {
+    isAdding.value = isScanning.value = false;
+  }
+});
+
+function removeElement(id: string) {
+  const el = elements.value.find((e) => e.id === id);
+  if (!el || tabId.value == null) return;
+  $q.dialog({
+    title: 'Delete Element',
+    message: `Really delete ${el.name}?`,
+    cancel: true,
+    ok: { label: 'Yes', flat: true },
+  }).onOk(() => {
+    const model = store.get(tabId.value!);
+    model.elements = model.elements.filter((e) => e.id !== id);
+    model.usedNames.delete(el.name);
+    syncFromStore();
+  });
+}
+
+function deleteModel() {
+  if (tabId.value == null) return;
+  $q.dialog({
+    title: 'Delete Model',
+    message: 'Really delete the model?',
+    cancel: true,
+    ok: { label: 'Yes', flat: true },
+  }).onOk(() => {
+    store.clear(tabId.value!);
+    syncFromStore();
+  });
+}
 
 function notYet(what: string) {
   $q.notify({ message: `${what} — not built yet`, icon: 'construction', timeout: 1500, position: 'bottom' });
 }
-
-// Keeps the host adapter live so tab switching is exercised while hand-testing;
-// the model it will swap arrives with SPEC §5.
-host.onTabChanged(() => {
-  isScanning.value = false;
-  isAdding.value = false;
-});
 </script>

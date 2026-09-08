@@ -72,6 +72,9 @@ export default defineContentScript({
       e.stopPropagation();
       const el = e.target as Element;
       const result = generate(el);
+      // Both modes are one-shot (SPEC §4) — stop before reporting, so the
+      // overlay is gone by the time the panel re-renders.
+      stop({ notify: false });
       // Rejects when no panel is open; that's fine, drop it.
       browser.runtime.sendMessage({ type: 'ELEMENT_PICKED', result }).catch(() => {});
     };
@@ -88,14 +91,18 @@ export default defineContentScript({
       document.addEventListener('keydown', onKey, true);
     }
 
-    function stop() {
+    /**
+     * `notify: false` when a pick is what stopped us — ELEMENT_PICKED already
+     * tells the panel picking is over, and a second message would race it.
+     */
+    function stop({ notify = true }: { notify?: boolean } = {}) {
       if (!active) return;
       active = false;
       document.removeEventListener('mousemove', onMove, true);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKey, true);
       removeOverlay();
-      browser.runtime.sendMessage({ type: 'PICKING_STOPPED' }).catch(() => {});
+      if (notify) browser.runtime.sendMessage({ type: 'PICKING_STOPPED' }).catch(() => {});
     }
 
     browser.runtime.onMessage.addListener((msg: unknown) => {

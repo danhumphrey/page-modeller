@@ -24,6 +24,8 @@ export interface ElementResult {
   tag: string;
   role: string | null;
   accessibleName: string | null;
+  /** Name derived in the page, before de-duplication (see naming.ts). */
+  suggestedName: string;
   candidates: RankedCandidate[];
   /** Index of the first predicted-unique candidate, or -1 if none. */
   preferredIndex: number;

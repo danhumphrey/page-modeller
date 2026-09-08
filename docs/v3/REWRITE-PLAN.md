@@ -317,13 +317,18 @@ before starting the next.
 3. **Toolbar + table shell** (SPEC §3, §6). ✅ **Done** — `ui/AppToolbar.vue`, `ui/ModelTable.vue`,
    `src/frameworks.ts`. Enablement rules wired; buttons acknowledge and do nothing. Awaiting hand-test.
 
-4. **Model lifetime** (SPEC §5). One model per tab, held in memory, swapping on tab change. Small, and
-   everything after it assumes it.
+4. **Model lifetime** (SPEC §5). ✅ **Done** — `src/model.ts`, one model per tab in memory.
 
-5. **Add Element** (SPEC §4). One-shot pick of any single element → a row. Exercises the whole path:
-   pick → engine → naming → table.
+5. **Add Element** (SPEC §4). ✅ **Done** — one-shot pick → row, plus row delete and Delete Model with
+   their confirms. Awaiting hand-test.
 
-6. **Naming** (SPEC §13). Accessible name first, the word-boundary fix, drop the Angular rules.
+6. **Naming** (SPEC §13). ✅ **Done** — `src/engine/naming.ts`, split so `baseName` runs in the page and
+   `uniqueName` in the panel.
+
+   **Gap: the engine only generates Playwright strategies.** No `id`, `name`, `linkText`,
+   `partialLinkText`, `className` or `tagName`, so selecting a Selenium target today yields `css:` for
+   everything. Needs a superset generator with per-framework filtering, as v2.5.1 had. Do this before
+   step 10.
 
 7. **View Matched Elements** (SPEC §8). The eye: highlight all, scroll to first, three-state snackbar.
    Verifies the engine against real pages, so it comes before scan.
