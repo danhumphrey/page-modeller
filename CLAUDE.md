@@ -69,6 +69,11 @@ exploited.
 
 - `v3/.github/workflows/` is **inert** — GitHub only reads `.github/` at the repo root. Merge it with
   the root CI when v3 is ready to build.
+- **Root CI is the only CI, and it sees the whole repo.** It runs on every `pull_request`, so anything
+  added anywhere in the tree lands in its path. Root Jest had no ignore patterns and walked into `v3/`,
+  handing TypeScript to a Babel configured for v2.5.1's JS — three suites failed to parse the first time
+  a branch containing `v3/` was PR'd. `/v3/` is now in `testPathIgnorePatterns`; `lint`, `prettier:check`
+  and `build` were already scoped to `src`. Check the root scripts before adding a tree.
 - Build output is gitignored (`/v3/.output`, `/v3/.wxt`, `/v3/.test-dist`, `/v3/test-results`).
 - `v3/` output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
 
