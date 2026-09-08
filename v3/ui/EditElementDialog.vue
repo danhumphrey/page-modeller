@@ -1,7 +1,7 @@
 <template>
   <q-dialog v-model="open" @hide="$emit('close')">
     <q-card class="edit-card">
-      <q-toolbar class="bg-primary text-white">
+      <q-toolbar class="dialog-header">
         <q-toolbar-title class="text-subtitle1">Edit Element</q-toolbar-title>
       </q-toolbar>
 
@@ -128,6 +128,17 @@ function save() {
 .edit-card {
   width: 100%;
   max-width: 720px;
+  background: var(--pm-page-bg);
+  color: var(--pm-text);
+}
+
+/* Neutral, like the main toolbar: the panel sits inside DevTools or a browser
+   sidebar and should read as part of that chrome, not as a branded surface. */
+.dialog-header {
+  background: var(--pm-toolbar-bg);
+  color: var(--pm-toolbar-fg);
+  border-bottom: 1px solid var(--pm-rule);
+  min-height: 44px;
 }
 
 /* Own flex rather than Quasar's `row` utility: a bare `row` class collides with

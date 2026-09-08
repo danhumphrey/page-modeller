@@ -75,19 +75,38 @@ function cssFor(el: Element): string {
   return parts.join(' > ');
 }
 
+const HTML_NS = 'http://www.w3.org/1999/xhtml';
+
+/**
+ * One step of an XPath.
+ *
+ * An unprefixed name test matches the null namespace; browsers special-case
+ * HTML-namespace elements in an HTML document, but nothing else — so `svg[1]`
+ * matches nothing, and every path through an <svg> resolved to zero. Elements
+ * outside the HTML namespace are matched on `local-name()`, which sidesteps
+ * namespaces entirely.
+ *
+ * `localName` rather than a lowercased `tagName`: SVG names are case-sensitive
+ * and some are camelCase (`clipPath`, `linearGradient`).
+ */
+function xpathStep(el: Element, index: number): string {
+  return el.namespaceURI === HTML_NS
+    ? `${el.localName}[${index}]`
+    : `*[local-name()=${JSON.stringify(el.localName)}][${index}]`;
+}
+
 function xpathFor(el: Element): string {
   if (el.id) return `//*[@id=${JSON.stringify(el.id)}]`;
   const parts: string[] = [];
   let cur: Element | null = el;
   while (cur && cur.nodeType === 1) {
-    const tag = cur.tagName.toLowerCase();
     const parent: Element | null = cur.parentElement;
     let idx = 1;
     if (parent) {
       const same = Array.from(parent.children).filter((c) => c.tagName === cur!.tagName);
       if (same.length > 1) idx = same.indexOf(cur) + 1;
     }
-    parts.unshift(`${tag}[${idx}]`);
+    parts.unshift(xpathStep(cur, idx));
     cur = parent;
   }
   return '/' + parts.join('/');
@@ -198,10 +217,6 @@ export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] 
   }
 }
 
-function predictedCount(doc: Document, c: LocatorCandidate): number {
-  return resolveCandidate(doc, c).length;
-}
-
 // ---- candidate generation (ranked, mirrors Playwright's priority) ----
 
 export function generate(el: Element): ElementResult {
@@ -246,10 +261,16 @@ export function generate(el: Element): ElementResult {
   out.push({ kind: 'css', value: cssFor(el) });
   out.push({ kind: 'xpath', value: xpathFor(el) });
 
-  const candidates: RankedCandidate[] = out.map((candidate) => ({
-    candidate,
-    predictedCount: predictedCount(doc, candidate),
-  }));
+  // Keep only candidates that actually find THIS element. A locator can be
+  // well-formed, resolve to something, and still be useless: getByRole excludes
+  // a11y-hidden elements, so a hidden button's role candidate finds the other
+  // buttons; getByText matches the innermost element, so a <fieldset>'s text
+  // candidate finds its <legend>. Offering those in the Edit dialog would hand
+  // the user a locator that cannot work.
+  const candidates: RankedCandidate[] = out
+    .map((candidate) => ({ candidate, matches: resolveCandidate(doc, candidate) }))
+    .filter(({ matches }) => matches.includes(el))
+    .map(({ candidate, matches }) => ({ candidate, predictedCount: matches.length }));
 
   const preferredIndex = candidates.findIndex((c) => c.predictedCount === 1);
 

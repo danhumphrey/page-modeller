@@ -168,6 +168,12 @@ locator can be tested before saving. **[settled]**
 | 0 | red error | *0 elements match that locator* |
 | >1 | amber warning | *N elements match that locator* |
 
+**Every candidate must find the element it was generated from.** A locator can be well-formed, resolve
+to something, and still be useless: `getByRole` excludes a11y-hidden elements, so a hidden button's role
+candidate finds the *other* buttons; `getByText` matches the innermost element, so a `<fieldset>`'s text
+candidate finds its `<legend>`. Candidates that do not find their own element are dropped rather than
+offered in the Edit dialog. **[settled]**
+
 **The count has to be the count the generated test will get.** The in-page resolver is our own
 approximation of Playwright's matching, and the eye reports from it, so any drift means showing the user
 a number their test will not reproduce. Three behaviours this forces, all found by asserting every
