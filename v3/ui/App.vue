@@ -101,7 +101,13 @@ async function stopPicking() {
 
 async function send(target: number, msg: PanelToContent): Promise<boolean> {
   try {
-    await browser.tabs.sendMessage(target, msg);
+    // Vue wraps reactive state in Proxies, and anything read out of `elements`
+    // is one. Firefox serialises messages with the structured clone algorithm,
+    // which throws DataCloneError on a Proxy; Chrome's path tolerates it. So a
+    // message carrying model data — HIGHLIGHT — failed on Firefox while
+    // START_PICKING, whose payload is a plain literal, worked on the same page.
+    // Messages are plain data, so a JSON round-trip is an exact copy.
+    await browser.tabs.sendMessage(target, JSON.parse(JSON.stringify(msg)) as PanelToContent);
     return true;
   } catch (err) {
     // Surface the reason: the notice below is a guess at the cause, and the
