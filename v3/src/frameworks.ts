@@ -18,12 +18,17 @@ const PLAYWRIGHT_TYPES = ['testId', 'role', 'label', 'placeholder', 'text', 'alt
 
 // Selenium's native By strategies, in order of preference.
 //
-// `name` ahead of `id`, unlike v2.5.1. A name is semantic and submitted with
-// the form, so frameworks almost never generate one, while they generate ids
-// constantly — React's useId gave Facebook's password field `id="_r_6_"` and
-// `name="pass"`. Only form controls have a name at all, so everywhere else this
-// changes nothing and `id` still wins. Safe even for a radio group, whose
-// members share a name: a candidate is only chosen when it resolves uniquely.
+// `name` ahead of `id`, unlike v2.5.1. A name is author-chosen and essentially
+// never framework-generated, while ids are generated constantly — React's useId
+// gave Facebook's password field `id="_r_6_"` alongside `name="pass"`.
+//
+// It is not only form controls: `<a>`, `<iframe>`, `<map>` and `<object>` carry
+// a name too. That is fine — wherever it exists it was written by hand, which
+// is the whole point. A legacy `<a name="top">` is usually an anchor target
+// with no text, so it has no linkText to lose to.
+//
+// Safe even for a radio group, whose members share a name: a candidate is only
+// chosen when it resolves uniquely (SPEC §7).
 const SELENIUM_TYPES = ['name', 'id', 'linkText', 'partialLinkText', 'css', 'xpath', 'className', 'tagName'] as const;
 
 export const frameworks: readonly Framework[] = [
