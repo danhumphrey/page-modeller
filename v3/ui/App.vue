@@ -37,7 +37,7 @@ import { defaultFrameworkId } from '@/src/frameworks';
 import { displayLocator } from '@/src/locators/display';
 import { ModelStore, activeCandidate, type ModelElement } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
-import { isMessage, type ContentToPanel, type HighlightResult, type PickMode } from '@/src/messaging';
+import { isMessage, type ContentToPanel, type PanelToContent } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 import { defaultSettings } from '@/src/settings';
 
@@ -99,11 +99,15 @@ async function stopPicking() {
   isAdding.value = isScanning.value = false;
 }
 
-async function send(target: number, msg: { type: 'START_PICKING'; mode: PickMode } | { type: 'STOP_PICKING' }): Promise<boolean> {
+async function send(target: number, msg: PanelToContent): Promise<boolean> {
   try {
     await browser.tabs.sendMessage(target, msg);
     return true;
-  } catch {
+  } catch (err) {
+    // Surface the reason: the notice below is a guess at the cause, and the
+    // real message is the only way to tell a missing content script from a
+    // messaging fault.
+    console.error('[Page Modeller] sendMessage failed', msg.type, err);
     // No content script: a browser-internal page, the web store, or a tab that
     // was already open when the extension loaded.
     $q.notify({
@@ -147,6 +151,8 @@ browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: numb
     syncFromStore();
   } else if (m.type === 'PICKING_STOPPED') {
     isAdding.value = isScanning.value = false;
+  } else if (m.type === 'HIGHLIGHT_RESULT') {
+    showMatchCount(m.count);
   }
 });
 
@@ -184,36 +190,31 @@ function deleteModel() {
  * in the page, and report the count. Exactly one match is the whole point of
  * the model, so the three outcomes are visually distinct.
  */
-// Quasar groups identical notifications and badges a count, so repeated eye
-// clicks piled up a "4". Each check should replace the last one's answer.
-let dismissMatchCount: (() => void) | undefined;
+/**
+ * Quasar groups identical notifications and badges a count, so repeated clicks
+ * pile up a "12". Each kind of notice keeps one slot and replaces it.
+ */
+const openNotices: Record<string, (() => void) | undefined> = {};
+
+function notice(kind: string, opts: Parameters<typeof $q.notify>[0]) {
+  openNotices[kind]?.();
+  openNotices[kind] = $q.notify({ group: false, position: 'bottom', timeout: 3000, ...(opts as object) });
+}
 
 function clearHighlight() {
   if (tabId.value == null) return;
-  void browser.tabs.sendMessage(tabId.value, { type: 'CLEAR_HIGHLIGHT' }, { frameId: 0 }).catch(() => {});
+  // Every frame may clear; only the top one ever draws.
+  void browser.tabs.sendMessage(tabId.value, { type: 'CLEAR_HIGHLIGHT' }).catch(() => {});
 }
 
 async function highlight(id: string) {
   const el = elements.value.find((e) => e.id === id);
   if (!el || tabId.value == null) return;
+  // Fire and forget; the count arrives as HIGHLIGHT_RESULT.
+  await send(tabId.value, { type: 'HIGHLIGHT', candidate: activeCandidate(el) });
+}
 
-  let count = 0;
-  try {
-    const res = (await browser.tabs.sendMessage(tabId.value, { type: 'HIGHLIGHT', candidate: activeCandidate(el) }, { frameId: 0 })) as
-      | HighlightResult
-      | undefined;
-    count = res?.count ?? 0;
-  } catch {
-    $q.notify({
-      message: 'Page Modeller can’t reach this page. Reload the tab, or try a normal http(s) page.',
-      icon: 'block',
-      color: 'negative',
-      timeout: 3000,
-      position: 'bottom',
-    });
-    return;
-  }
-
+function showMatchCount(count: number) {
   const tone =
     count === 1
       ? { icon: 'check_circle', color: 'positive' }
@@ -221,16 +222,12 @@ async function highlight(id: string) {
         ? { icon: 'error', color: 'negative' }
         : { icon: 'warning', color: 'warning' };
 
-  dismissMatchCount?.();
-  dismissMatchCount = $q.notify({
+  notice('matchCount', {
     ...tone,
     message: `${count} element${count === 1 ? '' : 's'} match${count === 1 ? 'es' : ''} that locator`,
-    group: false,
-    timeout: 3000,
-    position: 'bottom',
     // Close takes the highlight with it, so the page is never left marked up
-    // with no explanation. Only on the explicit action: onDismiss would also
-    // fire when this notification is *replaced* by the next eye click, wiping
+    // with no explanation. Only on the explicit action: a dismiss handler would
+    // also fire when this notice is *replaced* by the next eye click, wiping
     // the highlight that click had just applied. Natural expiry needs no
     // handler — both timers are 3s.
     actions: [{ label: 'Close', color: 'white', handler: clearHighlight }],
@@ -238,6 +235,6 @@ async function highlight(id: string) {
 }
 
 function notYet(what: string) {
-  $q.notify({ message: `${what} — not built yet`, icon: 'construction', timeout: 1500, position: 'bottom' });
+  notice('notYet', { message: `${what} — not built yet`, icon: 'construction', timeout: 1500 });
 }
 </script>

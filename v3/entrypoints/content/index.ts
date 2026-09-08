@@ -1,4 +1,4 @@
-import { generate, resolveCandidate } from '@/src/engine/candidates';
+import { generate, resolveCandidate, safeRole } from '@/src/engine/candidates';
 import { isMessage, type Message } from '@/src/messaging';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
@@ -48,12 +48,22 @@ export default defineContentScript({
       current = null;
     }
 
+    /**
+     * What the tool will classify this element as (SPEC §11), not its raw role
+     * attribute. `role="none"` and `presentation` remove an element from the
+     * accessibility tree, so they say nothing useful about what you are picking
+     * — fall back to the tag, as for anything with no computed role.
+     */
+    function overlayLabel(el: Element): string {
+      const role = safeRole(el);
+      return role && role !== 'none' && role !== 'presentation' ? role : el.tagName.toLowerCase();
+    }
+
     function highlight(el: Element) {
       ensureOverlay();
       const r = el.getBoundingClientRect();
       Object.assign(box!.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-      const role = (el as HTMLElement).getAttribute('role') ?? el.tagName.toLowerCase();
-      label!.textContent = role;
+      label!.textContent = overlayLabel(el);
       label!.style.left = `${r.left}px`;
       label!.style.top = `${Math.max(0, r.top - 18)}px`;
     }
@@ -85,6 +95,8 @@ export default defineContentScript({
       for (const t of targets) {
         const r = t.getBoundingClientRect();
         const mark = document.createElement('div');
+        // Identifies our overlay to tests and to anyone inspecting the page.
+        mark.dataset.pageModeller = 'highlight';
         Object.assign(mark.style, {
           position: 'fixed',
           pointerEvents: 'none',
@@ -150,21 +162,23 @@ export default defineContentScript({
       if (notify) browser.runtime.sendMessage({ type: 'PICKING_STOPPED' }).catch(() => {});
     }
 
-    browser.runtime.onMessage.addListener((msg: unknown, _sender: unknown, sendResponse: (r: unknown) => void) => {
+    browser.runtime.onMessage.addListener((msg: unknown) => {
       if (!isMessage(msg)) return;
       const m = msg as Message;
       if (m.type === 'START_PICKING') start();
       else if (m.type === 'STOP_PICKING') stop();
       else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
       else if (m.type === 'HIGHLIGHT') {
-        // The panel sends this to the main frame only (frameId: 0). This script
-        // runs in every frame, and tabs.sendMessage delivers just the first
-        // reply — so a frame with no matches could answer for one that has
-        // them. Cross-frame highlighting arrives with frame support (SPEC §16).
+        // This script runs in every frame, but only the top one answers — a
+        // sub-frame with no matches would otherwise report 0 over the top
+        // frame's real count. Decided here rather than by the panel passing
+        // frameId, so the send is shaped exactly like the ones that work on
+        // both browsers. Cross-frame highlighting arrives with SPEC §16.
+        if (window.top !== window) return;
         const targets = resolveCandidate(document, m.candidate);
         highlightAll(targets);
-        sendResponse({ count: targets.length });
-        return true;
+        // Answered as a message, not a reply — sendResponse is not portable.
+        browser.runtime.sendMessage({ type: 'HIGHLIGHT_RESULT', count: targets.length }).catch(() => {});
       }
     });
   },

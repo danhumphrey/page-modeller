@@ -41,7 +41,7 @@ function safeName(el: Element): string {
   }
 }
 
-function safeRole(el: Element): string | null {
+export function safeRole(el: Element): string | null {
   try {
     return getRole(el) || null;
   } catch {

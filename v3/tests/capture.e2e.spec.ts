@@ -27,6 +27,21 @@ test.afterAll(async () => {
   server?.kill();
 });
 
+/**
+ * The panel's runtime.onMessage, stood up in the service worker. The worker
+ * outlives each test, so the listener is installed once — registering it per
+ * test records every message as many times as there are listeners.
+ */
+async function collectMessages(sw: { evaluate: (fn: never, arg?: unknown) => Promise<unknown> }) {
+  await (sw as unknown as { evaluate: (f: () => void) => Promise<void> }).evaluate(() => {
+    const g = globalThis as unknown as { __picks: unknown[]; __collecting?: boolean };
+    g.__picks = [];
+    if (g.__collecting) return;
+    g.__collecting = true;
+    chrome.runtime.onMessage.addListener((m) => g.__picks.push(m));
+  });
+}
+
 test('picking is one-shot and reports a named element', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
@@ -39,13 +54,7 @@ test('picking is one-shot and reports a named element', async () => {
     `http://localhost:${PORT}/login.html`
   );
 
-  // Collect every ELEMENT_PICKED / PICKING_STOPPED the content script emits.
-  await sw.evaluate(() => {
-    (globalThis as unknown as { __picks: unknown[] }).__picks = [];
-    chrome.runtime.onMessage.addListener((m) => {
-      (globalThis as unknown as { __picks: unknown[] }).__picks.push(m);
-    });
-  });
+  await collectMessages(sw as never);
 
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
 
@@ -70,4 +79,43 @@ test('picking is one-shot and reports a named element', async () => {
   await page.waitForTimeout(500);
   const after = await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks.length);
   expect(after, 'picking stopped itself after one element').toBe(1);
+});
+
+test('highlighting reports its count as a message, and Close clears it', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const page = await context.newPage();
+  await page.goto(`http://localhost:${PORT}/login.html`);
+  const tabId: number = await sw.evaluate(
+    async (url) => (await chrome.tabs.query({ url }))[0].id!,
+    `http://localhost:${PORT}/login.html`
+  );
+
+  await collectMessages(sw as never);
+
+  const marks = page.locator('[data-page-modeller="highlight"]');
+
+  // The count comes back as HIGHLIGHT_RESULT, not as a reply. sendResponse is
+  // not portable — Chrome wants `return true`, Firefox's native browser.* wants
+  // a returned Promise, and doing both left the caller's promise unsettled on
+  // Firefox, reported as "can't reach this page".
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'role', role: 'link', name: 'Home', exact: true } }),
+    tabId
+  );
+  await expect(marks).toHaveCount(1);
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string; count?: number }[] }).__picks))
+      .filter((m) => m.type === 'HIGHLIGHT_RESULT')
+      .map((m) => m.count))
+    .toEqual([1]);
+
+  // A locator matching several elements highlights all of them.
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: 'a' } }), tabId);
+  await expect(marks).toHaveCount(3);
+
+  // Close dismisses the highlight, not just the message.
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'CLEAR_HIGHLIGHT' }), tabId);
+  await expect(marks).toHaveCount(0);
 });
