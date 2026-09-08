@@ -299,25 +299,35 @@ function showMatchCount(count: number) {
   });
 }
 
+/**
+ * Both confirms are destructive, so the affirmative action reads as such.
+ *
+ * The colours are explicit because Quasar's dialog plugin defaults to
+ * `isDark() ? 'amber' : 'primary'` — which made both buttons yellow against the
+ * dark panel, and gave a delete confirm the same weight as any other dialog.
+ */
+function confirmDestructive(title: string, message: string) {
+  return $q.dialog({
+    title,
+    message,
+    cancel: { label: 'Cancel', flat: true, color: 'grey' },
+    ok: { label: 'Yes', flat: true, color: 'negative' },
+  });
+}
+
 function removeElement(id: string) {
   const el = model.value.elements.find((e) => e.id === id);
   if (!el || tabId.value == null) return;
-  $q.dialog({
-    title: 'Delete Element',
-    message: `Really delete ${el.name}?`,
-    cancel: true,
-    ok: { label: 'Yes', flat: true },
-  }).onOk(() => toBackground({ type: 'DELETE_ELEMENT', tabId: tabId.value!, id }));
+  confirmDestructive('Delete Element', `Really delete ${el.name}?`).onOk(() =>
+    toBackground({ type: 'DELETE_ELEMENT', tabId: tabId.value!, id })
+  );
 }
 
 function deleteModel() {
   if (tabId.value == null) return;
-  $q.dialog({
-    title: 'Delete Model',
-    message: 'Really delete the model?',
-    cancel: true,
-    ok: { label: 'Yes', flat: true },
-  }).onOk(() => toBackground({ type: 'DELETE_MODEL', tabId: tabId.value! }));
+  confirmDestructive('Delete Model', 'Really delete the model?').onOk(() =>
+    toBackground({ type: 'DELETE_MODEL', tabId: tabId.value! })
+  );
 }
 
 function notYet(what: string) {

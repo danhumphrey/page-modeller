@@ -249,7 +249,12 @@ CANCEL / SAVE. **[settled]**
 
 ## 10. Delete Model
 
-Confirm dialog — *"Really delete the model?"* — YES / CANCEL. **[settled]**
+Confirm dialog — *"Really delete the model?"* — YES / CANCEL, with **Yes** styled as destructive.
+Same for deleting a single element. **[settled]**
+
+Both set their button colours explicitly: Quasar's dialog plugin defaults to `isDark() ? 'amber' :
+'primary'`, which made a delete confirm yellow on a dark panel and gave it the same weight as any other
+dialog.
 
 ## 11. Generate Code
 
