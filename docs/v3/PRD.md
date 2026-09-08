@@ -89,6 +89,12 @@ Models — with first-class modern **Playwright accessibility locators**. Determ
 - NFR-3 Per-pick latency interactive (<~100ms typical DOM).
 - NFR-4 Test pyramid: unit (generators) + engine-fidelity vs real Playwright + extension E2E.
 - NFR-5 Automated build → zip → multi-store submit.
+- NFR-7 **Browser floors, declared in the manifest and guarded by
+  `v3/scripts/check-manifests.mjs`.** Chrome **114** (`minimum_chrome_version`), set by the side panel
+  API; Firefox **115** (`gecko.strict_min_version`), set by `storage.session`, where the per-tab models
+  live. Both are the highest floor anything in v3 needs — MV3 itself is Chrome 88 / Firefox 109, and
+  `menus` with `contexts: ['action']` is Chrome 85 / Firefox 109. Shipped source uses no JavaScript newer
+  than `??=` and `replaceChildren` (2020).
 - NFR-6 Ship as in-place update to existing CWS + AMO listings; preserve extension IDs (CWS item `ejgkdhekcepfgdghejpkmbfjgnioejak`, AMO `gecko.id` — **not yet recorded, read it off the AMO Developer Hub**; `v3/wxt.config.ts` carries a placeholder). MV3 on both browsers, as v2.5.1 already ships. User storage persists across upgrade.
 
 ## 6. Out of scope (v1)

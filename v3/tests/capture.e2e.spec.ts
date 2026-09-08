@@ -684,3 +684,105 @@ test('appendTypeToName changes how a pick is named (SPEC §13)', async () => {
 
   await panel.evaluate(() => chrome.storage.sync.remove('options'));
 });
+
+test('scan adds a container\'s interactive descendants, not the container (SPEC §4)', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'scan');
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  const model = async () =>
+    (await panel.evaluate(() => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string; role: string | null }[] } }[] }).__msgs))
+      .filter((m) => m.type === 'MODEL')
+      .at(-1)?.model;
+
+  await panel.evaluate(
+    (id) =>
+      chrome.runtime.sendMessage({
+        type: 'RELAY_TO_TAB',
+        tabId: id,
+        message: { type: 'START_PICKING', mode: 'scan', includeHidden: false },
+      }),
+    tabId
+  );
+
+  // Reach the <form> with the arrow keys, which is what they are for: clicking
+  // the middle of a form lands on a child input, and scanning that collects
+  // nothing. Hover a control inside it, then walk up.
+  const label = page.locator('[data-page-modeller="label"]');
+  await page.getByRole('button', { name: 'Sign in' }).hover();
+  for (let i = 0; i < 5 && !/› form$/.test((await label.textContent()) ?? ''); i++) {
+    await page.keyboard.press('ArrowUp');
+  }
+  await expect(label).toHaveText(/› form$/);
+  await page.keyboard.press('Enter');
+
+  await expect.poll(async () => (await model())?.elements.length).toBeGreaterThan(0);
+  const elements = (await model())!.elements;
+
+  // Only the form's own controls, and never the form itself.
+  expect(elements.map((e) => e.name)).toEqual(['EmailAddress', 'Password', 'RememberMe', 'SignIn']);
+  // The password field has NO role — HTML-AAM maps input[type=password] to
+  // none — which is exactly why the rule cannot be role-only.
+  expect(elements.map((e) => e.role)).toEqual(['textbox', null, 'checkbox', 'button']);
+
+  // Static content inside the form — the four labels — is not collected: a scan
+  // of a page would otherwise return every piece of text on it.
+  expect(elements).toHaveLength(4);
+});
+
+test('a hidden match is marked on its nearest visible ancestor', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'hidden-eye', 'edgecases.html');
+  await collectMessages(sw as never);
+
+  const marks = page.locator('[data-page-modeller="highlight"]');
+
+  // A visible control marks itself, solid.
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: '#hidden-host' } }),
+    tabId
+  );
+  await expect(marks).toHaveCount(1);
+  await expect(marks.first()).not.toHaveAttribute('data-hidden', 'true');
+
+  // A hidden one has no box of its own, so it is marked on the nearest
+  // ancestor that has one — dashed, and captioned, rather than drawn nowhere.
+  await sw.evaluate(
+    (id) =>
+      chrome.tabs.sendMessage(id, {
+        type: 'HIGHLIGHT',
+        candidate: { kind: 'css', value: '[data-spike="hidden-in-visible-parent"]' },
+      }),
+    tabId
+  );
+  await expect(marks).toHaveCount(1);
+  await expect(marks.first()).toHaveAttribute('data-hidden', 'true');
+  await expect(marks.first()).toContainText('hidden element');
+
+  // And the count says so, or "1 element matches" with nothing outlined where
+  // you expected it reads as a failure.
+  await expect
+    .poll(async () =>
+      (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string; hidden?: number }[] }).__picks))
+        .filter((m) => m.type === 'HIGHLIGHT_RESULT')
+        .at(-1)?.hidden
+    )
+    .toBe(1);
+});

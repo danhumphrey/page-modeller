@@ -53,6 +53,13 @@ MV3 on both browsers. One `sidepanel` entrypoint gives Chrome `side_panel` and F
 `npm run dev` (Chrome) or `npm run dev:firefox` — WXT launches the browser with the extension loaded.
 Navigate wherever you want to test.
 
+The dev browser is Chrome **stable**, and reuses a profile under `.wxt/` rather than a throwaway one, so
+settings, logins and history survive a restart. `chrome-launcher` otherwise picks the newest install it
+finds — Canary, on a machine that has it — which would hide exactly the version problems
+`minimum_chrome_version` exists to catch. Set `CHROME_PATH` to override. `web-ext` uses a temporary profile by default, which meant `storage.sync`
+started empty every run and no setting ever appeared to persist. Delete `.wxt/chrome-profile` or
+`.wxt/firefox-profile` to start clean.
+
 Manually, from a production build:
 
 - **Chrome** — `npm run build`, then `chrome://extensions` → Developer mode → Load unpacked →
@@ -81,29 +88,33 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    - **↑ / ↓** walk the target up and down the nesting; moving the mouse starts again from the cursor.
      **Enter** or a click picks the walked-to element, not what is under the pointer. The page must not
      scroll, and Enter must not re-trigger the Add Element button.
-5. **Escape** cancels Add Element — both with focus in the panel and with focus in the page.
-6. The row's name and locator look right, **on one line** — Name, Locator and Actions across, not
+5. **Scan Page** → pick a container (arrow keys help: clicking the middle of a form lands on an input)
+   → its interactive descendants arrive as rows, the container itself does not, and Scan then greys out
+   because it is once per model.
+6. **Escape** cancels Add Element — both with focus in the panel and with focus in the page.
+7. The row's name and locator look right, **on one line** — Name, Locator and Actions across, not
    stacked; a second element with the same name becomes `About2`.
-7. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
-8. **Eye** highlights every match in yellow with a red outline, scrolls the first into view, and reports
+8. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
+9. **Eye** highlights every match in yellow with a red outline, scrolls the first into view, and reports
    the count — green for 1, red for 0, amber for more. Highlight clears after ~3s, or at once on
    **Close**. Clicking it repeatedly replaces the message rather than stacking a counter badge, and the
    new highlight survives the replacement.
-9. **Edit** (pencil or double-click): name validation rejects blank, spaced and duplicate names;
+10. With **Model hidden elements** on, the eye on a hidden row marks its nearest visible ancestor
+    with a dashed outline captioned *hidden element*, and the count says so.
+11. **Edit** (pencil or double-click): name validation rejects blank, spaced and duplicate names;
    switching type fills the fields from a generated locator or blanks them; the eye tests what is
    typed; Save updates the row in **both** surfaces.
-10. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
+12. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
    still opens the editor.
-11. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
+13. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
     rows, and a pick in either appears in both. Close one; the model survives in the other. Close them
     all and reopen; that tab's model is gone. Check this with a second tab modelled too — closing one
     tab's panels must not touch the other's.
-12. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
+14. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
    switch to B, add something different, switch back — A must be intact.
-13. **Navigate within a tab** with a model built: a banner names the page it was built on and offers
+15. **Navigate within a tab** with a model built: a banner names the page it was built on and offers
     Delete Model. Navigate back and the banner clears.
-14. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
-15. Table headers stay visible at the narrowest side-panel width.
+16. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
 engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a

@@ -352,7 +352,8 @@ before starting the next.
    Scan deliberately: Scan's job is picking a *container*, and containers are exactly the nested,
    same-box elements this fixes.
 
-10. **Scan** (SPEC §4). Container pick, interactive-role descendants, a11y-tree filtered.
+10. **Scan** (SPEC §4). ✅ **Done** — container pick, interactive descendants, a11y-tree filtered,
+    honouring `modelHiddenElements`. Awaiting hand-test.
 
 11. **Generate Code** (SPEC §11). Selenium Java first — the reference template — with the six fixes.
 
@@ -362,6 +363,29 @@ before starting the next.
 13. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python.
 
 14. **Frames** (SPEC §16) and the **page-object wrapper** (SPEC §17).
+
+**Considered, not scheduled — capture from the Elements tree.** `devtools.panels.elements
+.onSelectionChanged` plus `inspectedWindow.eval` with `$0` would let a button add whatever is selected
+in DevTools' own DOM tree (Chrome 18 / Firefox 56, so no compatibility concern). Attractive because that
+tree already solves nesting, shadow DOM and collapsed subtrees — the things the overlay struggles with.
+
+**It only makes sense feeding the sidebar, not a DevTools panel.** DevTools panels are mutually
+exclusive tabs: you are on Elements or on Page Modeller, never both, so selecting in the tree and then
+switching tabs to press Add is worse than the overlay.
+
+The `devtools` page is not a panel, though — `devtools.html` runs the whole time DevTools is open,
+whichever tab is showing. So it can listen for `onSelectionChanged` while Elements is active and feed
+the **sidebar**, which is visible alongside it. That is the one arrangement where this beats the
+overlay, and it needs DevTools and the sidebar open together.
+
+Remaining wrinkle: `inspectedWindow.eval` runs in the page world while the engine lives in the content
+script's, and `useContentScriptContext` is Chrome-only — the portable bridge is to tag `$0` with a
+temporary attribute and have the content script find it.
+
+A sidebar pane in the Elements panel (`createSidebarPane`) was rejected outright: it would be a second
+copy of the table we already have, somewhere worse. There is no way to add an item to the Elements
+context menu — the menu contexts are `action, bookmark, browser_action, launcher, page_action, password,
+tab, tools_menu`, and none of them are DevTools.
 
 **Settings** (SPEC §14) ✅ **done, pulled forward** — `src/settings.ts` over `storage.sync`, an options
 page at `entrypoints/options/`, and all five toggles wired. Brought forward because `appendTypeToName`

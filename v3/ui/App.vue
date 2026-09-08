@@ -8,7 +8,7 @@
         :is-adding="isAdding"
         :show-tooltips="settings.showTooltips"
         @update:framework-id="setFramework"
-        @scan="notYet('Scan')"
+        @scan="toggleScan"
         @add="toggleAdd"
         @delete-model="deleteModel"
         @generate="notYet('Generate Code')"
@@ -63,7 +63,7 @@ import EditElementDialog from './EditElementDialog.vue';
 import { defaultFrameworkId } from '@/src/frameworks';
 import { displayLocator } from '@/src/locators/display';
 import { activeCandidate, emptyModel, type ModelElement, type TabModel } from '@/src/model';
-import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, type PanelToContent } from '@/src/messaging';
+import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, type PanelToContent, type PickMode } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 import { applyTheme } from './theme';
 import type { LocatorCandidate } from '@/src/engine/types';
@@ -201,7 +201,7 @@ function onRuntimeMessage(msg: unknown) {
   } else if (incoming.type === 'FROM_TAB') {
     const m = incoming.message;
     if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
-    else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count);
+    else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count, m.hidden);
   }
 }
 
@@ -268,14 +268,28 @@ host.onTabChanged((next) => {
   if (next != null) toBackground({ type: 'GET_MODEL', tabId: next });
 });
 
-async function toggleAdd() {
-  if (isAdding.value) return stopPicking();
+async function startPicking(mode: PickMode) {
   const target = tabId.value ?? (await host.getTabId());
   tabId.value = target;
   if (target == null) return;
-  send(target, { type: 'START_PICKING', mode: 'add' });
+  send(target, { type: 'START_PICKING', mode, includeHidden: settings.value.modelHiddenElements });
   // Optimistic: TAB_UNREACHABLE resets it if the page cannot be reached.
-  isAdding.value = true;
+  if (mode === 'scan') isScanning.value = true;
+  else isAdding.value = true;
+}
+
+async function toggleAdd() {
+  if (isAdding.value) return stopPicking();
+  await startPicking('add');
+}
+
+/**
+ * Scan is once per model (SPEC §4) — the toolbar disables it once anything has
+ * been added, so this only ever starts on an empty model.
+ */
+async function toggleScan() {
+  if (isScanning.value) return stopPicking();
+  await startPicking('scan');
 }
 
 function setFramework(frameworkId: string) {
@@ -312,7 +326,7 @@ function saveEdit(payload: { name: string; selectedIndex: number; override?: Loc
   editing.value = undefined;
 }
 
-function showMatchCount(count: number) {
+function showMatchCount(count: number, hidden = 0) {
   const tone =
     count === 1
       ? { icon: 'check_circle', color: 'positive' }
@@ -320,9 +334,13 @@ function showMatchCount(count: number) {
         ? { icon: 'error', color: 'negative' }
         : { icon: 'warning', color: 'warning' };
 
+  // Say when a match is hidden. Otherwise "1 element matches" with nothing
+  // outlined reads as a failure, when the locator is doing exactly its job.
+  const aside = hidden > 0 ? ` — ${hidden === count ? (count === 1 ? 'it is' : 'all') : hidden} hidden` : '';
+
   notice('matchCount', {
     ...tone,
-    message: `${count} element${count === 1 ? '' : 's'} match${count === 1 ? 'es' : ''} that locator`,
+    message: `${count} element${count === 1 ? '' : 's'} match${count === 1 ? 'es' : ''} that locator${aside}`,
     // Close takes the highlight with it, so the page is never left marked up
     // with no explanation. Only on the explicit action: a dismiss handler would
     // also fire when this notice is replaced by the next eye click, wiping the

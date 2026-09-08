@@ -16,6 +16,8 @@ const EXPECT = {
     'devtools_page': (m) => m.devtools_page === 'devtools.html',
     'background.service_worker': (m) => typeof m.background?.service_worker === 'string',
     'no gecko settings': (m) => m.browser_specific_settings == null,
+    // sidePanel is Chrome 114+; storage.session is 102+.
+    'minimum_chrome_version covers sidePanel': (m) => Number(m.minimum_chrome_version) >= 114,
   },
   'firefox-mv3': {
     'manifest_version': (m) => m.manifest_version === 3,
@@ -29,6 +31,9 @@ const EXPECT = {
     'devtools_page': (m) => m.devtools_page === 'devtools.html',
     'background.scripts': (m) => Array.isArray(m.background?.scripts),
     'gecko.id': (m) => typeof m.browser_specific_settings?.gecko?.id === 'string',
+    // storage.session is Firefox 115+, which is the highest floor here.
+    'strict_min_version covers storage.session': (m) =>
+      parseFloat(m.browser_specific_settings?.gecko?.strict_min_version) >= 115,
   },
 };
 

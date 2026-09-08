@@ -140,7 +140,7 @@ export function matchesText(actual: string, expected: string, exact: boolean | u
  * applies this by default (`includeHidden: false`) and we must too, or the eye
  * counts hidden elements the test will never see.
  */
-function ariaHidden(el: Element): boolean {
+export function ariaHidden(el: Element): boolean {
   for (let cur: Element | null = el; cur; cur = cur.parentElement) {
     if (cur.getAttribute('aria-hidden') === 'true') return true;
     if ((cur as HTMLElement).hidden) return true;

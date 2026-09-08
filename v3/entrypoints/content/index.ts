@@ -1,6 +1,7 @@
 import { generate, resolveCandidate } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
-import { isMessage, type Message } from '@/src/messaging';
+import { collectInteractive } from '@/src/engine/interactive';
+import { isMessage, type Message, type PickMode } from '@/src/messaging';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
 // on click, run the locator engine and report the result to the side panel.
@@ -9,6 +10,9 @@ export default defineContentScript({
   allFrames: true,
   main() {
     let active = false;
+    /** 'add' takes the element itself; 'scan' takes its interactive children. */
+    let mode: PickMode = 'add';
+    let includeHidden = false;
     let box: HTMLDivElement | null = null;
     let label: HTMLDivElement | null = null;
     let current: Element | null = null;
@@ -120,35 +124,102 @@ export default defineContentScript({
       markTimer = undefined;
     }
 
-    function highlightAll(targets: Element[]) {
+    const hasBox = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 || r.height > 0;
+    };
+
+    /**
+     * Where to draw a match, and whether it is really there.
+     *
+     * A hidden element has no box to outline, so with `modelHiddenElements` on
+     * the eye reported "1 element matches" and drew nothing at all — a true
+     * count that looked like a failure. Fall back to the nearest ancestor that
+     * does have a box, which at least says *where* on the page the hidden thing
+     * lives.
+     */
+    function markTarget(el: Element): { anchor: Element | null; hidden: boolean } {
+      if (hasBox(el)) return { anchor: el, hidden: false };
+      for (let cur = el.parentElement; cur; cur = cur.parentElement) {
+        if (hasBox(cur)) return { anchor: cur, hidden: true };
+      }
+      return { anchor: null, hidden: true };
+    }
+
+    function drawMark(rect: DOMRect, hidden: boolean, caption?: string) {
+      const mark = document.createElement('div');
+      // Identifies our overlay to tests and to anyone inspecting the page.
+      mark.dataset.pageModeller = 'highlight';
+      if (hidden) mark.dataset.hidden = 'true';
+      Object.assign(mark.style, {
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: Z,
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        background: 'rgba(255, 235, 59, 0.45)',
+        // Dashed, so a stand-in for something you cannot see does not look like
+        // the thing itself.
+        outline: hidden ? '2px dashed #d32f2f' : '2px solid #d32f2f',
+        outlineOffset: '-1px',
+      } as CSSStyleDeclaration);
+
+      if (caption) {
+        const tag = document.createElement('div');
+        tag.textContent = caption;
+        Object.assign(tag.style, {
+          position: 'absolute',
+          left: '0',
+          top: '0',
+          font: '11px/1.4 ui-monospace, monospace',
+          color: '#fff',
+          background: '#d32f2f',
+          padding: '1px 6px',
+          borderRadius: '0 0 3px 0',
+          whiteSpace: 'nowrap',
+        } as CSSStyleDeclaration);
+        mark.appendChild(tag);
+      }
+
+      document.documentElement.appendChild(mark);
+      marks.push(mark);
+      return mark;
+    }
+
+    function highlightAll(targets: Element[]): { hidden: number } {
       clearMarks();
-      if (targets.length === 0) return;
+      if (targets.length === 0) return { hidden: 0 };
+
+      const placed = targets.map((t) => ({ target: t, ...markTarget(t) }));
 
       // Scroll the FIRST match into view before measuring, or every box after
-      // it would be positioned against the pre-scroll viewport.
-      targets[0].scrollIntoView({ block: 'center', inline: 'nearest' });
+      // it would be positioned against the pre-scroll viewport. A hidden
+      // element cannot be scrolled to, so scroll to its stand-in.
+      placed.find((p) => p.anchor)?.anchor?.scrollIntoView({ block: 'center', inline: 'nearest' });
 
-      for (const t of targets) {
-        const r = t.getBoundingClientRect();
-        const mark = document.createElement('div');
-        // Identifies our overlay to tests and to anyone inspecting the page.
-        mark.dataset.pageModeller = 'highlight';
-        Object.assign(mark.style, {
-          position: 'fixed',
-          pointerEvents: 'none',
-          zIndex: Z,
-          left: `${r.left}px`,
-          top: `${r.top}px`,
-          width: `${r.width}px`,
-          height: `${r.height}px`,
-          background: 'rgba(255, 235, 59, 0.45)',
-          outline: '2px solid #d32f2f',
-          outlineOffset: '-1px',
-        } as CSSStyleDeclaration);
-        document.documentElement.appendChild(mark);
-        marks.push(mark);
+      let unplaceable = 0;
+      for (const { anchor, hidden } of placed) {
+        if (!anchor) {
+          unplaceable++;
+          continue;
+        }
+        drawMark(anchor.getBoundingClientRect(), hidden, hidden ? 'hidden element' : undefined);
       }
+
+      // Nothing on the page to point at — say so rather than drawing nothing.
+      if (unplaceable > 0) {
+        const banner = drawMark(new DOMRect(16, 16, 260, 0), true);
+        banner.style.height = 'auto';
+        banner.style.padding = '8px 10px';
+        banner.style.font = '12px/1.4 ui-monospace, monospace';
+        banner.style.color = '#4a1010';
+        banner.textContent = `${unplaceable} matched element${unplaceable === 1 ? '' : 's'} hidden, with no position on the page`;
+      }
+
       markTimer = setTimeout(clearMarks, HIGHLIGHT_MS);
+      return { hidden: placed.filter((p) => p.hidden).length };
     }
 
     const onMove = (e: MouseEvent) => {
@@ -165,12 +236,20 @@ export default defineContentScript({
     /** Commit the current target. Shared by clicking and by Enter. */
     function pickCurrent() {
       if (!active || !current) return;
-      const result = generate(current);
+      const target = current;
       // Both modes are one-shot (SPEC §4) — stop before reporting, so the
       // overlay is gone by the time the panel re-renders.
       stop({ notify: false });
+
+      // Scan takes the container's interactive descendants, never the container
+      // itself: you are modelling what is inside the section you chose.
+      const message =
+        mode === 'scan'
+          ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map(generate) }
+          : { type: 'ELEMENT_PICKED', result: generate(target) };
+
       // Rejects when no panel is open; that's fine, drop it.
-      browser.runtime.sendMessage({ type: 'ELEMENT_PICKED', result }).catch(() => {});
+      browser.runtime.sendMessage(message).catch(() => {});
     }
 
     const onClick = (e: MouseEvent) => {
@@ -256,7 +335,11 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener((msg: unknown) => {
       if (!isMessage(msg)) return;
       const m = msg as Message;
-      if (m.type === 'START_PICKING') start();
+      if (m.type === 'START_PICKING') {
+        mode = m.mode;
+        includeHidden = m.includeHidden;
+        start();
+      }
       else if (m.type === 'STOP_PICKING') stop();
       else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
       else if (m.type === 'MOVE_TARGET') moveTarget(m.direction);
@@ -269,9 +352,9 @@ export default defineContentScript({
         // both browsers. Cross-frame highlighting arrives with SPEC §16.
         if (window.top !== window) return;
         const targets = resolveCandidate(document, m.candidate);
-        highlightAll(targets);
+        const { hidden } = highlightAll(targets);
         // Answered as a message, not a reply — sendResponse is not portable.
-        browser.runtime.sendMessage({ type: 'HIGHLIGHT_RESULT', count: targets.length }).catch(() => {});
+        browser.runtime.sendMessage({ type: 'HIGHLIGHT_RESULT', count: targets.length, hidden }).catch(() => {});
       }
     });
   },
