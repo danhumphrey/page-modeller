@@ -18,7 +18,7 @@
         <q-btn flat dense no-caps icon="content_copy" label="Copy" data-testid="code-copy" @click="copy" />
       </q-toolbar>
 
-      <q-card-section class="q-pa-none">
+      <q-card-section class="code-body q-pa-none">
         <!-- Read-only, as in v2.5.1: the model is edited in the table, not here. -->
         <pre class="code" data-testid="code-output">{{ code }}</pre>
       </q-card-section>
@@ -66,11 +66,27 @@ async function copy() {
 </script>
 
 <style scoped>
-.code-card {
-  width: 100%;
-  max-width: 900px;
+/* Doubled class to out-specify Quasar's `.q-dialog__inner--minimized > div`,
+   which caps a dialog at 560px wide and 100dvh - 48px tall. */
+.code-card.code-card {
+  /* Fixed to the viewport, not to the content: switching shape changes the
+     line count wildly, and a card that resizes under the pointer is jarring.
+     The dialog's own padding supplies the surrounding margin. */
+  width: 90vw;
+  max-width: 90vw;
+  height: 90vh;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   background: var(--pm-page-bg);
   color: var(--pm-text);
+}
+
+/* min-height: 0 or the flex item refuses to shrink below its content and the
+   code scrolls the card instead of itself. */
+.code-body {
+  flex: 1;
+  min-height: 0;
 }
 
 .dialog-header {
@@ -88,8 +104,8 @@ async function copy() {
 .code {
   margin: 0;
   padding: 16px;
+  height: 100%;
   /* The panel is narrow; long locators scroll rather than widening the dialog. */
-  max-height: 60vh;
   overflow: auto;
   font: 12px/1.6 ui-monospace, SFMono-Regular, monospace;
   white-space: pre;
