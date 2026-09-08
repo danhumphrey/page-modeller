@@ -9,10 +9,10 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
   `getByLabel`, … → CSS/XPath fallback) via `dom-accessibility-api`. Validated against real Playwright
   resolution (see the fidelity test).
 - **Locator IR** (`src/engine/types.ts`) — framework-agnostic candidate list; the contract for generators.
-- **Playwright-TS generator** (`src/generators/`) — pure `IR → Page Object source` function.
 - **Inspector overlay** (`entrypoints/content/`) — highlight + click to pick; runs in all frames.
-- **Panel UI** (`ui/App.vue`) — Quasar: pick, choose among ranked candidates, live code preview, copy.
-  One app, three surfaces.
+- **Panel UI** (`ui/`) — Quasar: `AppToolbar` (SPEC §3) over `ModelTable` (SPEC §6). One app, three
+  surfaces. Shell only so far — capture, generation and the dialogs are the next increments.
+- **Frameworks** (`src/frameworks.ts`) — the targets and the locator types each can express (SPEC §7).
 - **Host adapter** (`host/`) — the only thing that differs per surface: which tab the panel drives.
   Side panel / sidebar follow the active tab (`tabs.query`); a DevTools panel is pinned to the tab it
   was opened on (`devtools.inspectedWindow.tabId`).
@@ -26,7 +26,7 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
 | `npm run build` / `build:firefox` | Production build (`.output/`) |
 | `npm run zip` | Store-ready zips (incl. Firefox sources zip) |
 | `npm run typecheck` | Strict TS check of the pure core |
-| `npm run test:unit` | Vitest — generator + naming |
+| `npm run test:unit` | Vitest — pure core |
 | `npm run check:manifests` | Assert both builds emit the expected surfaces |
 | `npm test` | Unit + engine fidelity (real Playwright) + both builds + manifests + extension E2E |
 
@@ -59,12 +59,12 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
 1. Extension loads with no console errors (check the background/service-worker console too).
 2. Open the side panel / sidebar **and** the DevTools panel. Both render, and the header chip names the
    surface you're on.
-3. On any page: **Pick element** → hover highlights → click adds a row with a name, role chip and
-   ranked candidates. Switch candidate, edit the name, delete the row — the code preview tracks each.
-4. **Copy** puts the generated class on the clipboard.
-5. Switch tabs with the side panel open: picking stops, and picks from the other tab don't leak in.
-6. Try a page with no content script (`about:blank`, `chrome://extensions`): **Pick element** shows the
-   "can't reach this page" notice rather than failing silently.
+3. Toolbar reads Scan · Delete Model · framework · Add Element · Generate Code, with Delete Model and
+   Generate Code visibly disabled while the model is empty (SPEC §3).
+4. The framework selector opens and lists all six targets; picking one updates the label.
+5. Table shows Name · Locator · Actions and the empty state, with all three headers visible at the
+   narrowest side-panel width.
+6. Tooltips appear on every toolbar button.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
 engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a
@@ -72,12 +72,13 @@ mismatch there is a real signal. Optional; the fidelity spec covers them automat
 markup, so the failures that matter — overlays, sticky headers, shadow roots, frames — only show up on
 real sites.
 
-## Known Phase-1 limits (next steps)
+## Where this is up to
 
-- **Main-frame picking** — the content script runs in all frames, but cross-origin **frame-path
-  assembly** (IR `framePath`) is not wired into the UI yet (proven feasible in the study's Spike #5).
-- Single generator (Playwright-TS). Selenium/Puppeteer/Playwright-Python generators are additive
-  (one file each) thanks to the IR.
+Behaviour is owned by [`../docs/v3/SPEC.md`](../docs/v3/SPEC.md); the build order is `REWRITE-PLAN.md`
+§12. Built so far: the host-agnostic shell, and the toolbar + table shell. **No capture yet** — the
+toolbar buttons acknowledge and do nothing, so the table only ever shows its empty state until Add
+Element lands.
+
 - Content script applies to pages loaded after install; already-open tabs need a reload.
 - `browser_specific_settings.gecko.id` is a **placeholder**. The real AMO id must replace it before any
   upload, or Firefox gets a second listing instead of an update (NFR-6).

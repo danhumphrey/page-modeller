@@ -33,11 +33,24 @@ test('built extension loads and every panel surface renders', async () => {
         const page = await context.newPage();
         await page.goto(`chrome-extension://${extId}/${surface.page}`);
 
-        await expect(page.getByTestId('pick-toggle')).toBeVisible();
+        // Toolbar and empty state (SPEC §3, §6).
+        await expect(page.getByTestId('btn-scan')).toBeVisible();
+        await expect(page.getByTestId('btn-add')).toBeVisible();
+        await expect(page.getByTestId('framework-selector')).toContainText('Playwright');
         await expect(page.getByTestId('empty-state')).toBeVisible();
-        await expect(page.getByTestId('surface-label')).toBeVisible();
-        // Code panel is present (empty model still renders the class skeleton).
-        await expect(page.getByTestId('code-output')).toContainText('class GeneratedPage');
+
+        // Enablement with no model: scan and add live, the rest disabled.
+        await expect(page.getByTestId('btn-delete-model')).toBeDisabled();
+        await expect(page.getByTestId('btn-generate')).toBeDisabled();
+        await expect(page.getByTestId('btn-scan')).toBeEnabled();
+        await expect(page.getByTestId('btn-add')).toBeEnabled();
+
+        // The framework selector offers every target and locks after a model
+        // exists — it must at least open while there is none.
+        await page.getByTestId('framework-selector').click();
+        await expect(page.getByText('Selenium WebDriver Java')).toBeVisible();
+        await page.keyboard.press('Escape');
+
         await page.close();
       });
     }
