@@ -8,5 +8,5 @@ import { hostKey, type PanelHost } from '@/host/types';
 
 /** Mount the one panel app onto whichever surface is hosting it. */
 export function mountPanel(host: PanelHost) {
-  createApp(App).use(Quasar, { plugins: { Notify, Dialog } }).provide(hostKey, host).mount('#app');
+  createApp(App).use(Quasar, { plugins: { Notify, Dialog }, config: { dark: 'auto' } }).provide(hostKey, host).mount('#app');
 }

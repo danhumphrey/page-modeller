@@ -66,12 +66,14 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    Generate Code visibly disabled while the model is empty (SPEC §3).
 4. **Add Element** → hover highlights → click adds one row, then picking *stops* (SPEC §4). Clicking
    again without pressing Add must not add a second row.
-5. The row's name and locator look right; a second element with the same name becomes `About2`.
-6. Row trash and Delete Model both confirm before deleting.
-7. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
+5. **Escape** cancels Add Element — both with focus in the panel and with focus in the page.
+6. The row's name and locator look right, **on one line** — Name, Locator and Actions across, not
+   stacked; a second element with the same name becomes `About2`.
+7. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
+8. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
    switch to B, add something different, switch back — A must be intact.
-8. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
-9. Table headers stay visible at the narrowest side-panel width.
+9. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
+10. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
 engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a

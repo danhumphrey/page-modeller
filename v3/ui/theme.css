@@ -29,6 +29,9 @@
     --pm-text-muted: #9aa0a6;
     --pm-rule: #3c4043;
     --pm-row-hover: rgba(138, 180, 248, 0.12);
+    /* Quasar themes its own overlays (dialog, notify) from these. */
+    --q-dark-page: #1e1f22;
+    --q-dark: #2b2d31;
   }
 }
 
@@ -40,6 +43,8 @@
   --pm-text-muted: #9aa0a6;
   --pm-rule: #3c4043;
   --pm-row-hover: rgba(138, 180, 248, 0.12);
+  --q-dark-page: #1e1f22;
+  --q-dark: #2b2d31;
 }
 
 body {

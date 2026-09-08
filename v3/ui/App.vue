@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted } from 'vue';
+import { ref, computed, inject, onMounted, onBeforeUnmount } from 'vue';
 import { useQuasar } from 'quasar';
 import { browser } from 'wxt/browser';
 import AppToolbar from './AppToolbar.vue';
@@ -62,9 +62,20 @@ const rows = computed<ModelRow[]>(() =>
 onMounted(async () => {
   tabId.value = await host.getTabId();
   syncFromStore();
+  // The content script listens for Escape too, but after clicking Add Element
+  // focus is in the panel, so the page never sees the keydown. Cover both.
+  window.addEventListener('keydown', onPanelKey, true);
 });
 
-host.onTabChanged(async (next) => {
+onBeforeUnmount(() => window.removeEventListener('keydown', onPanelKey, true));
+
+function onPanelKey(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || !isPicking()) return;
+  e.preventDefault();
+  void stopPicking();
+}
+
+host.onTabChanged((next) => {
   if (isPicking() && tabId.value != null) void send(tabId.value, { type: 'STOP_PICKING' });
   isScanning.value = isAdding.value = false;
   tabId.value = next;
@@ -72,6 +83,11 @@ host.onTabChanged(async (next) => {
 });
 
 const isPicking = () => isScanning.value || isAdding.value;
+
+async function stopPicking() {
+  if (tabId.value != null) await send(tabId.value, { type: 'STOP_PICKING' });
+  isAdding.value = isScanning.value = false;
+}
 
 async function send(target: number, msg: { type: 'START_PICKING'; mode: PickMode } | { type: 'STOP_PICKING' }): Promise<boolean> {
   try {
@@ -92,12 +108,11 @@ async function send(target: number, msg: { type: 'START_PICKING'; mode: PickMode
 }
 
 async function toggleAdd() {
+  if (isAdding.value) return stopPicking();
   const target = tabId.value ?? (await host.getTabId());
   tabId.value = target;
   if (target == null) return;
-  const next = !isAdding.value;
-  const ok = await send(target, next ? { type: 'START_PICKING', mode: 'add' } : { type: 'STOP_PICKING' });
-  if (ok) isAdding.value = next;
+  if (await send(target, { type: 'START_PICKING', mode: 'add' })) isAdding.value = true;
 }
 
 let idSeq = 0;
