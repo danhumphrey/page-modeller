@@ -53,8 +53,10 @@ MV3 on both browsers. One `sidepanel` entrypoint gives Chrome `side_panel` and F
 `npm run dev` (Chrome) or `npm run dev:firefox` — WXT launches the browser with the extension loaded.
 Navigate wherever you want to test.
 
-The dev browser reuses a profile under `.wxt/` rather than a throwaway one, so settings, logins and
-history survive a restart. `web-ext` uses a temporary profile by default, which meant `storage.sync`
+The dev browser is Chrome **stable**, and reuses a profile under `.wxt/` rather than a throwaway one, so
+settings, logins and history survive a restart. `chrome-launcher` otherwise picks the newest install it
+finds — Canary, on a machine that has it — which would hide exactly the version problems
+`minimum_chrome_version` exists to catch. Set `CHROME_PATH` to override. `web-ext` uses a temporary profile by default, which meant `storage.sync`
 started empty every run and no setting ever appeared to persist. Delete `.wxt/chrome-profile` or
 `.wxt/firefox-profile` to start clean.
 

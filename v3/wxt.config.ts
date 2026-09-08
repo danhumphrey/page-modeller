@@ -1,8 +1,33 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'wxt';
 import vue from '@vitejs/plugin-vue';
 import { quasar, transformAssetUrls } from '@quasar/vite-plugin';
+
+/**
+ * Chrome *stable*, not whatever is newest.
+ *
+ * chrome-launcher picks the most recent installation it finds, which on a
+ * machine with Canary installed means testing against Canary — and Canary will
+ * happily hide a version problem that the declared floor
+ * (`minimum_chrome_version`) exists to catch.
+ *
+ * Returns undefined when stable is not where it is expected, so web-ext falls
+ * back to its own search rather than failing to launch. `CHROME_PATH` wins, as
+ * chrome-launcher itself honours it.
+ */
+function chromeStable(): string | undefined {
+  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  const candidates: Record<string, string[]> = {
+    darwin: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'],
+    linux: ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/opt/google/chrome/chrome'],
+    win32: [
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    ],
+  };
+  return (candidates[process.platform] ?? []).find((path) => existsSync(path));
+}
 
 function devProfile(name: string): string {
   const path = resolve('.wxt', name);
@@ -61,6 +86,7 @@ export default defineConfig({
   // Created here because chrome-launcher writes its log INTO the profile
   // directory without creating it first, and dies with ENOENT if it is missing.
   webExt: {
+    binaries: { chrome: chromeStable() },
     keepProfileChanges: true,
     chromiumProfile: devProfile('chrome-profile'),
     firefoxProfile: devProfile('firefox-profile'),
