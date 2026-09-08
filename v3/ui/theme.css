@@ -18,6 +18,8 @@
   /* Horizontal inset for the table; v2.5.1 used 2em, too much at side-panel
      width where the whole panel can be ~350px. */
   --pm-gutter: 16px;
+  --pm-warning-bg: #fff4e0;
+  --pm-warning-fg: #7a4a00;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,6 +34,8 @@
     /* Quasar themes its own overlays (dialog, notify) from these. */
     --q-dark-page: #1e1f22;
     --q-dark: #2b2d31;
+    --pm-warning-bg: #3a2f18;
+    --pm-warning-fg: #ffcc80;
   }
 }
 
@@ -45,6 +49,8 @@
   --pm-row-hover: rgba(138, 180, 248, 0.12);
   --q-dark-page: #1e1f22;
   --q-dark: #2b2d31;
+  --pm-warning-bg: #3a2f18;
+  --pm-warning-fg: #ffcc80;
 }
 
 body {

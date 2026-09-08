@@ -3,6 +3,7 @@ import { isMessage, PANEL_PORT, type Message, type PanelViewing } from '@/src/me
 import { ModelStore, usedNames, type TabModel } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
 import { defaultFrameworkId } from '@/src/frameworks';
+import { chooseCandidate } from '@/src/locators/select';
 
 // Background service worker / event page.
 //
@@ -29,6 +30,19 @@ export default defineBackground(() => {
   }
 
   browser.tabs.onRemoved.addListener((tabId) => store.clear(tabId));
+
+  // A model kept across a navigation may no longer describe the page (SPEC §5).
+  // The background has to notice: a DevTools panel cannot read the tab's URL.
+  browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (!changeInfo.url) return;
+    const model = store.get(tabId);
+    if (model.url == null) return;
+    const stale = model.url !== changeInfo.url;
+    if (stale === model.stale) return;
+    // Navigating back to where it was built makes it current again.
+    model.stale = stale;
+    publish(tabId, model);
+  });
 
   // A model with no panel watching it is abandoned work (SPEC §5). Each panel
   // holds a port and reports which tab it is showing; when a panel closes, the
@@ -75,11 +89,15 @@ export default defineBackground(() => {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
         const model = store.get(tabId);
+        // The page the model belongs to, recorded when the first element lands.
+        if (model.url == null) model.url = sender.tab?.url ?? null;
         model.elements.push({
           ...m.result,
           id: `el-${idSeq++}`,
           name: uniqueName(m.result.suggestedName, usedNames(model)),
-          selectedIndex: m.result.preferredIndex >= 0 ? m.result.preferredIndex : 0,
+          // Not the engine's preferredIndex: that is framework-agnostic, and
+          // would hand a Selenium model a Playwright-only locator.
+          selectedIndex: chooseCandidate(m.result.candidates, model.frameworkId),
         });
         publish(tabId, model);
         // Picking is one-shot (SPEC §4); tell the panels so they can un-arm.
@@ -111,6 +129,19 @@ export default defineBackground(() => {
       case 'DELETE_ELEMENT': {
         const model = store.get(m.tabId);
         model.elements = model.elements.filter((e) => e.id !== m.id);
+        publish(m.tabId, model);
+        return;
+      }
+      case 'UPDATE_ELEMENT': {
+        const model = store.get(m.tabId);
+        const el = model.elements.find((e) => e.id === m.id);
+        if (!el) return;
+        el.name = m.name;
+        el.selectedIndex = m.selectedIndex;
+        // Absent means "use the generated candidate again", so it must be
+        // deleted rather than set to undefined — the model is serialised.
+        if (m.override) el.override = m.override;
+        else delete el.override;
         publish(m.tabId, model);
         return;
       }

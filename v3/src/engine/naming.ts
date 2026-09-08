@@ -42,7 +42,7 @@ function accessibleName(el: Element): string {
  * through to the next naming rule, while a false negative ships a name that
  * will rot.
  */
-function looksGenerated(value: string): boolean {
+export function looksGenerated(value: string): boolean {
   // Known CSS-in-JS shapes: emotion (css-1q2w3e), styled-components (sc-bdVaJa),
   // CSS Modules (Button_root__2xK9f), and leading-underscore hashes (_2xK9f).
   if (/^(css|sc|emotion)-[a-z0-9]+$/i.test(value)) return true;

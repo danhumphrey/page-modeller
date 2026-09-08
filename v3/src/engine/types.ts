@@ -11,7 +11,17 @@ export type LocatorCandidate =
   | { kind: 'altText'; text: string; exact?: boolean }
   | { kind: 'title'; text: string; exact?: boolean }
   | { kind: 'css'; value: string }
-  | { kind: 'xpath'; value: string };
+  | { kind: 'xpath'; value: string }
+  // Selenium's native By strategies. The engine does not generate these yet —
+  // that is the superset generator (REWRITE-PLAN §12) — but the IR has to hold
+  // them, because the Edit dialog offers the full framework list (SPEC §7) and
+  // a hand-typed Selenium locator must be storable and testable with the eye.
+  | { kind: 'id'; value: string }
+  | { kind: 'name'; value: string }
+  | { kind: 'className'; value: string }
+  | { kind: 'tagName'; value: string }
+  | { kind: 'linkText'; text: string }
+  | { kind: 'partialLinkText'; text: string };
 
 export interface RankedCandidate {
   candidate: LocatorCandidate;

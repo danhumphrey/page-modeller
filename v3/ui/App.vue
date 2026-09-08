@@ -16,12 +16,35 @@
 
     <q-page-container>
       <q-page>
+        <!-- SPEC §5: a model is kept across a navigation, so it can end up
+             describing a page that is no longer loaded. Say so, rather than
+             leaving the user to wonder why the eye reports 0 for every row. -->
+        <div v-if="model.stale" class="stale-banner" data-testid="stale-banner">
+          <q-icon name="warning" size="18px" />
+          <div class="stale-text">
+            Built on a different page.
+            <span class="stale-url" :title="model.url ?? ''">{{ model.url }}</span>
+          </div>
+          <q-btn flat dense no-caps size="sm" label="Delete Model" data-testid="stale-delete" @click="deleteModel" />
+        </div>
+
         <ModelTable
           :elements="rows"
           :click-to-highlight="settings.clickTableRowsToViewMatchedElements"
           @highlight="highlight"
-          @edit="notYet('Edit')"
+          @edit="openEditor"
           @remove="removeElement"
+        />
+
+        <EditElementDialog
+          v-if="editing"
+          :key="editing.id"
+          :element="editing"
+          :framework-id="model.frameworkId"
+          :taken-names="model.elements.filter((e) => e.id !== editing!.id).map((e) => e.name)"
+          @close="editing = undefined"
+          @highlight="highlightCandidate"
+          @save="saveEdit"
         />
       </q-page>
     </q-page-container>
@@ -34,11 +57,13 @@ import { useQuasar } from 'quasar';
 import { browser } from 'wxt/browser';
 import AppToolbar from './AppToolbar.vue';
 import ModelTable, { type ModelRow } from './ModelTable.vue';
+import EditElementDialog from './EditElementDialog.vue';
 import { defaultFrameworkId } from '@/src/frameworks';
 import { displayLocator } from '@/src/locators/display';
-import { activeCandidate, emptyModel, type TabModel } from '@/src/model';
+import { activeCandidate, emptyModel, type ModelElement, type TabModel } from '@/src/model';
 import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, type PanelToContent } from '@/src/messaging';
 import { hostKey } from '@/host/types';
+import type { LocatorCandidate } from '@/src/engine/types';
 import { defaultSettings } from '@/src/settings';
 
 // The panel is a VIEW. The background owns the model, one per tab (SPEC §5), so
@@ -54,6 +79,7 @@ const tabId = ref<number | undefined>();
 const model = ref<TabModel>(emptyModel(defaultFrameworkId));
 const isScanning = ref(false);
 const isAdding = ref(false);
+const editing = ref<ModelElement | undefined>();
 
 const rows = computed<ModelRow[]>(() =>
   model.value.elements.map((el) => ({
@@ -203,9 +229,25 @@ function clearHighlight() {
 
 function highlight(id: string) {
   const el = model.value.elements.find((e) => e.id === id);
-  if (!el || tabId.value == null) return;
+  if (!el) return;
+  highlightCandidate(activeCandidate(el));
+}
+
+/** Also used by the Edit dialog, which tests what is typed, not what is saved. */
+function highlightCandidate(candidate: LocatorCandidate) {
+  if (tabId.value == null) return;
   // Fire and forget; the count arrives as HIGHLIGHT_RESULT.
-  send(tabId.value, { type: 'HIGHLIGHT', candidate: activeCandidate(el) });
+  send(tabId.value, { type: 'HIGHLIGHT', candidate });
+}
+
+function openEditor(id: string) {
+  editing.value = model.value.elements.find((e) => e.id === id);
+}
+
+function saveEdit(payload: { name: string; selectedIndex: number; override?: LocatorCandidate }) {
+  if (!editing.value || tabId.value == null) return;
+  toBackground({ type: 'UPDATE_ELEMENT', tabId: tabId.value, id: editing.value.id, ...payload });
+  editing.value = undefined;
 }
 
 function showMatchCount(count: number) {
@@ -252,3 +294,31 @@ function notYet(what: string) {
   notice('notYet', { message: `${what} — not built yet`, icon: 'construction', timeout: 1500 });
 }
 </script>
+
+<style scoped>
+.stale-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px var(--pm-gutter);
+  background: var(--pm-warning-bg);
+  color: var(--pm-warning-fg);
+  border-bottom: 1px solid var(--pm-rule);
+  font-size: 12px;
+}
+
+.stale-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* A URL is long and the panel is narrow; the full value is on the title. */
+.stale-url {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+</style>

@@ -1,4 +1,5 @@
-import { generate, resolveCandidate, safeRole } from '@/src/engine/candidates';
+import { generate, resolveCandidate } from '@/src/engine/candidates';
+import { describeElement } from '@/src/engine/describe';
 import { isMessage, type Message } from '@/src/messaging';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
@@ -27,6 +28,7 @@ export default defineContentScript({
         transition: 'all 40ms ease-out',
       } as CSSStyleDeclaration);
       label = document.createElement('div');
+      label.dataset.pageModeller = 'label';
       Object.assign(label.style, {
         position: 'fixed',
         pointerEvents: 'none',
@@ -48,22 +50,11 @@ export default defineContentScript({
       current = null;
     }
 
-    /**
-     * What the tool will classify this element as (SPEC §11), not its raw role
-     * attribute. `role="none"` and `presentation` remove an element from the
-     * accessibility tree, so they say nothing useful about what you are picking
-     * — fall back to the tag, as for anything with no computed role.
-     */
-    function overlayLabel(el: Element): string {
-      const role = safeRole(el);
-      return role && role !== 'none' && role !== 'presentation' ? role : el.tagName.toLowerCase();
-    }
-
     function highlight(el: Element) {
       ensureOverlay();
       const r = el.getBoundingClientRect();
       Object.assign(box!.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-      label!.textContent = overlayLabel(el);
+      label!.textContent = describeElement(el);
       label!.style.left = `${r.left}px`;
       label!.style.top = `${Math.max(0, r.top - 18)}px`;
     }

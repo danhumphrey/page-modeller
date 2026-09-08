@@ -25,6 +25,13 @@
     <label for="plan-pro">Pro plan</label>
 
     <p data-spike="unique-paragraph">This is a unique descriptive paragraph of text.</p>
+
+    <!-- A control built from divs, wrapped in a plain one. The two have the same
+         bounding box, so the overlay label is the only way to tell which you are
+         about to pick. -->
+    <div class="cta-wrapper" style="padding: 12px">
+      <div role="button" tabindex="0" data-spike="div-button">Continue to checkout</div>
+    </div>
   </main>
 </body>
 </html>

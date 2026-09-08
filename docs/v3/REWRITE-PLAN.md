@@ -325,10 +325,10 @@ before starting the next.
 6. **Naming** (SPEC §13). ✅ **Done** — `src/engine/naming.ts`, split so `baseName` runs in the page and
    `uniqueName` in the panel.
 
-   **Gap: the engine only generates Playwright strategies.** No `id`, `name`, `linkText`,
-   `partialLinkText`, `className` or `tagName`, so selecting a Selenium target today yields `css:` for
-   everything. Needs a superset generator with per-framework filtering, as v2.5.1 had. Do this before
-   step 10.
+   ✅ **Superset generator done.** The engine emits Selenium's `id`, `name`, `className`, `tagName`,
+   `linkText` and `partialLinkText` alongside the Playwright strategies, and `src/locators/select.ts`
+   picks the first candidate the chosen framework can express. The fidelity spec verifies the new kinds
+   against Playwright's equivalent selectors.
 
 7. **View Matched Elements** (SPEC §8). ✅ **Done** — the eye: highlight all, scroll to first,
    three-state snackbar. Awaiting hand-test.
@@ -338,18 +338,34 @@ before starting the next.
    innermost element only. The fidelity spec now asserts **every** candidate's predicted count against
    real Playwright, not just the preferred one — which is how those three were found.
 
-8. **Edit dialog** (SPEC §9) and **Delete Model** (SPEC §10).
+8. **Edit dialog** (SPEC §9) and **Delete Model** (SPEC §10). ✅ **Done** — `ui/EditElementDialog.vue`,
+   with per-type fields (`src/locators/fields.ts`) so `getByRole`'s role + name is expressible.
+   Delete Model landed earlier.
 
-9. **Scan** (SPEC §4). Container pick, interactive-role descendants, a11y-tree filtered.
+   The IR gained Selenium's `id`, `name`, `className`, `tagName`, `linkText` and `partialLinkText`,
+   with resolution so the eye can test them. The engine still does not *generate* them — that is the
+   superset generator below — but the dialog offers the full framework list, so the model has to be
+   able to hold a hand-typed one.
 
-10. **Generate Code** (SPEC §11). Selenium Java first — the reference template — with the six fixes.
+9. **Ancestor navigation while picking** (SPEC §4). Arrow keys walk the target up and down the DOM,
+   with a breadcrumb of the chain replacing the single overlay label. The mouse alone cannot reliably
+   hit a nested element: a wrapper `<div>` and the `<div role="button">` inside it share a bounding box,
+   and selecting the wrapper meant finding a 2px sliver of padding.
 
-11. **Playwright** (SPEC §12). Structured locators, ancestor scoping, `exact: true`. The primary target
+   **Before Scan, deliberately.** Scan's whole job is picking a *container*, and containers are exactly
+   the nested, same-box elements this fixes — building Scan first would ship a feature whose primary
+   interaction is the one we know is broken.
+
+10. **Scan** (SPEC §4). Container pick, interactive-role descendants, a11y-tree filtered.
+
+11. **Generate Code** (SPEC §11). Selenium Java first — the reference template — with the six fixes.
+
+12. **Playwright** (SPEC §12). Structured locators, ancestor scoping, `exact: true`. The primary target
     going forward, so it gets its own step rather than riding along with the other generators.
 
-12. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python.
+13. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python.
 
-13. **Frames** (SPEC §16), **settings** (SPEC §14), **page-object wrapper** (SPEC §17).
+14. **Frames** (SPEC §16), **settings** (SPEC §14), **page-object wrapper** (SPEC §17).
 
 **Release blocker:** `browser_specific_settings.gecko.id` is a placeholder. The real AMO id must replace
 it or an upload creates a second listing instead of updating the existing one (NFR-6).

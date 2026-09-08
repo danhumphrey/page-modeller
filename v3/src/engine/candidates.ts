@@ -1,6 +1,6 @@
 import { computeAccessibleName, getRole } from 'dom-accessibility-api';
 import type { LocatorCandidate, ElementResult, RankedCandidate } from './types';
-import { baseName } from './naming';
+import { baseName, looksGenerated } from './naming';
 
 const norm = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
 
@@ -25,7 +25,7 @@ function pseudoText(el: Element, pseudo: '::before' | '::after'): string {
   }
 }
 
-function safeName(el: Element): string {
+export function safeName(el: Element): string {
   try {
     let name = norm(computeAccessibleName(el));
     // Pseudo content only contributes when the name is derived from content
@@ -75,19 +75,38 @@ function cssFor(el: Element): string {
   return parts.join(' > ');
 }
 
+const HTML_NS = 'http://www.w3.org/1999/xhtml';
+
+/**
+ * One step of an XPath.
+ *
+ * An unprefixed name test matches the null namespace; browsers special-case
+ * HTML-namespace elements in an HTML document, but nothing else — so `svg[1]`
+ * matches nothing, and every path through an <svg> resolved to zero. Elements
+ * outside the HTML namespace are matched on `local-name()`, which sidesteps
+ * namespaces entirely.
+ *
+ * `localName` rather than a lowercased `tagName`: SVG names are case-sensitive
+ * and some are camelCase (`clipPath`, `linearGradient`).
+ */
+function xpathStep(el: Element, index: number): string {
+  return el.namespaceURI === HTML_NS
+    ? `${el.localName}[${index}]`
+    : `*[local-name()=${JSON.stringify(el.localName)}][${index}]`;
+}
+
 function xpathFor(el: Element): string {
   if (el.id) return `//*[@id=${JSON.stringify(el.id)}]`;
   const parts: string[] = [];
   let cur: Element | null = el;
   while (cur && cur.nodeType === 1) {
-    const tag = cur.tagName.toLowerCase();
     const parent: Element | null = cur.parentElement;
     let idx = 1;
     if (parent) {
       const same = Array.from(parent.children).filter((c) => c.tagName === cur!.tagName);
       if (same.length > 1) idx = same.indexOf(cur) + 1;
     }
-    parts.unshift(`${tag}[${idx}]`);
+    parts.unshift(xpathStep(cur, idx));
     cur = parent;
   }
   return '/' + parts.join('/');
@@ -179,11 +198,23 @@ export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] 
         return [];
       }
     }
-  }
-}
 
-function predictedCount(doc: Document, c: LocatorCandidate): number {
-  return resolveCandidate(doc, c).length;
+    // Selenium's By strategies, so the eye can test a hand-typed one.
+    case 'id':
+      return c.value ? Array.from(doc.querySelectorAll(`#${CSS.escape(c.value)}`)) : [];
+    case 'name':
+      return c.value ? Array.from(doc.querySelectorAll(`[name="${CSS.escape(c.value)}"]`)) : [];
+    case 'className':
+      // By.className takes ONE class name, not a selector.
+      return c.value ? Array.from(doc.getElementsByClassName(c.value)) : [];
+    case 'tagName':
+      return c.value ? Array.from(doc.getElementsByTagName(c.value)) : [];
+    case 'linkText':
+      // Selenium matches links on their rendered text, trimmed.
+      return Array.from(doc.querySelectorAll('a')).filter((a) => norm(a.textContent) === norm(c.text));
+    case 'partialLinkText':
+      return Array.from(doc.querySelectorAll('a')).filter((a) => norm(a.textContent).includes(norm(c.text)));
+  }
 }
 
 // ---- candidate generation (ranked, mirrors Playwright's priority) ----
@@ -227,13 +258,48 @@ export function generate(el: Element): ElementResult {
     if (text && text.length <= 80) out.push({ kind: 'text', text, exact: true });
   }
 
+  // ---- Selenium's By strategies ----
+  //
+  // Generated for every element regardless of the chosen framework: the model
+  // holds the superset and the framework decides which are expressible. Without
+  // these, a Selenium target had nothing but css and xpath, and would happily
+  // select a `role` locator Selenium cannot write.
+  const id = el.getAttribute('id');
+  if (id && !looksGenerated(id)) out.push({ kind: 'id', value: id });
+
+  const nameAttr = el.getAttribute('name');
+  if (nameAttr) out.push({ kind: 'name', value: nameAttr });
+
+  // By.className takes ONE class name, so each is its own candidate. Capped,
+  // and build-generated names skipped, or a CSS-in-JS page yields a dropdown of
+  // hashes that change on their next deploy.
+  for (const cls of Array.from(el.classList).filter((c) => !looksGenerated(c)).slice(0, 3)) {
+    out.push({ kind: 'className', value: cls });
+  }
+
+  out.push({ kind: 'tagName', value: el.localName });
+
+  if (el.localName === 'a') {
+    const linkText = norm(el.textContent);
+    if (linkText) {
+      out.push({ kind: 'linkText', text: linkText });
+      out.push({ kind: 'partialLinkText', text: linkText });
+    }
+  }
+
   out.push({ kind: 'css', value: cssFor(el) });
   out.push({ kind: 'xpath', value: xpathFor(el) });
 
-  const candidates: RankedCandidate[] = out.map((candidate) => ({
-    candidate,
-    predictedCount: predictedCount(doc, candidate),
-  }));
+  // Keep only candidates that actually find THIS element. A locator can be
+  // well-formed, resolve to something, and still be useless: getByRole excludes
+  // a11y-hidden elements, so a hidden button's role candidate finds the other
+  // buttons; getByText matches the innermost element, so a <fieldset>'s text
+  // candidate finds its <legend>. Offering those in the Edit dialog would hand
+  // the user a locator that cannot work.
+  const candidates: RankedCandidate[] = out
+    .map((candidate) => ({ candidate, matches: resolveCandidate(doc, candidate) }))
+    .filter(({ matches }) => matches.includes(el))
+    .map(({ candidate, matches }) => ({ candidate, predictedCount: matches.length }));
 
   const preferredIndex = candidates.findIndex((c) => c.predictedCount === 1);
 

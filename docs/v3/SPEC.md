@@ -40,6 +40,12 @@ does not exist in Playwright). The user knows their target before they start.
 
 ## 4. Capture
 
+**The overlay labels what you are about to pick** — the computed role, then the accessible name, with
+the tag shown only when it differs from the role: `button "Save"`, `button (div) "Log in"`, or plain
+`div` for a wrapper. It previews the locator rather than naming the tag, which matters because a wrapper
+`<div>` and the `<div role="button">` inside it have the same bounding box and both used to read `div`.
+**[settled]**
+
 **Scan Page** — pick a *container*: the whole page or any subsection (typically a `div` or `form`). Its
 **interactive descendants** enter the model. Non-interactive elements (`p`, `span`, …) are skipped. The
 container itself is not added, only children. Scan is **once per model**; Add is how you extend it.
@@ -130,9 +136,15 @@ it is deleted, so the panel needs to say the model has gone stale.
 
 **Stale models and hidden elements are one problem, not two.** Both end in the eye reporting *0 elements
 match* when nothing is actually wrong — the model was built on another page, or the element is
-deliberately not rendered yet. One mechanism covers both: the model records the URL it was built against,
-the panel shows a stale banner when the tab has navigated away from it, and the 0-match snackbar names
-the likely reason rather than just the count. **[inferred]**
+deliberately not rendered yet.
+
+The model records the URL of the page its first element came from, and the **background** decides
+staleness on `tabs.onUpdated`, because a DevTools panel cannot read the tab's URL for itself. The panel
+shows a banner naming that page, with **Delete Model** to hand — the model also blocks scanning the new
+page, since scan is once-per-model (§4). Navigating back makes the model current again rather than
+leaving it flagged. **[settled]**
+
+Still to do: the 0-match snackbar naming the likely reason rather than just the count. **[inferred]**
 
 ## 6. Model table
 
@@ -144,6 +156,15 @@ Empty state: *"Scan the page or start adding elements to build the model"*.
 - **Single-click a row** → View Matched Elements, if the setting is on. **[settled]**
 
 ## 7. Locators
+
+**The engine generates a superset** — every strategy it can find, Playwright's and Selenium's alike —
+and the framework decides which are expressible. The candidate an element *starts on* is the first, in
+the framework's own order of preference, that the framework can express and that resolves uniquely.
+
+This matters more than it sounds. Without it a Selenium model selected `getByRole`, displayed it as
+`role: heading — Google`, and the eye reported *1 element matches* — because the in-page resolver
+understands roles even though Selenium cannot express one. A green tick on a locator that cannot exist
+in the target framework is worse than no check at all. **[settled]**
 
 Each element carries the set of locators that were **generated and matched** for it. The type dropdown
 offers the **full framework list**, not just the generated ones — selecting a type with no generated
@@ -168,6 +189,12 @@ locator can be tested before saving. **[settled]**
 | 0 | red error | *0 elements match that locator* |
 | >1 | amber warning | *N elements match that locator* |
 
+**Every candidate must find the element it was generated from.** A locator can be well-formed, resolve
+to something, and still be useless: `getByRole` excludes a11y-hidden elements, so a hidden button's role
+candidate finds the *other* buttons; `getByText` matches the innermost element, so a `<fieldset>`'s text
+candidate finds its `<legend>`. Candidates that do not find their own element are dropped rather than
+offered in the Edit dialog. **[settled]**
+
 **The count has to be the count the generated test will get.** The in-page resolver is our own
 approximation of Playwright's matching, and the eye reports from it, so any drift means showing the user
 a number their test will not reproduce. Three behaviours this forces, all found by asserting every
@@ -185,8 +212,21 @@ candidate against real Playwright rather than reasoning about it:
 
 ## 9. Edit dialog
 
-Title **Edit Element**. Fields: **Name** · locator **type** dropdown · editable locator **value** · eye.
+Title **Edit Element**. Fields: **Name** · locator **type** dropdown · the fields that type needs · eye.
 CANCEL / SAVE. **[settled]**
+
+- **Name** is required, unique within the model, and cannot contain spaces — v2.5.1's rules.
+- **Type** offers the full framework list (§7). Switching to a type the engine generated fills the
+  fields in; switching to one it did not leaves them blank to type.
+- The **eye** tests what is currently in the fields, not what is saved, so a locator can be checked
+  before committing to it. It is **disabled, along with Save, while a required field is blank** — blank
+  does not mean "match anything": an empty `label` matches every control with no accessible name.
+  `getByRole`'s accessible name is the one optional field, since `getByRole('navigation')` is a real
+  locator.
+- A hand-edited locator that happens to equal a generated one is stored as that **selection** rather
+  than an override, so it keeps tracking the engine's own verification.
+- `exact: true` survives editing. The dialog does not expose `exact`, so dropping it on save would
+  quietly loosen the locator (§12).
 
 ## 10. Delete Model
 
@@ -280,6 +320,8 @@ Puppeteer: `css, xpath`. Robot Framework and Protractor are dropped.
 
 Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
 engine's existing ranking, testId first as the most change-resistant.
+
+These lists are also the **order of preference** for choosing an element's starting locator (§7).
 
 ## 12. Playwright
 

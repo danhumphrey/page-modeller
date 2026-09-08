@@ -23,12 +23,17 @@ export interface TabModel {
   elements: ModelElement[];
   /** Chosen up front and locked once the model has anything in it (SPEC §3). */
   frameworkId: string;
-  /** The URL the model was built against, for the stale check (SPEC §5). */
+  /** The URL the model was built against. Set when the first element lands. */
   url: string | null;
+  /**
+   * The tab has navigated away from `url`. The background decides this: a
+   * DevTools panel cannot read the tab's URL for itself (SPEC §5).
+   */
+  stale: boolean;
 }
 
 export function emptyModel(frameworkId: string): TabModel {
-  return { elements: [], frameworkId, url: null };
+  return { elements: [], frameworkId, url: null, stale: false };
 }
 
 /** The locator currently in effect for an element: an override, or the pick. */
