@@ -594,3 +594,46 @@ test('arrow keys walk the target up and down the DOM', async () => {
   expect(result.tag, 'picked the wrapper, not the button under the cursor').toBe('div');
   expect(result.role).toBeNull();
 });
+
+test('the model lives outside the service worker, not in it', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'session-storage');
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(
+    ([name, id]) => {
+      chrome.runtime.connect({ name: name as string }).postMessage({ tabId: id as number });
+    },
+    ['page-modeller-panel', tabId] as [string, number]
+  );
+
+  await panel.evaluate(
+    (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'START_PICKING', mode: 'add' } }),
+    tabId
+  );
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  // Chrome terminates the worker after 30s of inactivity, and since Chrome 114
+  // an open port does not hold it open. A model in worker memory simply
+  // vanished — which is why it "came back" after restarting the browser.
+  // storage.session survives that: in memory, cleared when the browser closes,
+  // never written to disk, so SPEC §5 still holds.
+  await expect
+    .poll(async () =>
+      panel.evaluate(async (id) => {
+        const stored = (await chrome.storage.session.get('models')) as {
+          models?: Record<string, { elements: { name: string }[] }>;
+        };
+        return stored.models?.[id]?.elements.map((e) => e.name);
+      }, tabId)
+    )
+    .toEqual(['SignIn']);
+});

@@ -204,6 +204,24 @@ function onRuntimeMessage(msg: unknown) {
 // go (SPEC §5). Disconnect happens on its own when the page unloads, which is
 // what covers closing the sidebar or closing DevTools.
 let port: { disconnect(): void; postMessage(msg: unknown): void } | undefined;
+let closing = false;
+
+/**
+ * The port also drops when Chrome terminates the service worker, which it does
+ * after 30 seconds of inactivity — and since Chrome 114 an open port does not
+ * hold it open. Reconnect, or the panel stops being counted and the background
+ * never learns which tab it is on.
+ */
+function connectToBackground() {
+  const opened = browser.runtime.connect({ name: PANEL_PORT });
+  port = opened;
+  opened.onDisconnect.addListener(() => {
+    port = undefined;
+    if (closing) return;
+    connectToBackground();
+  });
+  reportViewing();
+}
 
 /** Tell the background which tab this panel is showing (SPEC §5). */
 function reportViewing() {
@@ -211,9 +229,8 @@ function reportViewing() {
 }
 
 onMounted(async () => {
-  port = browser.runtime.connect({ name: PANEL_PORT });
   tabId.value = await host.getTabId();
-  reportViewing();
+  connectToBackground();
   if (tabId.value != null) toBackground({ type: 'GET_MODEL', tabId: tabId.value });
   // The content script listens for Escape too, but after clicking Add Element
   // focus is in the panel, so the page never sees the keydown. Cover both.
@@ -222,6 +239,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  closing = true;
   window.removeEventListener('keydown', onPanelKey, true);
   browser.runtime.onMessage.removeListener(onRuntimeMessage);
   port?.disconnect();

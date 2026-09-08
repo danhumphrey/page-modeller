@@ -125,8 +125,15 @@ assumptions: it is per *window*, it follows the active tab, and it outlives navi
 | Close the **last panel watching a tab** | that tab's model is dropped |
 | Both surfaces open | **the same model**, and a pick in one appears in the other |
 
-A model can therefore never be displayed against a page it was not built from. Nothing is persisted to
-storage; a model is session work, not a saved artifact.
+A model can therefore never be displayed against a page it was not built from. A model is session work,
+not a saved artifact: it is held in `chrome.storage.session`, which lives in memory, is cleared when the
+browser closes, and is never written to disk.
+
+**Not in the background's own memory**, which is where it started. An MV3 service worker is terminated
+after 30 seconds of inactivity, and since Chrome 114 an open port does not reset that timer — so every
+model silently vanished after half a minute of not clicking, and appeared to come back only because
+restarting the browser gave you a fresh worker. Panels reconnect their port when the worker restarts,
+or the background stops knowing which tab each panel is on.
 
 **The background owns it, and panels are views** — they render what it broadcasts and mutate it by
 sending commands. Held in a panel it was one model per *panel*: a sidebar and a DevTools panel on the
