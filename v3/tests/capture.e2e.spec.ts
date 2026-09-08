@@ -214,8 +214,74 @@ test('a pick reaches a panel page stamped with its tab', async () => {
           () => (window as unknown as { __msgs: { type: string; tabId?: number; message?: { type: string } }[] }).__msgs
         )
       )
-        .filter((m) => m.type === 'FROM_TAB' && m.message?.type === 'ELEMENT_PICKED')
+        .filter((m) => m.type === 'MODEL')
         .map((m) => m.tabId)
     )
     .toEqual([tabId]);
+
+  // The model the panel receives is the background's, with the element named.
+  const published = (await panel.evaluate(
+    () => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string }[] } }[] }).__msgs
+  )).filter((m) => m.type === 'MODEL');
+  expect(published.at(-1)!.model!.elements.map((e) => e.name)).toEqual(['SignIn']);
+});
+
+test('both panels on a tab see the same model (SPEC §5)', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  const { page, tabId } = await openFixture(sw as never, 'shared');
+
+  // Two panel pages, standing in for the sidebar and the DevTools panel.
+  const panels = [];
+  for (let i = 0; i < 2; i++) {
+    const p = await context.newPage();
+    await p.goto(`chrome-extension://${extId}/devtools-panel.html`);
+    await p.evaluate(() => {
+      (window as unknown as { __msgs: unknown[] }).__msgs = [];
+      chrome.runtime.onMessage.addListener((m) => {
+        (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+      });
+    });
+    panels.push(p);
+  }
+
+  // One panel starts a pick.
+  await panels[0].evaluate(
+    (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'START_PICKING', mode: 'add' } }),
+    tabId
+  );
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  // Both see it. A model held in the panel gave each surface its own rows.
+  for (const p of panels) {
+    await expect
+      .poll(async () =>
+        (
+          await p.evaluate(() => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string }[] } }[] }).__msgs)
+        )
+          .filter((m) => m.type === 'MODEL')
+          .at(-1)?.model?.elements.map((e) => e.name)
+      )
+      .toEqual(['SignIn']);
+  }
+
+  // A panel that opens later asks for the model and gets the same rows.
+  const late = await context.newPage();
+  await late.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await late.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+  await late.evaluate((id) => chrome.runtime.sendMessage({ type: 'GET_MODEL', tabId: id }), tabId);
+  await expect
+    .poll(async () =>
+      (await late.evaluate(() => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string }[] } }[] }).__msgs))
+        .filter((m) => m.type === 'MODEL')
+        .at(-1)?.model?.elements.map((e) => e.name)
+    )
+    .toEqual(['SignIn']);
 });

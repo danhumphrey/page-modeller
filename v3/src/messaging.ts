@@ -1,4 +1,5 @@
 import type { ElementResult, LocatorCandidate } from './engine/types';
+import type { TabModel } from './model';
 
 // Messages panel → content (sent via browser.tabs.sendMessage to the active tab).
 //
@@ -37,7 +38,14 @@ export type ContentToPanel =
 // panel could not reach the page at all. Relaying through the background is the
 // documented route, and using it everywhere keeps one code path instead of a
 // per-surface branch.
-export type PanelToBackground = { type: 'RELAY_TO_TAB'; tabId: number; message: PanelToContent };
+export type PanelToBackground =
+  | { type: 'RELAY_TO_TAB'; tabId: number; message: PanelToContent }
+  // Model commands. The background owns the model (SPEC §5), so panels ask for
+  // changes rather than making them, and every panel on the tab sees the result.
+  | { type: 'GET_MODEL'; tabId: number }
+  | { type: 'DELETE_ELEMENT'; tabId: number; id: string }
+  | { type: 'DELETE_MODEL'; tabId: number }
+  | { type: 'SET_FRAMEWORK'; tabId: number; frameworkId: string };
 
 // Messages background → panel.
 //
@@ -49,7 +57,10 @@ export type PanelToBackground = { type: 'RELAY_TO_TAB'; tabId: number; message: 
 // which tab a message came from.
 export type BackgroundToPanel =
   | { type: 'TAB_UNREACHABLE'; tabId: number }
-  | { type: 'FROM_TAB'; tabId: number; message: ContentToPanel };
+  | { type: 'FROM_TAB'; tabId: number; message: ContentToPanel }
+  // The whole model, after every change. Small enough that diffing would cost
+  // more in complexity than it saves, and it keeps panels stateless.
+  | { type: 'MODEL'; tabId: number; model: TabModel };
 
 export type Message = PanelToContent | ContentToPanel | PanelToBackground | BackgroundToPanel;
 

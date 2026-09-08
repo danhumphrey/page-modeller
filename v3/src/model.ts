@@ -1,9 +1,12 @@
 // The session model (SPEC §5, §7).
 //
-// One model per tab, held in memory. Switching tabs swaps the table; closing
-// the tab or the panel discards it. Nothing is persisted — a model is session
-// work, not a saved artifact, and this way a model can never be shown against
-// a page it was not built from.
+// One model per TAB, owned by the background. Panels are views: they render
+// what the background broadcasts and mutate it by sending messages. Holding it
+// in a panel made it one model per *panel*, so a sidebar and a DevTools panel
+// on the same tab showed different rows and a pick landed in whichever happened
+// to be listening.
+//
+// Nothing is persisted. A model lives as long as its tab.
 import type { ElementResult, LocatorCandidate } from './engine/types';
 
 export interface ModelElement extends ElementResult {
@@ -15,16 +18,17 @@ export interface ModelElement extends ElementResult {
   override?: LocatorCandidate;
 }
 
+/** Serialisable: it crosses the message boundary on every change. */
 export interface TabModel {
   elements: ModelElement[];
-  /** Reserves derived names so a second `About` becomes `About2`. */
-  usedNames: Set<string>;
+  /** Chosen up front and locked once the model has anything in it (SPEC §3). */
+  frameworkId: string;
   /** The URL the model was built against, for the stale check (SPEC §5). */
   url: string | null;
 }
 
-export function emptyModel(): TabModel {
-  return { elements: [], usedNames: new Set(), url: null };
+export function emptyModel(frameworkId: string): TabModel {
+  return { elements: [], frameworkId, url: null };
 }
 
 /** The locator currently in effect for an element: an override, or the pick. */
@@ -32,14 +36,25 @@ export function activeCandidate(el: ModelElement): LocatorCandidate {
   return el.override ?? el.candidates[el.selectedIndex]?.candidate ?? el.candidates[0].candidate;
 }
 
-/** Per-tab store. Keyed by tab id; entries live only as long as the panel. */
+/**
+ * Names in use, derived rather than tracked. A stored set would have to be kept
+ * in step with deletions; deriving it means a freed name is reusable with no
+ * bookkeeping.
+ */
+export function usedNames(model: TabModel): Set<string> {
+  return new Set(model.elements.map((e) => e.name));
+}
+
+/** Per-tab store. Lives in the background; entries die with their tab. */
 export class ModelStore {
   private byTab = new Map<number, TabModel>();
+
+  constructor(private defaultFrameworkId: string) {}
 
   get(tabId: number): TabModel {
     let m = this.byTab.get(tabId);
     if (!m) {
-      m = emptyModel();
+      m = emptyModel(this.defaultFrameworkId);
       this.byTab.set(tabId, m);
     }
     return m;
@@ -47,11 +62,5 @@ export class ModelStore {
 
   clear(tabId: number): void {
     this.byTab.delete(tabId);
-  }
-
-  /** Drop models for tabs that have gone away, so closing a tab frees it. */
-  retain(liveTabIds: Iterable<number>): void {
-    const live = new Set(liveTabIds);
-    for (const id of [...this.byTab.keys()]) if (!live.has(id)) this.byTab.delete(id);
   }
 }

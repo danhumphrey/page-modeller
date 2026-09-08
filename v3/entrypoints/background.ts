@@ -1,42 +1,95 @@
 import { browser } from 'wxt/browser';
 import { isMessage, type Message } from '@/src/messaging';
+import { ModelStore, usedNames, type TabModel } from '@/src/model';
+import { uniqueName } from '@/src/engine/naming';
+import { defaultFrameworkId } from '@/src/frameworks';
 
 // Background service worker / event page.
 //
-// Two jobs: opening the panel from the toolbar, and relaying panel → page
-// messages. The relay exists because a DevTools page is not granted the `tabs`
-// API — only devtools.*, runtime.* and a few others — so it cannot talk to a
-// content script directly. Every surface goes through here, so there is one
-// path rather than one per host.
+// Owns the model — one per tab (SPEC §5) — and relays messages in both
+// directions. Both exist because the panel cannot do them itself:
+//
+//   * A DevTools page is granted only devtools.*, runtime.* and a few others.
+//     `browser.tabs` is undefined there, so a panel cannot talk to a content
+//     script; it sends RELAY_TO_TAB instead.
+//   * Firefox does not populate `sender.tab` for a message delivered to a
+//     DevTools page, so a panel cannot tell which tab a pick came from. The
+//     background always sees the sender, and stamps it.
+//   * A model held in a panel is one model per *panel*: a sidebar and a
+//     DevTools panel on the same tab showed different rows.
 export default defineBackground(() => {
-  // Printed on startup so it is obvious which build is actually running. Both
-  // browsers show background output in their browser console, unlike a DevTools
-  // panel page, whose logs do not reliably surface anywhere convenient.
   console.log('[Page Modeller] background ready', import.meta.env.MODE, import.meta.env.BROWSER);
+
+  const store = new ModelStore(defaultFrameworkId);
+  let idSeq = 0;
+
+  /** Every panel gets the model; each ignores tabs that are not its own. */
+  function publish(tabId: number, model: TabModel) {
+    browser.runtime.sendMessage({ type: 'MODEL', tabId, model }).catch(() => {});
+  }
+
+  browser.tabs.onRemoved.addListener((tabId) => store.clear(tabId));
 
   browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: number } }) => {
     if (!isMessage(msg)) return;
     const m = msg as Message;
 
-    // Content → panel. Re-broadcast with the tab stamped on it, because only
-    // the background reliably sees sender.tab — a DevTools page does not.
-    if (m.type === 'ELEMENT_PICKED' || m.type === 'PICKING_STOPPED' || m.type === 'HIGHLIGHT_RESULT') {
-      const tabId = sender.tab?.id;
-      if (tabId == null) return;
-      browser.runtime.sendMessage({ type: 'FROM_TAB', tabId, message: m }).catch(() => {});
-      return;
+    switch (m.type) {
+      // ---- from a content script ----
+      case 'ELEMENT_PICKED': {
+        const tabId = sender.tab?.id;
+        if (tabId == null) return;
+        const model = store.get(tabId);
+        model.elements.push({
+          ...m.result,
+          id: `el-${idSeq++}`,
+          name: uniqueName(m.result.suggestedName, usedNames(model)),
+          selectedIndex: m.result.preferredIndex >= 0 ? m.result.preferredIndex : 0,
+        });
+        publish(tabId, model);
+        // Picking is one-shot (SPEC §4); tell the panels so they can un-arm.
+        browser.runtime.sendMessage({ type: 'FROM_TAB', tabId, message: { type: 'PICKING_STOPPED' } }).catch(() => {});
+        return;
+      }
+      case 'PICKING_STOPPED':
+      case 'HIGHLIGHT_RESULT': {
+        const tabId = sender.tab?.id;
+        if (tabId == null) return;
+        browser.runtime.sendMessage({ type: 'FROM_TAB', tabId, message: m }).catch(() => {});
+        return;
+      }
+
+      // ---- from a panel ----
+      case 'RELAY_TO_TAB': {
+        if (import.meta.env.DEV) console.log('[Page Modeller] relay', m.message.type, '→ tab', m.tabId);
+        browser.tabs.sendMessage(m.tabId, m.message).catch((err) => {
+          // No content script: a browser-internal page, the add-on store, or a
+          // tab open before the extension loaded.
+          console.error('[Page Modeller] relay failed', m.message.type, err);
+          browser.runtime.sendMessage({ type: 'TAB_UNREACHABLE', tabId: m.tabId }).catch(() => {});
+        });
+        return;
+      }
+      case 'GET_MODEL':
+        publish(m.tabId, store.get(m.tabId));
+        return;
+      case 'DELETE_ELEMENT': {
+        const model = store.get(m.tabId);
+        model.elements = model.elements.filter((e) => e.id !== m.id);
+        publish(m.tabId, model);
+        return;
+      }
+      case 'DELETE_MODEL':
+        store.clear(m.tabId);
+        publish(m.tabId, store.get(m.tabId));
+        return;
+      case 'SET_FRAMEWORK': {
+        const model = store.get(m.tabId);
+        model.frameworkId = m.frameworkId;
+        publish(m.tabId, model);
+        return;
+      }
     }
-
-    if (m.type !== 'RELAY_TO_TAB') return;
-
-    if (import.meta.env.DEV) console.log('[Page Modeller] relay', m.message.type, '→ tab', m.tabId);
-
-    browser.tabs.sendMessage(m.tabId, m.message).catch((err) => {
-      // No content script: a browser-internal page, the add-on store, or a tab
-      // open before the extension loaded.
-      console.error('[Page Modeller] relay failed', m.message.type, err);
-      browser.runtime.sendMessage({ type: 'TAB_UNREACHABLE', tabId: m.tabId }).catch(() => {});
-    });
   });
 
   if (import.meta.env.FIREFOX) {

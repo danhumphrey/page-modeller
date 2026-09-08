@@ -89,17 +89,27 @@ v2.5.1 never had to decide this — a DevTools panel is inherently per-tab, its 
 memory, survived navigation within that tab, and died with the panel. The side panel breaks all three
 assumptions: it is per *window*, it follows the active tab, and it outlives navigation.
 
-**One model per tab, held in memory.** **[settled]**
+**One model per tab, owned by the background.** **[settled]**
 
 | Event | Effect |
 |---|---|
 | Switch tab | table swaps to that tab's model |
 | Navigate within a tab | model kept — may be stale |
 | Close the tab | that model is gone |
-| Close the panel | all models gone |
+| Close a panel | model survives; the other surface still has it |
+| Both surfaces open | **the same model**, and a pick in one appears in the other |
 
 A model can therefore never be displayed against a page it was not built from. Nothing is persisted to
 storage; a model is session work, not a saved artifact.
+
+**The background owns it, and panels are views** — they render what it broadcasts and mutate it by
+sending commands. Held in a panel it was one model per *panel*: a sidebar and a DevTools panel on the
+same tab showed different rows, and a pick landed in whichever happened to be listening. This is also
+why closing a panel no longer discards the model, which is the better behaviour anyway — closing the
+sidebar should not lose the work.
+
+The framework selection lives in the model for the same reason: two surfaces rendering one model in
+different frameworks would show different locators for the same row.
 
 Because scan is once-per-model (§4), a model kept across a navigation blocks scanning the new page until
 it is deleted, so the panel needs to say the model has gone stale.
