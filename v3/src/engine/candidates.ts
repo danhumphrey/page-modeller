@@ -41,7 +41,7 @@ function safeName(el: Element): string {
   }
 }
 
-function safeRole(el: Element): string | null {
+export function safeRole(el: Element): string | null {
   try {
     return getRole(el) || null;
   } catch {
@@ -93,36 +93,97 @@ function xpathFor(el: Element): string {
   return '/' + parts.join('/');
 }
 
-// ---- predicted uniqueness (OUR best-effort, mirrors Playwright semantics) ----
+// ---- resolution ----
+//
+// One implementation, two callers: predicted uniqueness while ranking
+// candidates, and View Matched Elements (SPEC §8), which needs the elements
+// themselves so it can highlight them. They must agree, or the count the engine
+// ranked on would differ from the count the eye reports.
 
-function predictedCount(doc: Document, c: LocatorCandidate): number {
+/**
+ * Playwright's text matching, which the eye must reproduce or its count will
+ * disagree with the test that later runs the locator.
+ *
+ *   exact: true   case-sensitive, whole-string
+ *   exact: false  case-insensitive, substring   (Playwright's default)
+ *
+ * Whitespace is normalised either way — "exact match still trims whitespace",
+ * and matching by text collapses runs and turns line breaks into spaces.
+ */
+export function matchesText(actual: string, expected: string, exact: boolean | undefined): boolean {
+  const a = norm(actual);
+  const b = norm(expected);
+  return exact ? a === b : a.toLowerCase().includes(b.toLowerCase());
+}
+
+/**
+ * Excluded from the accessibility tree, per ARIA tree exclusion. `getByRole`
+ * applies this by default (`includeHidden: false`) and we must too, or the eye
+ * counts hidden elements the test will never see.
+ */
+function ariaHidden(el: Element): boolean {
+  for (let cur: Element | null = el; cur; cur = cur.parentElement) {
+    if (cur.getAttribute('aria-hidden') === 'true') return true;
+    if ((cur as HTMLElement).hidden) return true;
+    try {
+      const st = cur.ownerDocument.defaultView?.getComputedStyle(cur);
+      if (st && (st.display === 'none' || st.visibility === 'hidden' || st.visibility === 'collapse')) return true;
+    } catch {
+      /* detached or cross-document; treat as visible */
+    }
+  }
+  return false;
+}
+
+/** Every element the candidate matches, in document order. */
+export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] {
   const all = () => Array.from(doc.querySelectorAll('*'));
   switch (c.kind) {
     case 'testId':
-      return doc.querySelectorAll(`[data-testid="${CSS.escape(c.value)}"]`).length;
+      return Array.from(doc.querySelectorAll(`[data-testid="${CSS.escape(c.value)}"]`));
     case 'role':
-      return all().filter((e) => safeRole(e) === c.role && (c.name === undefined || safeName(e) === c.name)).length;
+      return all()
+        .filter((e) => safeRole(e) === c.role && (c.name === undefined || matchesText(safeName(e), c.name, c.exact)))
+        .filter((e) => !ariaHidden(e));
     case 'label':
-      return all().filter((e) => LABEL_TARGETS.has(e.tagName) && safeName(e) === c.text).length;
+      return all().filter((e) => LABEL_TARGETS.has(e.tagName) && matchesText(safeName(e), c.text, c.exact));
     case 'placeholder':
-      return Array.from(doc.querySelectorAll('[placeholder]')).filter(
-        (e) => norm(e.getAttribute('placeholder')) === c.text
-      ).length;
-    case 'text':
-      return all().filter((e) => norm((e as HTMLElement).textContent) === c.text).length;
+      return Array.from(doc.querySelectorAll('[placeholder]')).filter((e) =>
+        matchesText(e.getAttribute('placeholder') ?? '', c.text, c.exact)
+      );
+    case 'text': {
+      // Playwright matches the *smallest* element containing the text, so an
+      // ancestor whose text comes entirely from a matching descendant does not
+      // count. Without this a <fieldset> matches alongside its <legend>.
+      const hits = all().filter((e) => matchesText((e as HTMLElement).textContent ?? '', c.text, c.exact));
+      return hits.filter((e) => !hits.some((other) => other !== e && e.contains(other)));
+    }
     case 'altText':
-      return Array.from(doc.querySelectorAll('img[alt], input[alt], area[alt]')).filter(
-        (e) => norm(e.getAttribute('alt')) === c.text
-      ).length;
+      return Array.from(doc.querySelectorAll('img[alt], input[alt], area[alt]')).filter((e) =>
+        matchesText(e.getAttribute('alt') ?? '', c.text, c.exact)
+      );
     case 'title':
-      return Array.from(doc.querySelectorAll('[title]')).filter((e) => norm(e.getAttribute('title')) === c.text).length;
+      return Array.from(doc.querySelectorAll('[title]')).filter((e) => matchesText(e.getAttribute('title') ?? '', c.text, c.exact));
     case 'css':
-      return doc.querySelectorAll(c.value).length;
+      // A hand-typed selector can be invalid; that is a miss, not a crash.
+      try {
+        return Array.from(doc.querySelectorAll(c.value));
+      } catch {
+        return [];
+      }
     case 'xpath': {
-      const r = doc.evaluate(c.value, doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-      return r.snapshotLength;
+      try {
+        const r = doc.evaluate(c.value, doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+        return Array.from({ length: r.snapshotLength }, (_, i) => r.snapshotItem(i) as Element);
+      } catch {
+        return [];
+      }
     }
   }
+}
+
+function predictedCount(doc: Document, c: LocatorCandidate): number {
+  return resolveCandidate(doc, c).length;
 }
 
 // ---- candidate generation (ranked, mirrors Playwright's priority) ----
@@ -151,15 +212,15 @@ export function generate(el: Element): ElementResult {
   }
 
   const placeholder = el.getAttribute('placeholder');
-  if (placeholder) out.push({ kind: 'placeholder', text: norm(placeholder) });
+  if (placeholder) out.push({ kind: 'placeholder', text: norm(placeholder), exact: true });
 
   if (tag === 'img') {
     const alt = el.getAttribute('alt');
-    if (alt) out.push({ kind: 'altText', text: norm(alt) });
+    if (alt) out.push({ kind: 'altText', text: norm(alt), exact: true });
   }
 
   const title = el.getAttribute('title');
-  if (title) out.push({ kind: 'title', text: norm(title) });
+  if (title) out.push({ kind: 'title', text: norm(title), exact: true });
 
   if (!NON_TEXT.has(el.tagName)) {
     const text = norm(el.textContent);

@@ -13,7 +13,8 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
 - **Panel UI** (`ui/`) — Quasar: `AppToolbar` (SPEC §3) over `ModelTable` (SPEC §6). One app, three
   surfaces. Shell only so far — capture, generation and the dialogs are the next increments.
 - **Frameworks** (`src/frameworks.ts`) — the targets and the locator types each can express (SPEC §7).
-- **Session model** (`src/model.ts`) — one model per tab, in memory (SPEC §5).
+- **Session model** (`src/model.ts`) — one model per tab, owned by the background; panels are views
+  (SPEC §5).
 - **Naming** (`src/engine/naming.ts`) — split across the message boundary: `baseName` runs in the page,
   where the DOM rules apply; `uniqueName` runs in the panel, which owns the model (SPEC §13).
 - **Host adapter** (`host/`) — the only thing that differs per surface: which tab the panel drives.
@@ -29,7 +30,7 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
 | `npm run build` / `build:firefox` | Production build (`.output/`) |
 | `npm run zip` | Store-ready zips (incl. Firefox sources zip) |
 | `npm run typecheck` | Strict TS check of the pure core |
-| `npm run test:unit` | Vitest — pure core |
+| `npm run test:unit` | Vitest — pure core, plus Vue component tests |
 | `npm run check:manifests` | Assert both builds emit the expected surfaces |
 | `npm test` | Unit + engine fidelity (real Playwright) + both builds + manifests + extension & capture E2E |
 
@@ -57,7 +58,13 @@ Manually, from a production build:
 
 ## Manual verification
 
-Automated tests are a net; this is the gate. Per increment, on **both** browsers:
+Automated tests are a net; this is the gate. Per increment, on **both** browsers.
+
+> **Reload the page tab after any change to the engine, content script or naming.** WXT re-registers the
+> content script on rebuild, but re-registration only affects pages loaded afterwards — a tab open across
+> a rebuild keeps the old script and the old behaviour. Panel-only changes are hot-reloaded, which is
+> what makes the mixed behaviour confusing.
+
 
 1. Extension loads with no console errors (check the background/service-worker console too).
 2. Open the side panel / sidebar **and** the DevTools panel. Both render, and the header chip names the
@@ -70,10 +77,20 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
 6. The row's name and locator look right, **on one line** — Name, Locator and Actions across, not
    stacked; a second element with the same name becomes `About2`.
 7. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
-8. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
+8. **Eye** highlights every match in yellow with a red outline, scrolls the first into view, and reports
+   the count — green for 1, red for 0, amber for more. Highlight clears after ~3s, or at once on
+   **Close**. Clicking it repeatedly replaces the message rather than stacking a counter badge, and the
+   new highlight survives the replacement.
+9. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
+   still opens the editor.
+10. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
+    rows, and a pick in either appears in both. Close one; the model survives in the other. Close them
+    all and reopen; that tab's model is gone. Check this with a second tab modelled too — closing one
+    tab's panels must not touch the other's.
+11. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
    switch to B, add something different, switch back — A must be intact.
-9. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
-10. Table headers stay visible at the narrowest side-panel width.
+12. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
+13. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
 engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a

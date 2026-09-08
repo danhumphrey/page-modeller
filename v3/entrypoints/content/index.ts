@@ -1,4 +1,4 @@
-import { generate } from '@/src/engine/candidates';
+import { generate, resolveCandidate, safeRole } from '@/src/engine/candidates';
 import { isMessage, type Message } from '@/src/messaging';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
@@ -48,14 +48,71 @@ export default defineContentScript({
       current = null;
     }
 
+    /**
+     * What the tool will classify this element as (SPEC §11), not its raw role
+     * attribute. `role="none"` and `presentation` remove an element from the
+     * accessibility tree, so they say nothing useful about what you are picking
+     * — fall back to the tag, as for anything with no computed role.
+     */
+    function overlayLabel(el: Element): string {
+      const role = safeRole(el);
+      return role && role !== 'none' && role !== 'presentation' ? role : el.tagName.toLowerCase();
+    }
+
     function highlight(el: Element) {
       ensureOverlay();
       const r = el.getBoundingClientRect();
       Object.assign(box!.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-      const role = (el as HTMLElement).getAttribute('role') ?? el.tagName.toLowerCase();
-      label!.textContent = role;
+      label!.textContent = overlayLabel(el);
       label!.style.left = `${r.left}px`;
       label!.style.top = `${Math.max(0, r.top - 18)}px`;
+    }
+
+    // ---- View Matched Elements (SPEC §8) ----
+    //
+    // Yellow fill, red outline, on every match. Boxes are position:fixed against
+    // the viewport, so they go stale if the page scrolls — acceptable for a
+    // 3s lifetime, and the same trade v2.5.1 made.
+    let marks: HTMLDivElement[] = [];
+    let markTimer: ReturnType<typeof setTimeout> | undefined;
+    const HIGHLIGHT_MS = 3000;
+
+    function clearMarks() {
+      for (const m of marks) m.remove();
+      marks = [];
+      if (markTimer) clearTimeout(markTimer);
+      markTimer = undefined;
+    }
+
+    function highlightAll(targets: Element[]) {
+      clearMarks();
+      if (targets.length === 0) return;
+
+      // Scroll the FIRST match into view before measuring, or every box after
+      // it would be positioned against the pre-scroll viewport.
+      targets[0].scrollIntoView({ block: 'center', inline: 'nearest' });
+
+      for (const t of targets) {
+        const r = t.getBoundingClientRect();
+        const mark = document.createElement('div');
+        // Identifies our overlay to tests and to anyone inspecting the page.
+        mark.dataset.pageModeller = 'highlight';
+        Object.assign(mark.style, {
+          position: 'fixed',
+          pointerEvents: 'none',
+          zIndex: Z,
+          left: `${r.left}px`,
+          top: `${r.top}px`,
+          width: `${r.width}px`,
+          height: `${r.height}px`,
+          background: 'rgba(255, 235, 59, 0.45)',
+          outline: '2px solid #d32f2f',
+          outlineOffset: '-1px',
+        } as CSSStyleDeclaration);
+        document.documentElement.appendChild(mark);
+        marks.push(mark);
+      }
+      markTimer = setTimeout(clearMarks, HIGHLIGHT_MS);
     }
 
     const onMove = (e: MouseEvent) => {
@@ -110,6 +167,19 @@ export default defineContentScript({
       const m = msg as Message;
       if (m.type === 'START_PICKING') start();
       else if (m.type === 'STOP_PICKING') stop();
+      else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
+      else if (m.type === 'HIGHLIGHT') {
+        // This script runs in every frame, but only the top one answers — a
+        // sub-frame with no matches would otherwise report 0 over the top
+        // frame's real count. Decided here rather than by the panel passing
+        // frameId, so the send is shaped exactly like the ones that work on
+        // both browsers. Cross-frame highlighting arrives with SPEC §16.
+        if (window.top !== window) return;
+        const targets = resolveCandidate(document, m.candidate);
+        highlightAll(targets);
+        // Answered as a message, not a reply — sendResponse is not portable.
+        browser.runtime.sendMessage({ type: 'HIGHLIGHT_RESULT', count: targets.length }).catch(() => {});
+      }
     });
   },
 });

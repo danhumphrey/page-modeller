@@ -89,17 +89,41 @@ v2.5.1 never had to decide this — a DevTools panel is inherently per-tab, its 
 memory, survived navigation within that tab, and died with the panel. The side panel breaks all three
 assumptions: it is per *window*, it follows the active tab, and it outlives navigation.
 
-**One model per tab, held in memory.** **[settled]**
+**One model per tab, owned by the background.** **[settled]**
 
 | Event | Effect |
 |---|---|
 | Switch tab | table swaps to that tab's model |
 | Navigate within a tab | model kept — may be stale |
 | Close the tab | that model is gone |
-| Close the panel | all models gone |
+| Close a panel | model survives if another panel is still on that tab |
+| Close the **last panel watching a tab** | that tab's model is dropped |
+| Both surfaces open | **the same model**, and a pick in one appears in the other |
 
 A model can therefore never be displayed against a page it was not built from. Nothing is persisted to
 storage; a model is session work, not a saved artifact.
+
+**The background owns it, and panels are views** — they render what it broadcasts and mutate it by
+sending commands. Held in a panel it was one model per *panel*: a sidebar and a DevTools panel on the
+same tab showed different rows, and a pick landed in whichever happened to be listening. This is also
+why closing a panel no longer discards the model, which is the better behaviour anyway — closing the
+sidebar should not lose the work.
+
+The framework selection lives in the model for the same reason: two surfaces rendering one model in
+different frameworks would show different locators for the same row.
+
+**A model with no panel watching it is abandoned work.** Panels hold a `runtime.connect` port for their
+lifetime and report which tab they are showing; when a panel closes, that tab's model goes unless another
+panel is still on it. `onDisconnect` covers closing the sidebar, closing DevTools, and the tab hosting
+them going away.
+
+Two things this gets right that simpler rules do not:
+
+- **Evaluated on disconnect, never on a tab change.** A side panel follows the active tab, so dropping
+  whenever no panel is watching would lose tab A's model the moment you looked at tab B. Switching away
+  and back must not lose work; closing the panel is what ends it.
+- **Scoped to the tab the closing panel was on, not to a global count.** A global count meant a panel
+  open on tab 1 kept tab 2's model alive after both of tab 2's panels had been closed.
 
 Because scan is once-per-model (§4), a model kept across a navigation blocks scanning the new page until
 it is deleted, so the panel needs to say the model has gone stale.
@@ -133,15 +157,31 @@ Adding Playwright changes the per-framework type list, not the model's shape.
 ## 8. View Matched Elements (the eye)
 
 Runs the locator live against the page: highlights **every** match (yellow fill, red outline), scrolls
-the **first** match into view, and reports the count in a snackbar. Highlight clears after ~3s.
-Available from the table row *and* from inside the Edit dialog, so a locator can be tested before
-saving. **[settled]**
+the **first** match into view, and reports the count in a snackbar. Highlight clears after ~3s, or
+immediately on **Close** — dismissing the count takes the highlight with it, so the page is never left
+marked up with no explanation. Available from the table row *and* from inside the Edit dialog, so a
+locator can be tested before saving. **[settled]**
 
 | Matches | Icon | Message |
 |---|---|---|
 | 1 | green tick | *1 element matches that locator* |
 | 0 | red error | *0 elements match that locator* |
 | >1 | amber warning | *N elements match that locator* |
+
+**The count has to be the count the generated test will get.** The in-page resolver is our own
+approximation of Playwright's matching, and the eye reports from it, so any drift means showing the user
+a number their test will not reproduce. Three behaviours this forces, all found by asserting every
+candidate against real Playwright rather than reasoning about it:
+
+- **`exact` is honoured.** `exact: true` is case-sensitive whole-string; the default is case-insensitive
+  substring. Whitespace is normalised either way — exact match still trims, and matching by text collapses
+  runs and turns line breaks into spaces. Generated candidates always set `exact: true` (§12), but a
+  hand-edited locator may not, and the resolver must follow the locator rather than the convention.
+- **Role candidates exclude elements hidden from the accessibility tree**, since `getByRole` defaults to
+  `includeHidden: false`. The same ARIA tree exclusion as §4.
+- **Text candidates match the innermost element only.** Playwright matches the smallest element
+  containing the text, so an ancestor whose text comes entirely from a matching descendant does not
+  count — otherwise a `<fieldset>` matches alongside its `<legend>`.
 
 ## 9. Edit dialog
 
@@ -325,7 +365,10 @@ Four agreed changes: **[settled]**
    boundaries — hence `TableofContents` and `DocumentUploadandQuery`. Case first, then strip:
    `TableOfContents`, `DocumentUploadAndQuery`.
 2. **Use the computed accessible name** (`dom-accessibility-api`) in place of the hand-rolled label /
-   `aria-label` / text-content rules, which are a partial reimplementation of accname.
+   `aria-label` rules, which are a partial reimplementation of accname. **The text-content rule stays**,
+   ranked just below it: accname derives a name from content only for roles that support it, so a plain
+   `<span>` or `<div>` computes to nothing — and those are exactly what Add Element captures (§4).
+   Capped at 80 characters, since a container's `textContent` can be most of the page.
 3. **Rank the accessible name above `name` and `id`.** Today a button with `id="btn-1"` and text
    "Submit" is named `Btn1`; what a human calls the element should win.
 4. **Drop the ng-model and ng-binding rules.**

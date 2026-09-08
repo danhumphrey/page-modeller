@@ -48,6 +48,20 @@ describe('baseName', () => {
     expect(name(el('<input type="password" data-t />'))).toBe('PasswordElement');
   });
 
+  it('names a static element from its visible text', () => {
+    // accname derives a name from content only for roles that support it, so a
+    // plain span computes to nothing — and Add Element exists to capture these.
+    expect(name(el('<span data-t>Dark</span>'))).toBe('Dark');
+    expect(name(el('<div data-t>Read Wikipedia in your language</div>'))).toBe('ReadWikipediaInYour');
+  });
+
+  it('ignores text too long to be a name', () => {
+    // A container's textContent can be most of the page; truncating that gives
+    // a name no better than the tag index.
+    const long = 'word '.repeat(40);
+    expect(name(el(`<div data-t>${long}</div>`))).toBe('Div1');
+  });
+
   it('falls back to tag and index', () => {
     expect(name(el('<div data-t></div>'))).toBe('Div1');
   });

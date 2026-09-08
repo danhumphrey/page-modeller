@@ -32,3 +32,24 @@ describe('our templates do not collide with Quasar utility classes', () => {
     });
   }
 });
+
+
+// `browser.tabs` is undefined in a Firefox DevTools panel — a devtools page is
+// granted only devtools.*, runtime.* and a few others. Chrome tolerates the
+// call, so a regression here is invisible on Chrome and on every automated test
+// we can run. The panel must go through the background relay instead.
+describe('the panel never touches browser.tabs directly', () => {
+  const files = readdirSync(UI_DIR).filter((f) => f.endsWith('.vue') || f.endsWith('.ts'));
+
+  for (const file of files) {
+    it(file, () => {
+      const source = readFileSync(join(UI_DIR, file), 'utf8')
+        // Comments explain the rule; they are not calls.
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '');
+      expect(source, 'use send() / RELAY_TO_TAB — browser.tabs is undefined in a DevTools panel').not.toMatch(
+        /browser\s*\.\s*tabs/
+      );
+    });
+  }
+});

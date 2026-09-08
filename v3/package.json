@@ -29,6 +29,7 @@
     "@playwright/test": "^1.49.0",
     "@quasar/vite-plugin": "^2.0.2",
     "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/test-utils": "^2.5.0",
     "esbuild": "^0.28.2",
     "jsdom": "^30.0.1",
     "sass-embedded": "^1.83.0",

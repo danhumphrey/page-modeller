@@ -77,6 +77,18 @@ exploited.
 - Build output is gitignored (`/v3/.output`, `/v3/.wxt`, `/v3/.test-dist`, `/v3/test-results`).
 - `v3/` output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
 
+- **`browser.tabs` is undefined in a Firefox DevTools panel.** A devtools page is granted only
+  `devtools.*`, `runtime.*` and a few others. Chrome tolerates the direct call, so a regression is
+  invisible on Chrome and in every test we can run — Playwright cannot load a Firefox extension. The
+  panel goes through the background relay (`RELAY_TO_TAB`); a unit test scans `ui/` to keep it that way.
+- **`sender.tab` is not reliable in a Firefox DevTools page.** A content script's `runtime.sendMessage`
+  arrives without it, so a `sender.tab.id === myTab` filter silently drops every message. The background
+  always sees the sender, so it stamps the tab and re-broadcasts as `FROM_TAB`; panels filter on that.
+- **Never send Vue reactive state through `tabs.sendMessage`.** Anything read out of a `ref` is a Proxy,
+  and Firefox serialises messages with structured clone, which throws `DataCloneError` on a Proxy —
+  Chrome's path tolerates it, so this fails on Firefox only and presents as an unreachable tab. `send()`
+  in `ui/App.vue` JSON round-trips for this reason; anything bypassing it must do the same.
+
 ## Verification — manual testing is the completion gate
 
 **Automated tests are a net, not the criterion for done.** Nothing is complete until it has been

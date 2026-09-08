@@ -330,8 +330,13 @@ before starting the next.
    everything. Needs a superset generator with per-framework filtering, as v2.5.1 had. Do this before
    step 10.
 
-7. **View Matched Elements** (SPEC §8). The eye: highlight all, scroll to first, three-state snackbar.
-   Verifies the engine against real pages, so it comes before scan.
+7. **View Matched Elements** (SPEC §8). ✅ **Done** — the eye: highlight all, scroll to first,
+   three-state snackbar. Awaiting hand-test.
+
+   Building it forced the in-page resolver to actually match Playwright rather than approximate it:
+   `exact` is honoured, role candidates exclude a11y-hidden elements, and text candidates match the
+   innermost element only. The fidelity spec now asserts **every** candidate's predicted count against
+   real Playwright, not just the preferred one — which is how those three were found.
 
 8. **Edit dialog** (SPEC §9) and **Delete Model** (SPEC §10).
 
