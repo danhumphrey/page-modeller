@@ -347,16 +347,25 @@ before starting the next.
    superset generator below — but the dialog offers the full framework list, so the model has to be
    able to hold a hand-typed one.
 
-9. **Scan** (SPEC §4). Container pick, interactive-role descendants, a11y-tree filtered.
+9. **Ancestor navigation while picking** (SPEC §4). Arrow keys walk the target up and down the DOM,
+   with a breadcrumb of the chain replacing the single overlay label. The mouse alone cannot reliably
+   hit a nested element: a wrapper `<div>` and the `<div role="button">` inside it share a bounding box,
+   and selecting the wrapper meant finding a 2px sliver of padding.
 
-10. **Generate Code** (SPEC §11). Selenium Java first — the reference template — with the six fixes.
+   **Before Scan, deliberately.** Scan's whole job is picking a *container*, and containers are exactly
+   the nested, same-box elements this fixes — building Scan first would ship a feature whose primary
+   interaction is the one we know is broken.
 
-11. **Playwright** (SPEC §12). Structured locators, ancestor scoping, `exact: true`. The primary target
+10. **Scan** (SPEC §4). Container pick, interactive-role descendants, a11y-tree filtered.
+
+11. **Generate Code** (SPEC §11). Selenium Java first — the reference template — with the six fixes.
+
+12. **Playwright** (SPEC §12). Structured locators, ancestor scoping, `exact: true`. The primary target
     going forward, so it gets its own step rather than riding along with the other generators.
 
-12. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python.
+13. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python.
 
-13. **Frames** (SPEC §16), **settings** (SPEC §14), **page-object wrapper** (SPEC §17).
+14. **Frames** (SPEC §16), **settings** (SPEC §14), **page-object wrapper** (SPEC §17).
 
 **Release blocker:** `browser_specific_settings.gecko.id` is a placeholder. The real AMO id must replace
 it or an upload creates a second listing instead of updating the existing one (NFR-6).
