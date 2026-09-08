@@ -359,8 +359,12 @@ before starting the next.
     fixes. `src/generators/classify.ts` maps role to bucket and is shared by every generator to come;
     `ui/CodeDialog.vue` is the read-only view with Copy. Awaiting hand-test.
 
-12. **Playwright** (SPEC §12). Structured locators, ancestor scoping, `exact: true`. The primary target
-    going forward, so it gets its own step rather than riding along with the other generators.
+12. **Playwright** (SPEC §12). ✅ **Generator done** — `src/generators/playwright-ts.ts`, sharing the
+    role classifier with Selenium so the two cannot disagree on what an element is. Awaiting hand-test.
+
+    **Ancestor scoping is still to do**, and is its own increment: it needs a chained candidate in the
+    IR and engine work to find and verify a scoping ancestor, not just a change of output. Until then an
+    ambiguous role+name falls back to css or xpath, which works but is not idiomatic.
 
 13. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python.
 

@@ -424,13 +424,13 @@ undermines that afterwards: a later "About us" link turns a unique `About` locat
 one. `exact` still trims surrounding whitespace. A renamed element then fails loudly rather than
 drifting onto the wrong target.
 
-### Method bodies **[inferred]**
+### Method bodies **[settled]**
 
 Not a substitution of the Selenium templates; the API differs enough to change shape.
 
 | Bucket | Playwright |
 |---|---|
-| element | `get{Name}()` returns a lazy `Locator` — no staleness, no explicit waits |
+| element | `get{Name}Locator()` returns a lazy `Locator` — no staleness, no explicit waits |
 | actionable | `await get{Name}().click()` |
 | text | `fill(value)` — one call, replaces `clear()` + `sendKeys()`; read with `inputValue()` |
 | toggle | `check()` / `uncheck()` / `isChecked()` — real primitives, so no click-to-toggle dance |
@@ -442,7 +442,17 @@ Two v2.5.1 bugs cannot occur here: `fill()` clears first by construction, and ra
 expressible only as `uncheck()`, which Playwright rejects on a radio rather than silently doing nothing.
 
 All methods are `async`; TypeScript returns `Promise<...>`. Methods reference a bare `page`, mirroring
-how the Selenium templates reference a bare `driver` — the surrounding class supplies it. **[inferred]**
+how the Selenium templates reference a bare `driver` — the surrounding class supplies it.
+
+The getter is `get{Name}Locator()`, not `get{Name}()`: a text field needs `get{Name}()` for its value,
+and a Locator is not an element, so borrowing Selenium's `get{Name}Element()` would be doubly wrong.
+
+Three differences from Selenium worth naming, all because Playwright has a primitive where Selenium
+needs a sequence: `fill()` clears by construction; `check()`/`uncheck()` verify the resulting state
+rather than clicking and hoping; and `selectOption()` replaces the whole selection, so a multi-select
+needs no `deselectAll` step and cannot accidentally add to what was already chosen. Appending to a text
+field stays reachable via `pressSequentially`, as `clearFirst` does in Selenium — one method here, since
+TypeScript has default arguments.
 
 ### Test IDs **[inferred]**
 

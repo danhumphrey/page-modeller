@@ -60,10 +60,16 @@ describe('CodeDialog', () => {
     expect(codeText()).toContain('public void setEmail(String value) {');
   });
 
-  it('says which target is missing rather than showing nothing', async () => {
-    // Only Selenium Java exists so far; an empty dialog would look broken.
+  it('generates for Playwright too', async () => {
     await render(modelWith('playwright-ts', { name: 'Email' }));
-    expect(codeText()).toContain('Playwright (TypeScript) is not generated yet');
+    expect(codeText()).toContain('getEmailLocator(): Locator {');
+  });
+
+  it('says which target is missing rather than showing nothing', async () => {
+    // Not every target exists yet; an empty dialog would look broken.
+    await render(modelWith('puppeteer', { name: 'Email' }));
+    expect(codeText()).toContain('Puppeteer is not generated yet');
+    expect(codeText()).toContain('Available so far:');
   });
 
   it('renders an empty model without failing', async () => {
