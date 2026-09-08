@@ -304,7 +304,7 @@ Classification is by **computed a11y role**, not `tagName`. Five buckets: **[set
 | Bucket | Roles | Methods (Selenium Java shown) |
 |---|---|---|
 | **actionable** | button, link, menuitem, tab, option | `click{Name}()` |
-| **text** | textbox, searchbox, spinbutton | `get{Name}()` · `set{Name}(String)` |
+| **text** | textbox, searchbox, spinbutton | `get{Name}()` · `set{Name}(String)` · `set{Name}(String, boolean clearFirst)` |
 | **toggle** | checkbox, switch | `is{Name}Checked()` · `set{Name}(boolean)` |
 | **select (single)** | combobox | `get{Name}Select()` · `get{Name}Text()` · `get{Name}Value()` · `set{Name}ByValue()` · `set{Name}ByText()` |
 | **select (multi)** | listbox | `get{Name}Select()` · `get{Name}Texts()` · `get{Name}Values()` · `set{Name}ByValues(...)` · `set{Name}ByTexts(...)` · `deselectAll{Name}()` |
@@ -321,7 +321,10 @@ Every element also gets a banner comment and `get{Name}Element()`.
    `<a>` with no `href` was treated as a link when it has no link role.
 2. **`getDomProperty("value")`, not `getAttribute("value")`.** The attribute is the *initial* value; it
    does not change as the user types. Selenium 4.5+ exposes the live DOM property.
-3. **`clear()` before `sendKeys()`.** The setter appended to existing content.
+3. **`clear()` before `sendKeys()`.** The setter appended to existing content. Clearing is the default,
+   not the only option: `set{Name}(value)` clears, `set{Name}(value, clearFirst)` does not have to.
+   Swapping one hard-coded behaviour for the other would just be a different wrong default. Languages
+   with default arguments express this as one method; Java needs the overload.
 4. **`img` is static, not clickable.** It was in both `isClickable` and `isInteractive`, so images got
    `click{Name}()` and no text accessor. The accessor must read **`alt`** (or the accessible name) —
    `getText()` returns an empty string for an image.

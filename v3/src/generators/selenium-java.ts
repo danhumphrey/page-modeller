@@ -54,8 +54,12 @@ function methods(el: ModelElement): string[] {
         // getDomProperty, not getAttribute: the attribute is the INITIAL value
         // and does not change as the user types (Selenium 4.5+).
         `public String get${n}() {\n    return get${n}Element().getDomProperty("value");\n}`,
-        // clear() first, or the setter appends to what is already there.
-        `public void set${n}(String value) {\n    WebElement el = get${n}Element();\n    el.clear();\n    el.sendKeys(value);\n}`
+        // Clearing is the default, because v2.5.1's setter appended and almost
+        // nobody wanted that. An overload keeps appending available rather than
+        // trading one hard-coded behaviour for the other — Java has no default
+        // arguments, so it is two methods.
+        `public void set${n}(String value) {\n    set${n}(value, true);\n}`,
+        `public void set${n}(String value, boolean clearFirst) {\n    WebElement el = get${n}Element();\n    if (clearFirst) {\n        el.clear();\n    }\n    el.sendKeys(value);\n}`
       );
       break;
 

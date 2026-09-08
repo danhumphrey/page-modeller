@@ -65,9 +65,14 @@ describe('generateSeleniumJava', () => {
       expect(out).not.toContain('getAttribute("value")');
     });
 
-    it('clears a text field before typing into it', () => {
+    it('clears a text field by default, and lets you not', () => {
+      // v2.5.1 always appended. Clearing is the right default, but an overload
+      // keeps appending available rather than swapping one fixed behaviour for
+      // the other.
       const out = gen({ name: 'Email', role: 'textbox', tag: 'input', candidate: { kind: 'id', value: 'e' } });
-      expect(out).toMatch(/el\.clear\(\);\s*\n\s*el\.sendKeys\(value\);/);
+      expect(out).toContain('public void setEmail(String value) {\n    setEmail(value, true);\n}');
+      expect(out).toContain('public void setEmail(String value, boolean clearFirst) {');
+      expect(out).toMatch(/if \(clearFirst\) \{\s*\n\s*el\.clear\(\);/);
     });
 
     it('treats an image as static, reading alt rather than text', () => {
