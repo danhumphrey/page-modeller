@@ -16,7 +16,8 @@
           v-for="el in elements"
           :key="el.id"
           class="pm-row"
-          @click="$emit('highlight', el.id)"
+          :class="{ clickable: clickToHighlight }"
+          @click="clickToHighlight && $emit('highlight', el.id)"
           @dblclick="$emit('edit', el.id)"
         >
           <td class="col-name">{{ el.name }}</td>
@@ -49,7 +50,11 @@ export interface ModelRow {
   locator: string;
 }
 
-defineProps<{ elements: ModelRow[] }>();
+defineProps<{
+  elements: ModelRow[];
+  /** Single-click a row runs View Matched Elements — off by default (SPEC §6). */
+  clickToHighlight: boolean;
+}>();
 
 defineEmits<{
   highlight: [id: string];
@@ -114,6 +119,10 @@ td {
 .pm-row {
   cursor: default;
   user-select: none;
+}
+
+.pm-row.clickable {
+  cursor: pointer;
 }
 
 .pm-row:hover {

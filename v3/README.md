@@ -29,7 +29,7 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
 | `npm run build` / `build:firefox` | Production build (`.output/`) |
 | `npm run zip` | Store-ready zips (incl. Firefox sources zip) |
 | `npm run typecheck` | Strict TS check of the pure core |
-| `npm run test:unit` | Vitest — pure core |
+| `npm run test:unit` | Vitest — pure core, plus Vue component tests |
 | `npm run check:manifests` | Assert both builds emit the expected surfaces |
 | `npm test` | Unit + engine fidelity (real Playwright) + both builds + manifests + extension & capture E2E |
 
@@ -71,11 +71,14 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    stacked; a second element with the same name becomes `About2`.
 7. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
 8. **Eye** highlights every match in yellow with a red outline, scrolls the first into view, and reports
-   the count — green for 1, red for 0, amber for more. Highlight clears after ~3s.
-9. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
+   the count — green for 1, red for 0, amber for more. Highlight clears after ~3s. Clicking it repeatedly
+   replaces the message rather than stacking a counter badge.
+9. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
+   still opens the editor.
+10. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
    switch to B, add something different, switch back — A must be intact.
-10. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
-11. Table headers stay visible at the narrowest side-panel width.
+11. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
+12. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
 engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a

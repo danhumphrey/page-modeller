@@ -15,7 +15,13 @@
 
     <q-page-container>
       <q-page>
-        <ModelTable :elements="rows" @highlight="highlight" @edit="notYet('Edit')" @remove="removeElement" />
+        <ModelTable
+          :elements="rows"
+          :click-to-highlight="settings.clickTableRowsToViewMatchedElements"
+          @highlight="highlight"
+          @edit="notYet('Edit')"
+          @remove="removeElement"
+        />
       </q-page>
     </q-page-container>
   </q-layout>
@@ -33,10 +39,14 @@ import { ModelStore, activeCandidate, type ModelElement } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
 import { isMessage, type ContentToPanel, type HighlightResult, type PickMode } from '@/src/messaging';
 import { hostKey } from '@/host/types';
+import { defaultSettings } from '@/src/settings';
 
 const $q = useQuasar();
 const host = inject(hostKey)!;
 
+// Storage and the options page arrive with REWRITE-PLAN §12 step 13; until then
+// the panel runs on the defaults.
+const settings = ref({ ...defaultSettings });
 const frameworkId = ref(defaultFrameworkId);
 const tabId = ref<number | undefined>();
 const isScanning = ref(false);
@@ -174,6 +184,10 @@ function deleteModel() {
  * in the page, and report the count. Exactly one match is the whole point of
  * the model, so the three outcomes are visually distinct.
  */
+// Quasar groups identical notifications and badges a count, so repeated eye
+// clicks piled up a "4". Each check should replace the last one's answer.
+let dismissMatchCount: (() => void) | undefined;
+
 async function highlight(id: string) {
   const el = elements.value.find((e) => e.id === id);
   if (!el || tabId.value == null) return;
@@ -202,9 +216,11 @@ async function highlight(id: string) {
         ? { icon: 'error', color: 'negative' }
         : { icon: 'warning', color: 'warning' };
 
-  $q.notify({
+  dismissMatchCount?.();
+  dismissMatchCount = $q.notify({
     ...tone,
     message: `${count} element${count === 1 ? '' : 's'} match${count === 1 ? 'es' : ''} that locator`,
+    group: false,
     timeout: 3000,
     position: 'bottom',
     actions: [{ label: 'Close', color: 'white' }],
