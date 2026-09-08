@@ -365,10 +365,11 @@ Also: the templates emit a stray leading space on every line.
 
 Selenium Java / C# / Python: `name, id, linkText, partialLinkText, css, xpath, className, tagName`.
 
-**`name` ahead of `id`, unlike v2.5.1.** A name is semantic and submitted with the form, so frameworks
-almost never generate one; ids they generate constantly — React's `useId` gave Facebook's password field
-`id="_r_6_"` alongside `name="pass"`. Only form controls have a name, so everywhere else `id` still wins,
-and a shared name (a radio group) is never chosen because a candidate must resolve uniquely (§7).
+**`name` ahead of `id`, unlike v2.5.1.** A name is author-chosen and essentially never
+framework-generated; ids are generated constantly — React's `useId` gave Facebook's password field
+`id="_r_6_"` alongside `name="pass"`. It is not only form controls that carry one — `<a>`, `<iframe>`,
+`<map>` and `<object>` do too — but wherever it exists it was written by hand, which is the point. A
+shared name (a radio group) is never chosen, because a candidate must resolve uniquely (§7).
 Puppeteer: `css, xpath`. Robot Framework and Protractor are dropped.
 
 Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
