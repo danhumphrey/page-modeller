@@ -519,9 +519,14 @@ Its reason for existing — DevTools being the only surface — is gone in v3. *
 toolbar click opens the panel** (side panel on Chrome, sidebar toggle on Firefox), because a click
 should get you working rather than show you a menu. **[settled]**
 
-**Right-clicking the toolbar icon carries what the popup did** — **Options** and **Support** — via
-`contextMenus` with `contexts: ['action']`. The items are created on install rather than on every worker
-start: the browser keeps them, and the worker is restarted constantly. **[settled]**
+**Right-clicking the toolbar icon carries what the popup did**, via `contextMenus` with
+`contexts: ['action']` — but only what the browser does not already offer. Chrome puts **Options** on
+that menu itself (along with *Open side panel*), so adding our own would show it twice; Firefox offers
+*Manage Extension*, which goes to `about:addons` rather than the options page. So **Support** on both,
+**Options** on Firefox only. **[settled]**
+
+Created on every worker start, not on install: `onInstalled` does not reliably fire when an unpacked
+extension is reloaded — which is every rebuild in dev — and the menu is then simply absent.
 
 ## 16. Frames
 

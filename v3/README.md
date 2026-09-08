@@ -44,7 +44,8 @@ MV3 on both browsers. One `sidepanel` entrypoint gives Chrome `side_panel` and F
 | | Chrome | Firefox |
 |---|---|---|
 | Side panel / sidebar | toolbar icon | toolbar icon (or View → Sidebar → Page Modeller) |
-| Options / Support | right-click the toolbar icon | right-click the toolbar icon |
+| Support | right-click the toolbar icon | right-click the toolbar icon |
+| Options | right-click the toolbar icon (Chrome's own item) | right-click the toolbar icon |
 | DevTools panel | F12 → **Page Modeller** | F12 → **Page Modeller** |
 
 ## Load it

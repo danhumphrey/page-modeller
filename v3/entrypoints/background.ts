@@ -182,20 +182,21 @@ export default defineBackground(() => {
   // Options in a popup; the popup is gone, because a click should open the
   // panel rather than a menu, and this is where those links belong instead.
   //
-  // Created on install rather than on every worker start: menu items are kept
-  // by the browser, and the worker is restarted constantly.
-  const MENU = {
-    options: 'Options',
-    support: 'Support',
-  };
+  // Only what the browser does not already offer. Chrome puts Options on this
+  // menu itself, so adding our own would show it twice; Firefox offers
+  // "Manage Extension", which goes to about:addons rather than the options
+  // page, so there it earns its place.
+  const items: Array<{ id: string; title: string }> = [{ id: 'support', title: 'Support' }];
+  if (import.meta.env.FIREFOX) items.unshift({ id: 'options', title: 'Options' });
 
-  browser.runtime.onInstalled.addListener(() => {
-    // removeAll first, or re-creating a known id throws on update.
-    browser.contextMenus.removeAll(() => {
-      for (const [id, title] of Object.entries(MENU)) {
-        browser.contextMenus.create({ id, title, contexts: ['action'] });
-      }
-    });
+  // On every worker start, not on install: onInstalled does not reliably fire
+  // when an unpacked extension is reloaded, which is every rebuild in dev, and
+  // the menu would then be missing. removeAll first, or re-creating a known id
+  // throws.
+  browser.contextMenus.removeAll(() => {
+    for (const { id, title } of items) {
+      browser.contextMenus.create({ id, title, contexts: ['action'] });
+    }
   });
 
   browser.contextMenus.onClicked.addListener((info) => {
