@@ -17,7 +17,7 @@ export default defineConfig({
     // `storage` covers storage.session, where the per-tab models live (SPEC §5)
     // — the service worker is terminated after 30s idle and cannot hold them —
     // and storage.sync for settings (SPEC §14).
-    permissions: ['activeTab', 'tabs', 'storage'],
+    permissions: ['activeTab', 'tabs', 'storage', 'contextMenus'],
     // No popup — the click is handled in the background so it can open the
     // side panel (Chrome) or toggle the sidebar (Firefox). Without an `action`
     // key there is no toolbar button at all.

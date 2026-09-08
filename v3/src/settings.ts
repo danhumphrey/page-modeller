@@ -1,9 +1,9 @@
 // User settings (SPEC §14).
 //
 // Stored in chrome.storage.sync under the key `options`, preserving v2.5.1's
-// keys so an in-place upgrade keeps the user's choices. Storage and the options
-// page land with REWRITE-PLAN §12 step 13; until then these defaults are what
-// the panel runs on.
+// key and names so an in-place upgrade keeps the user's choices (NFR-6).
+import { browser } from 'wxt/browser';
+
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 export interface Settings {
@@ -14,6 +14,8 @@ export interface Settings {
   modelHiddenElements: boolean;
   /** Single-click a row runs View Matched Elements (SPEC §6). */
   clickTableRowsToViewMatchedElements: boolean;
+  /** Append the element's type to its derived name: `About` → `AboutLink`. */
+  appendTypeToName: boolean;
 }
 
 export const defaultSettings: Settings = {
@@ -21,4 +23,36 @@ export const defaultSettings: Settings = {
   theme: 'system',
   modelHiddenElements: false,
   clickTableRowsToViewMatchedElements: false,
+  appendTypeToName: false,
 };
+
+const KEY = 'options';
+
+/** Stored settings merged over the defaults, so a new setting has a value. */
+export async function loadSettings(): Promise<Settings> {
+  try {
+    const stored = (await browser.storage.sync.get(KEY)) as { options?: Partial<Settings> };
+    return { ...defaultSettings, ...stored.options };
+  } catch {
+    // Sync storage can be unavailable or over quota; defaults still work.
+    return { ...defaultSettings };
+  }
+}
+
+export async function saveSettings(settings: Settings): Promise<void> {
+  await browser.storage.sync.set({ [KEY]: settings });
+}
+
+/**
+ * Call `onChange` whenever settings change anywhere — the options page is a
+ * separate tab, so a panel cannot learn about a change any other way.
+ * Returns an unsubscribe.
+ */
+export function watchSettings(onChange: (settings: Settings) => void): () => void {
+  const listener = (changes: Record<string, { newValue?: unknown }>, area: string) => {
+    if (area !== 'sync' || !changes[KEY]) return;
+    onChange({ ...defaultSettings, ...(changes[KEY].newValue as Partial<Settings> | undefined) });
+  };
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
+}

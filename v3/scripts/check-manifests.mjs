@@ -7,6 +7,9 @@ const EXPECT = {
   'chrome-mv3': {
     'manifest_version': (m) => m.manifest_version === 3,
     'action (toolbar button exists)': (m) => m.action != null,
+    'contextMenus permission': (m) => m.permissions?.includes('contextMenus'),
+    'storage permission': (m) => m.permissions?.includes('storage'),
+    'options_ui opens in a tab': (m) => m.options_ui?.open_in_tab === true,
     'icons': (m) => m.icons?.['128'] != null,
     'side_panel.default_path': (m) => m.side_panel?.default_path === 'sidepanel.html',
     'sidePanel permission': (m) => m.permissions?.includes('sidePanel'),
@@ -17,6 +20,9 @@ const EXPECT = {
   'firefox-mv3': {
     'manifest_version': (m) => m.manifest_version === 3,
     'action (toolbar button exists)': (m) => m.action != null,
+    'contextMenus permission': (m) => m.permissions?.includes('contextMenus'),
+    'storage permission': (m) => m.permissions?.includes('storage'),
+    'options_ui opens in a tab': (m) => m.options_ui?.open_in_tab === true,
     'icons': (m) => m.icons?.['128'] != null,
     'sidebar_action.default_panel': (m) => m.sidebar_action?.default_panel === 'sidepanel.html',
     'no sidePanel permission': (m) => !m.permissions?.includes('sidePanel'),

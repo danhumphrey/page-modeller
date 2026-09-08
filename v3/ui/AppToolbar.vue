@@ -4,17 +4,17 @@
          a model exists; the framework is chosen up front because locator types
          are framework-specific. -->
     <q-btn flat dense round icon="manage_search" :disable="hasModel || isAdding" data-testid="btn-scan" @click="$emit('scan')">
-      <q-tooltip>Scan Page</q-tooltip>
+      <q-tooltip v-if="showTooltips">Scan Page</q-tooltip>
     </q-btn>
 
     <q-btn flat dense round icon="delete_sweep" :disable="!hasModel || isPicking" data-testid="btn-delete-model" @click="$emit('deleteModel')">
-      <q-tooltip>Delete Model</q-tooltip>
+      <q-tooltip v-if="showTooltips">Delete Model</q-tooltip>
     </q-btn>
 
     <q-btn flat dense no-caps :disable="hasModel || isPicking" class="framework" data-testid="framework-selector">
       <span class="ellipsis">{{ framework.label }}</span>
       <q-icon name="arrow_drop_down" />
-      <q-tooltip>Select Target Framework</q-tooltip>
+      <q-tooltip v-if="showTooltips">Select Target Framework</q-tooltip>
       <q-menu auto-close>
         <q-list dense style="min-width: 200px">
           <q-item
@@ -34,11 +34,11 @@
     <q-space />
 
     <q-btn flat dense round icon="playlist_add" :disable="isScanning" data-testid="btn-add" @click="$emit('add')">
-      <q-tooltip>Add Element</q-tooltip>
+      <q-tooltip v-if="showTooltips">Add Element</q-tooltip>
     </q-btn>
 
     <q-btn flat dense round icon="code" :disable="!hasModel || isPicking" data-testid="btn-generate" @click="$emit('generate')">
-      <q-tooltip>Generate Code</q-tooltip>
+      <q-tooltip v-if="showTooltips">Generate Code</q-tooltip>
     </q-btn>
   </q-toolbar>
 </template>
@@ -52,6 +52,7 @@ const props = defineProps<{
   hasModel: boolean;
   isScanning: boolean;
   isAdding: boolean;
+  showTooltips: boolean;
 }>();
 
 defineEmits<{

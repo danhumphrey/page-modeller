@@ -9,9 +9,9 @@ const rows: ModelRow[] = [
   { id: 'b', name: 'About', locator: "getByRole('link', { name: 'About', exact: true })" },
 ];
 
-function render(props: Partial<{ elements: ModelRow[]; clickToHighlight: boolean }> = {}) {
+function render(props: Partial<{ elements: ModelRow[]; clickToHighlight: boolean; showTooltips: boolean }> = {}) {
   return mount(ModelTable, {
-    props: { elements: rows, clickToHighlight: false, ...props },
+    props: { elements: rows, clickToHighlight: false, showTooltips: true, ...props },
     // @quasar/vite-plugin auto-imports Quasar components when building; in a
     // test they have to be registered by hand or they render as unknown
     // elements and every query for a real <button> misses.

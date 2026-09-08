@@ -4,6 +4,8 @@ import { ModelStore, usedNames, type TabModel } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
 import { defaultFrameworkId } from '@/src/frameworks';
 import { chooseCandidate } from '@/src/locators/select';
+import { withTypeSuffix } from '@/src/locators/type-name';
+import { loadSettings } from '@/src/settings';
 
 // Background service worker / event page.
 //
@@ -18,6 +20,9 @@ import { chooseCandidate } from '@/src/locators/select';
 //     background always sees the sender, and stamps it.
 //   * A model held in a panel is one model per *panel*: a sidebar and a
 //     DevTools panel on the same tab showed different rows.
+/** Where Support goes — the repository, as in v2.5.1. */
+const SUPPORT_URL = 'https://github.com/danhumphrey/page-modeller';
+
 export default defineBackground(() => {
   console.log('[Page Modeller] background ready', import.meta.env.MODE, import.meta.env.BROWSER);
 
@@ -41,11 +46,13 @@ export default defineBackground(() => {
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (!changeInfo.url) return;
     const url = changeInfo.url;
-    void store.mutate(tabId, (model) => {
-      if (model.url == null) return;
-      // Navigating back to where it was built makes it current again.
-      model.stale = model.url !== url;
-    }).then((model) => publish(tabId, model));
+    void store
+      .mutate(tabId, (model) => {
+        if (model.url == null) return;
+        // Navigating back to where it was built makes it current again.
+        model.stale = model.url !== url;
+      })
+      .then((model) => publish(tabId, model));
   });
 
   // A model with no panel watching it is abandoned work (SPEC §5). Each panel
@@ -95,20 +102,25 @@ export default defineBackground(() => {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
         const url = sender.tab?.url ?? null;
-        void change(tabId, (model) => {
-          // The page the model belongs to, recorded when the first element lands.
-          if (model.url == null) model.url = url;
-          model.elements.push({
-            ...m.result,
-            // Unique within the model rather than a worker-lifetime counter:
-            // the worker restarts, and the counter would restart with it.
-            id: `el-${Date.now().toString(36)}-${model.elements.length}`,
-            name: uniqueName(m.result.suggestedName, usedNames(model)),
-            // Not the engine's preferredIndex: that is framework-agnostic, and
-            // would hand a Selenium model a Playwright-only locator.
-            selectedIndex: chooseCandidate(m.result.candidates, model.frameworkId),
-          });
-        });
+        // Read before mutating: the change callback is synchronous, and naming
+        // depends on a setting the user can change at any time (SPEC §13).
+        void loadSettings().then((settings) =>
+          change(tabId, (model) => {
+            // The page the model belongs to, recorded when the first element
+            // lands.
+            if (model.url == null) model.url = url;
+            model.elements.push({
+              ...m.result,
+              // Unique within the model rather than a worker-lifetime counter:
+              // the worker restarts, and the counter would restart with it.
+              id: `el-${Date.now().toString(36)}-${model.elements.length}`,
+              name: uniqueName(settings.appendTypeToName ? withTypeSuffix(m.result.suggestedName, m.result.role) : m.result.suggestedName, usedNames(model)),
+              // Not the engine's preferredIndex: that is framework-agnostic,
+              // and would hand a Selenium model a Playwright-only locator.
+              selectedIndex: chooseCandidate(m.result.candidates, model.frameworkId),
+            });
+          })
+        );
         // Picking is one-shot (SPEC §4); tell the panels so they can un-arm.
         browser.runtime.sendMessage({ type: 'FROM_TAB', tabId, message: { type: 'PICKING_STOPPED' } }).catch(() => {});
         return;
@@ -153,7 +165,10 @@ export default defineBackground(() => {
         });
         return;
       case 'DELETE_MODEL':
-        void store.clear(m.tabId).then(() => store.get(m.tabId)).then((model) => publish(m.tabId, model));
+        void store
+          .clear(m.tabId)
+          .then(() => store.get(m.tabId))
+          .then((model) => publish(m.tabId, model));
         return;
       case 'SET_FRAMEWORK':
         void change(m.tabId, (model) => {
@@ -161,6 +176,32 @@ export default defineBackground(() => {
         });
         return;
     }
+  });
+
+  // Right-clicking the toolbar icon (SPEC §15). v2.5.1 carried Support and
+  // Options in a popup; the popup is gone, because a click should open the
+  // panel rather than a menu, and this is where those links belong instead.
+  //
+  // Only what the browser does not already offer. Chrome puts Options on this
+  // menu itself, so adding our own would show it twice; Firefox offers
+  // "Manage Extension", which goes to about:addons rather than the options
+  // page, so there it earns its place.
+  const items: Array<{ id: string; title: string }> = [{ id: 'support', title: 'Support' }];
+  if (import.meta.env.FIREFOX) items.unshift({ id: 'options', title: 'Options' });
+
+  // On every worker start, not on install: onInstalled does not reliably fire
+  // when an unpacked extension is reloaded, which is every rebuild in dev, and
+  // the menu would then be missing. removeAll first, or re-creating a known id
+  // throws.
+  browser.contextMenus.removeAll(() => {
+    for (const { id, title } of items) {
+      browser.contextMenus.create({ id, title, contexts: ['action'] });
+    }
+  });
+
+  browser.contextMenus.onClicked.addListener((info) => {
+    if (info.menuItemId === 'options') void browser.runtime.openOptionsPage();
+    else if (info.menuItemId === 'support') void browser.tabs.create({ url: SUPPORT_URL });
   });
 
   if (import.meta.env.FIREFOX) {

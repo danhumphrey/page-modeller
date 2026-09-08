@@ -361,7 +361,12 @@ before starting the next.
 
 13. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python.
 
-14. **Frames** (SPEC §16), **settings** (SPEC §14), **page-object wrapper** (SPEC §17).
+14. **Frames** (SPEC §16) and the **page-object wrapper** (SPEC §17).
+
+**Settings** (SPEC §14) ✅ **done, pulled forward** — `src/settings.ts` over `storage.sync`, an options
+page at `entrypoints/options/`, and all five toggles wired. Brought forward because `appendTypeToName`
+was requested, and a setting nobody can change is not a feature; building the mechanism twice would have
+been the alternative.
 
 **Release blocker:** `browser_specific_settings.gecko.id` is a placeholder. The real AMO id must replace
 it or an upload creates a second listing instead of updating the existing one (NFR-6).

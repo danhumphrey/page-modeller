@@ -16,6 +16,51 @@ const SURFACES = [
   { name: 'DevTools panel', page: 'devtools-panel.html' },
 ];
 
+test('the options page renders every setting', async () => {
+  const context: BrowserContext = await chromium.launchPersistentContext('', {
+    headless: false,
+    // A DARK browser, so that "auto" genuinely means dark. Under the default
+    // light scheme the theme assertion below passes whether or not Quasar was
+    // switched, which makes it worthless.
+    colorScheme: 'dark',
+    args: [`--headless=new`, `--disable-extensions-except=${EXT_PATH}`, `--load-extension=${EXT_PATH}`],
+  });
+
+  try {
+    let [sw] = context.serviceWorkers();
+    if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${new URL(sw.url()).host}/options.html`);
+
+    // A setting nobody can reach is not a setting (SPEC §14).
+    for (const key of ['showTooltips', 'appendTypeToName', 'modelHiddenElements', 'clickTableRowsToViewMatchedElements']) {
+      await expect(page.getByTestId(`option-${key}`)).toBeVisible();
+    }
+    await expect(page.getByTestId('option-theme')).toBeVisible();
+
+    // Choosing Light must move BOTH our tokens and Quasar's dark mode. Setting
+    // only the tokens left dark text on Quasar's dark body.
+    await page.getByTestId('option-theme').click();
+    await page.getByRole('option', { name: 'Light' }).click();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-pm-theme')))
+      .toBe('light');
+    await expect
+      .poll(() => page.evaluate(() => document.body.classList.contains('body--dark')))
+      .toBe(false);
+
+    // Toggling writes through to sync storage, which is what the panel reads.
+    await page.getByTestId('option-appendTypeToName').click();
+    await expect
+      .poll(async () =>
+        page.evaluate(async () => ((await chrome.storage.sync.get('options')) as { options?: { appendTypeToName?: boolean } }).options?.appendTypeToName)
+      )
+      .toBe(true);
+  } finally {
+    await context.close();
+  }
+});
+
 test('built extension loads and every panel surface renders', async () => {
   const context: BrowserContext = await chromium.launchPersistentContext('', {
     headless: false,
