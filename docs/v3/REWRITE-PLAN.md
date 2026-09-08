@@ -364,6 +364,21 @@ before starting the next.
 
 14. **Frames** (SPEC §16) and the **page-object wrapper** (SPEC §17).
 
+**Considered, not scheduled — capture from the Elements tree.** `devtools.panels.elements
+.onSelectionChanged` plus `inspectedWindow.eval` with `$0` would let a button add whatever is selected
+in DevTools' own DOM tree (Chrome 18 / Firefox 56, so no compatibility concern). Attractive because that
+tree already solves nesting, shadow DOM and collapsed subtrees — the things the overlay struggles with.
+
+Two reasons it is not scheduled. `devtools.*` exists only in the DevTools panel, so it would be a button
+the sidebar cannot have; and `inspectedWindow.eval` runs in the page world while the engine lives in the
+content script's, with `useContentScriptContext` being Chrome-only — the portable bridge is to tag `$0`
+with a temporary attribute and have the content script find it.
+
+A sidebar pane in the Elements panel (`createSidebarPane`) was rejected outright: it would be a second
+copy of the table we already have, somewhere worse. There is no way to add an item to the Elements
+context menu — the menu contexts are `action, bookmark, browser_action, launcher, page_action, password,
+tab, tools_menu`, and none of them are DevTools.
+
 **Settings** (SPEC §14) ✅ **done, pulled forward** — `src/settings.ts` over `storage.sync`, an options
 page at `entrypoints/options/`, and all five toggles wired. Brought forward because `appendTypeToName`
 was requested, and a setting nobody can change is not a feature; building the mechanism twice would have
