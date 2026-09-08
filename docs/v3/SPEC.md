@@ -446,6 +446,13 @@ is itself unique. Scoping cannot save a genuinely repeated element — the delet
 row — so the full chain is **scope → `.nth()` within the scope → CSS/XPath**, the tail being
 **[inferred]**.
 
+### XPath needs its prefix **[settled]**
+
+`page.locator('xpath=…')`, always. Playwright infers XPath only from a leading `//` or `..`; the
+engine's fallback path starts with a single `/`, which is parsed as CSS and throws. Prefixed
+unconditionally — `//` would survive bare, but two spellings of one thing is one more thing to get
+wrong.
+
 ### Name matching **[settled]**
 
 Always emit `exact: true`. The engine certifies uniqueness at pick time and substring matching

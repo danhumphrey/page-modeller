@@ -2,7 +2,11 @@ import { test, expect } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { buildLocator } from './pw-builder';
+import { playwrightExpr } from '../src/locators/display';
+import { frameworkById } from '../src/frameworks';
 import type { ElementResult } from '../src/engine/types';
+
+const PLAYWRIGHT_KINDS = new Set(frameworkById('playwright-ts').locatorTypes);
 
 // The crown-jewel correctness gate: every locator the engine deems unique must
 // resolve uniquely to the correct element in a REAL Playwright run.
@@ -50,6 +54,21 @@ test('locator engine matches real Playwright resolution', async ({ page }) => {
         const findsIt = await loc.evaluateAll((els, id) => els.some((e) => e.getAttribute('data-spike') === id), spikeId);
         if (!findsIt) {
           failures.push(`${fixture}/${spikeId}: ${candidate.kind} resolves, but not to ${spikeId}`);
+        }
+
+        // And the GENERATED STRING, not just the IR. `playwrightExpr` is what
+        // lands in the user's page object, and it has its own way to be wrong
+        // independently of the candidate being right: an XPath needs the
+        // `xpath=` prefix, because Playwright infers XPath only from a leading
+        // `//` or `..` and the engine's fallback path starts with one slash.
+        if (PLAYWRIGHT_KINDS.has(candidate.kind)) {
+          const expr = playwrightExpr(candidate);
+          const generated = await new Function('page', `return page.${expr};`)(page)
+            .count()
+            .catch((e: Error) => `threw: ${String(e).split('\n')[0]}`);
+          if (generated !== actual) {
+            failures.push(`${fixture}/${spikeId}: page.${expr} gave ${generated}, expected ${actual}`);
+          }
         }
       }
 
