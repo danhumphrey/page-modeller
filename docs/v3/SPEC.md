@@ -449,8 +449,8 @@ Four agreed changes: **[settled]**
 Keep v2.5.1's **plain names** by default — `About`, not `AboutLink`. The user can rename before
 exporting.
 
-**`appendTypeToName`** (§14, off by default) turns the suffix on: `DiscoverTheDifference` becomes
-`DiscoverTheDifferenceLink`. The vocabulary is the one test authors use rather than raw ARIA — `textbox`
+**`appendTypeToName`** (§14, off by default) turns the suffix on: `FeelTheMagic` becomes
+`FeelTheMagicLink`. The vocabulary is the one test authors use rather than raw ARIA — `textbox`
 and `searchbox` become `Input`, `combobox` and `listbox` become `Select`, `img` becomes `Image` — since
 these names are read by people writing page objects. A role with no entry falls back to the role itself,
 so an unmapped one still produces something sensible, and a name already ending in its type is left

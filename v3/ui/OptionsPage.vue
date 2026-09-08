@@ -48,7 +48,7 @@ const options: Array<{ key: BooleanKey; label: string; hint: string }> = [
   {
     key: 'appendTypeToName',
     label: 'Append the element type to names',
-    hint: '“DiscoverTheDifference” becomes “DiscoverTheDifferenceLink”.',
+    hint: '“FeelTheMagic” becomes “FeelTheMagicLink”.',
   },
   {
     key: 'modelHiddenElements',
