@@ -28,7 +28,22 @@ export type ContentToPanel =
   | { type: 'PICKING_STOPPED' }
   | { type: 'HIGHLIGHT_RESULT'; count: number };
 
-export type Message = PanelToContent | ContentToPanel;
+// Messages panel → background.
+//
+// The panel never calls tabs.sendMessage itself. A DevTools page gets only a
+// subset of the extension APIs — devtools.*, runtime.*, and little else — and
+// `tabs` is not in it, which is documented for both browsers. Chrome happens to
+// tolerate the direct call from a panel page; Firefox does not, so the DevTools
+// panel could not reach the page at all. Relaying through the background is the
+// documented route, and using it everywhere keeps one code path instead of a
+// per-surface branch.
+export type PanelToBackground = { type: 'RELAY_TO_TAB'; tabId: number; message: PanelToContent };
+
+// Messages background → panel. Delivery is reported back rather than returned,
+// for the same portability reason as HIGHLIGHT_RESULT.
+export type BackgroundToPanel = { type: 'TAB_UNREACHABLE'; tabId: number };
+
+export type Message = PanelToContent | ContentToPanel | PanelToBackground | BackgroundToPanel;
 
 export function isMessage(x: unknown): x is Message {
   return typeof x === 'object' && x !== null && typeof (x as { type?: unknown }).type === 'string';

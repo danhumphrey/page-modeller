@@ -28,6 +28,22 @@ test.afterAll(async () => {
 });
 
 /**
+ * Open a fixture and return its tab id. Each test gets a distinct URL: pages
+ * accumulate across tests in one persistent context, and tabs.query({url})
+ * would otherwise return an earlier test's tab.
+ */
+async function openFixture(sw: { evaluate: (fn: never, arg?: unknown) => Promise<unknown> }, caseName: string) {
+  const url = `http://localhost:${PORT}/login.html?case=${caseName}`;
+  const page = await context.newPage();
+  await page.goto(url);
+  const tabId = (await (sw as unknown as { evaluate: (f: (u: string) => Promise<number>, a: string) => Promise<number> }).evaluate(
+    async (u) => (await chrome.tabs.query({ url: u }))[0].id!,
+    url
+  )) as number;
+  return { page, tabId };
+}
+
+/**
  * The panel's runtime.onMessage, stood up in the service worker. The worker
  * outlives each test, so the listener is installed once — registering it per
  * test records every message as many times as there are listeners.
@@ -46,14 +62,7 @@ test('picking is one-shot and reports a named element', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
 
-  const page = await context.newPage();
-  await page.goto(`http://localhost:${PORT}/login.html`);
-
-  const tabId: number = await sw.evaluate(
-    async (url) => (await chrome.tabs.query({ url }))[0].id!,
-    `http://localhost:${PORT}/login.html`
-  );
-
+  const { page, tabId } = await openFixture(sw as never, 'oneshot');
   await collectMessages(sw as never);
 
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
@@ -85,13 +94,7 @@ test('highlighting reports its count as a message, and Close clears it', async (
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
 
-  const page = await context.newPage();
-  await page.goto(`http://localhost:${PORT}/login.html`);
-  const tabId: number = await sw.evaluate(
-    async (url) => (await chrome.tabs.query({ url }))[0].id!,
-    `http://localhost:${PORT}/login.html`
-  );
-
+  const { page, tabId } = await openFixture(sw as never, 'highlight');
   await collectMessages(sw as never);
 
   const marks = page.locator('[data-page-modeller="highlight"]');
@@ -118,4 +121,56 @@ test('highlighting reports its count as a message, and Close clears it', async (
   // Close dismisses the highlight, not just the message.
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'CLEAR_HIGHLIGHT' }), tabId);
   await expect(marks).toHaveCount(0);
+});
+
+test('the background relays panel messages, and reports an unreachable tab', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  const { page, tabId } = await openFixture(sw as never, 'relay');
+  await collectMessages(sw as never);
+
+  // The panel never calls tabs.sendMessage — a DevTools page is not granted
+  // that API — so everything goes through the background. Drive the relay from
+  // a real extension page, which is what the panel is.
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(
+    (id) =>
+      chrome.runtime.sendMessage({
+        type: 'RELAY_TO_TAB',
+        tabId: id,
+        message: { type: 'HIGHLIGHT', candidate: { kind: 'role', role: 'link', name: 'Home', exact: true } },
+      }),
+    tabId
+  );
+  await expect(page.locator('[data-page-modeller="highlight"]')).toHaveCount(1);
+
+  // A tab that does not exist. An extension page would not do: tabs.sendMessage
+  // reaches extension pages hosted in a tab, so the panel's own listener
+  // answers and nothing rejects. The failure has to come back as a message,
+  // since the panel cannot see the background's rejection.
+  const missingTabId = 987654321;
+  // Collected in the panel page, not the service worker: runtime.sendMessage
+  // does not fire the sender's own listener, so the background cannot observe
+  // the failure it reports. The panel is the intended audience anyway.
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: { type: string; tabId?: number }[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  await panel.evaluate(
+    (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'STOP_PICKING' } }),
+    missingTabId
+  );
+  await expect
+    .poll(async () =>
+      (await panel.evaluate(() => (window as unknown as { __msgs: { type: string; tabId?: number }[] }).__msgs))
+        .filter((m) => m.type === 'TAB_UNREACHABLE')
+        .map((m) => m.tabId)
+    )
+    .toEqual([missingTabId]);
 });

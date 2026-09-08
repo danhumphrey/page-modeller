@@ -1,10 +1,27 @@
 import { browser } from 'wxt/browser';
+import { isMessage, type Message } from '@/src/messaging';
 
-// Background service worker / event page. The toolbar click is the only way in
-// to the side panel on Chrome and the quickest one to the sidebar on Firefox,
-// so it lives here; the DevTools panel registers itself via devtools.html.
-// Content ↔ panel messaging goes direct over runtime/tabs, so nothing else does.
+// Background service worker / event page.
+//
+// Two jobs: opening the panel from the toolbar, and relaying panel → page
+// messages. The relay exists because a DevTools page is not granted the `tabs`
+// API — only devtools.*, runtime.* and a few others — so it cannot talk to a
+// content script directly. Every surface goes through here, so there is one
+// path rather than one per host.
 export default defineBackground(() => {
+  browser.runtime.onMessage.addListener((msg: unknown) => {
+    if (!isMessage(msg)) return;
+    const m = msg as Message;
+    if (m.type !== 'RELAY_TO_TAB') return;
+
+    browser.tabs.sendMessage(m.tabId, m.message).catch((err) => {
+      // No content script: a browser-internal page, the add-on store, or a tab
+      // open before the extension loaded.
+      console.error('[Page Modeller] relay failed', m.message.type, err);
+      browser.runtime.sendMessage({ type: 'TAB_UNREACHABLE', tabId: m.tabId }).catch(() => {});
+    });
+  });
+
   if (import.meta.env.FIREFOX) {
     // sidebarAction.toggle() needs a user gesture — the action click is one.
     browser.action.onClicked.addListener(() => browser.sidebarAction.toggle());

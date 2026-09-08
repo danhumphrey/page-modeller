@@ -37,7 +37,7 @@ import { defaultFrameworkId } from '@/src/frameworks';
 import { displayLocator } from '@/src/locators/display';
 import { ModelStore, activeCandidate, type ModelElement } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
-import { isMessage, type ContentToPanel, type PanelToContent } from '@/src/messaging';
+import { isMessage, type BackgroundToPanel, type ContentToPanel, type PanelToContent } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 import { defaultSettings } from '@/src/settings';
 
@@ -86,7 +86,7 @@ function onPanelKey(e: KeyboardEvent) {
 }
 
 host.onTabChanged((next) => {
-  if (isPicking() && tabId.value != null) void send(tabId.value, { type: 'STOP_PICKING' });
+  if (isPicking() && tabId.value != null) send(tabId.value, { type: 'STOP_PICKING' });
   isScanning.value = isAdding.value = false;
   tabId.value = next;
   syncFromStore();
@@ -94,8 +94,8 @@ host.onTabChanged((next) => {
 
 const isPicking = () => isScanning.value || isAdding.value;
 
-async function stopPicking() {
-  if (tabId.value != null) await send(tabId.value, { type: 'STOP_PICKING' });
+function stopPicking() {
+  if (tabId.value != null) send(tabId.value, { type: 'STOP_PICKING' });
   isAdding.value = isScanning.value = false;
 }
 
@@ -132,15 +132,30 @@ async function toggleAdd() {
   const target = tabId.value ?? (await host.getTabId());
   tabId.value = target;
   if (target == null) return;
-  if (await send(target, { type: 'START_PICKING', mode: 'add' })) isAdding.value = true;
+  send(target, { type: 'START_PICKING', mode: 'add' });
+  // Optimistic: TAB_UNREACHABLE resets it if the page cannot be reached.
+  isAdding.value = true;
 }
 
 let idSeq = 0;
 
 browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: number } }) => {
   if (!isMessage(msg)) return;
-  // Only this panel's tab. Without it, a DevTools panel would absorb every
-  // other tab's picks.
+
+  // The background has no sender.tab, so it is matched on the tab it names.
+  if ((msg as BackgroundToPanel).type === 'TAB_UNREACHABLE') {
+    if ((msg as BackgroundToPanel).tabId !== tabId.value) return;
+    isAdding.value = isScanning.value = false;
+    notice('unreachable', {
+      message: 'Page Modeller can’t reach this page. Reload the tab, or try a normal http(s) page.',
+      icon: 'block',
+      color: 'negative',
+    });
+    return;
+  }
+
+  // Content traffic: only this panel's tab. Without it, a DevTools panel would
+  // absorb every other tab's picks.
   if (sender.tab?.id !== tabId.value || tabId.value == null) return;
   const m = msg as ContentToPanel;
 
@@ -201,23 +216,32 @@ function deleteModel() {
  * pile up a "12". Each kind of notice keeps one slot and replaces it.
  */
 const openNotices: Record<string, (() => void) | undefined> = {};
+let noticeSeq = 0;
 
 function notice(kind: string, opts: Parameters<typeof $q.notify>[0]) {
   openNotices[kind]?.();
-  openNotices[kind] = $q.notify({ group: false, position: 'bottom', timeout: 3000, ...(opts as object) });
+  openNotices[kind] = $q.notify({
+    position: 'bottom',
+    timeout: 3000,
+    ...(opts as object),
+    // A unique group per call, rather than `group: false`. Quasar groups
+    // notifications by content and badges a count; `false` did not reliably
+    // stop it, and a value nothing else shares cannot be grouped with anything.
+    group: `${kind}-${++noticeSeq}`,
+  });
 }
 
 function clearHighlight() {
   if (tabId.value == null) return;
   // Every frame may clear; only the top one ever draws.
-  void browser.tabs.sendMessage(tabId.value, { type: 'CLEAR_HIGHLIGHT' }).catch(() => {});
+  send(tabId.value, { type: 'CLEAR_HIGHLIGHT' });
 }
 
-async function highlight(id: string) {
+function highlight(id: string) {
   const el = elements.value.find((e) => e.id === id);
   if (!el || tabId.value == null) return;
   // Fire and forget; the count arrives as HIGHLIGHT_RESULT.
-  await send(tabId.value, { type: 'HIGHLIGHT', candidate: activeCandidate(el) });
+  send(tabId.value, { type: 'HIGHLIGHT', candidate: activeCandidate(el) });
 }
 
 function showMatchCount(count: number) {
