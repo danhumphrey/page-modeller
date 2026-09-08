@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'wxt';
 import vue from '@vitejs/plugin-vue';
 import { quasar, transformAssetUrls } from '@quasar/vite-plugin';
@@ -39,6 +40,16 @@ export default defineConfig({
       },
     }),
   }),
+
+  // web-ext launches a throwaway profile by default, so every `npm run dev`
+  // started with empty storage.sync — settings never survived a restart, and
+  // neither did being logged in to whatever site you were modelling. These live
+  // under .wxt/, which is gitignored.
+  webExt: {
+    keepProfileChanges: true,
+    chromiumProfile: resolve('.wxt/chrome-profile'),
+    firefoxProfile: resolve('.wxt/firefox-profile'),
+  },
 
   vite: () => ({
     plugins: [vue({ template: { transformAssetUrls } }), quasar({})],
