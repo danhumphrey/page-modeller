@@ -13,6 +13,9 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
 - **Panel UI** (`ui/`) — Quasar: `AppToolbar` (SPEC §3) over `ModelTable` (SPEC §6). One app, three
   surfaces. Shell only so far — capture, generation and the dialogs are the next increments.
 - **Frameworks** (`src/frameworks.ts`) — the targets and the locator types each can express (SPEC §7).
+- **Session model** (`src/model.ts`) — one model per tab, in memory (SPEC §5).
+- **Naming** (`src/engine/naming.ts`) — split across the message boundary: `baseName` runs in the page,
+  where the DOM rules apply; `uniqueName` runs in the panel, which owns the model (SPEC §13).
 - **Host adapter** (`host/`) — the only thing that differs per surface: which tab the panel drives.
   Side panel / sidebar follow the active tab (`tabs.query`); a DevTools panel is pinned to the tab it
   was opened on (`devtools.inspectedWindow.tabId`).
@@ -28,7 +31,7 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
 | `npm run typecheck` | Strict TS check of the pure core |
 | `npm run test:unit` | Vitest — pure core |
 | `npm run check:manifests` | Assert both builds emit the expected surfaces |
-| `npm test` | Unit + engine fidelity (real Playwright) + both builds + manifests + extension E2E |
+| `npm test` | Unit + engine fidelity (real Playwright) + both builds + manifests + extension & capture E2E |
 
 ## Surfaces
 
@@ -61,10 +64,16 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    surface you're on.
 3. Toolbar reads Scan · Delete Model · framework · Add Element · Generate Code, with Delete Model and
    Generate Code visibly disabled while the model is empty (SPEC §3).
-4. The framework selector opens and lists all six targets; picking one updates the label.
-5. Table shows Name · Locator · Actions and the empty state, with all three headers visible at the
-   narrowest side-panel width.
-6. Tooltips appear on every toolbar button.
+4. **Add Element** → hover highlights → click adds one row, then picking *stops* (SPEC §4). Clicking
+   again without pressing Add must not add a second row.
+5. **Escape** cancels Add Element — both with focus in the panel and with focus in the page.
+6. The row's name and locator look right, **on one line** — Name, Locator and Actions across, not
+   stacked; a second element with the same name becomes `About2`.
+7. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
+8. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
+   switch to B, add something different, switch back — A must be intact.
+9. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
+10. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
 engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a

@@ -1,5 +1,6 @@
 import { computeAccessibleName, getRole } from 'dom-accessibility-api';
 import type { LocatorCandidate, ElementResult, RankedCandidate } from './types';
+import { baseName } from './naming';
 
 const norm = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
 
@@ -175,5 +176,5 @@ export function generate(el: Element): ElementResult {
 
   const preferredIndex = candidates.findIndex((c) => c.predictedCount === 1);
 
-  return { tag, role, accessibleName: name || null, candidates, preferredIndex };
+  return { tag, role, accessibleName: name || null, suggestedName: baseName(el), candidates, preferredIndex };
 }

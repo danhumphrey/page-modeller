@@ -15,7 +15,7 @@
         <tr
           v-for="el in elements"
           :key="el.id"
-          class="row"
+          class="pm-row"
           @click="$emit('highlight', el.id)"
           @dblclick="$emit('edit', el.id)"
         >
@@ -109,12 +109,14 @@ td {
   font-size: 12px;
 }
 
-.row {
+/* Namespaced: a bare `.row` is Quasar's flex grid utility (display: flex;
+   flex-wrap: wrap), which stacks the cells of every row. */
+.pm-row {
   cursor: default;
   user-select: none;
 }
 
-.row:hover {
+.pm-row:hover {
   background: var(--pm-row-hover);
 }
 
