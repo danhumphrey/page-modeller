@@ -75,9 +75,13 @@ onMounted(async () => {
   // The content script listens for Escape too, but after clicking Add Element
   // focus is in the panel, so the page never sees the keydown. Cover both.
   window.addEventListener('keydown', onPanelKey, true);
+  browser.runtime.onMessage.addListener(onRuntimeMessage);
 });
 
-onBeforeUnmount(() => window.removeEventListener('keydown', onPanelKey, true));
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onPanelKey, true);
+  browser.runtime.onMessage.removeListener(onRuntimeMessage);
+});
 
 function onPanelKey(e: KeyboardEvent) {
   if (e.key !== 'Escape' || !isPicking()) return;
@@ -136,7 +140,13 @@ async function toggleAdd() {
 
 let idSeq = 0;
 
-browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: number } }) => {
+/**
+ * Registered on mount and removed on unmount. Registering at setup leaked a
+ * listener per instance: on HMR the replaced component kept receiving, and its
+ * store and refs are per-instance, so a pick could land in an instance that is
+ * no longer rendered — the table simply stayed empty.
+ */
+function onRuntimeMessage(msg: unknown, sender: { tab?: { id?: number } }) {
   if (!isMessage(msg)) return;
 
   // The background has no sender.tab, so it is matched on the tab it names.
@@ -172,7 +182,7 @@ browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: numb
   } else if (m.type === 'HIGHLIGHT_RESULT') {
     showMatchCount(m.count);
   }
-});
+}
 
 function removeElement(id: string) {
   const el = elements.value.find((e) => e.id === id);
