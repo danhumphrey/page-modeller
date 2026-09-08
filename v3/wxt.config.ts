@@ -1,7 +1,14 @@
+import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig } from 'wxt';
 import vue from '@vitejs/plugin-vue';
 import { quasar, transformAssetUrls } from '@quasar/vite-plugin';
+
+function devProfile(name: string): string {
+  const path = resolve('.wxt', name);
+  mkdirSync(path, { recursive: true });
+  return path;
+}
 
 // Validated stack (Spike #2): drive Vite directly with the Vue + Quasar plugins.
 export default defineConfig({
@@ -45,10 +52,13 @@ export default defineConfig({
   // started with empty storage.sync — settings never survived a restart, and
   // neither did being logged in to whatever site you were modelling. These live
   // under .wxt/, which is gitignored.
+  //
+  // Created here because chrome-launcher writes its log INTO the profile
+  // directory without creating it first, and dies with ENOENT if it is missing.
   webExt: {
     keepProfileChanges: true,
-    chromiumProfile: resolve('.wxt/chrome-profile'),
-    firefoxProfile: resolve('.wxt/firefox-profile'),
+    chromiumProfile: devProfile('chrome-profile'),
+    firefoxProfile: devProfile('firefox-profile'),
   },
 
   vite: () => ({
