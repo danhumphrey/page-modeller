@@ -509,3 +509,36 @@ test('a pick under Selenium never selects a Playwright-only locator', async () =
   const [kind] = (await selectedKinds())!;
   expect(seleniumTypes, `selected ${kind}`).toContain(kind);
 });
+
+test('the overlay label previews the locator, not just the tag', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const url = `http://localhost:${PORT}/widgets.html`;
+  const page = await context.newPage();
+  await page.goto(url);
+  const tabId: number = await sw.evaluate(async (u) => (await chrome.tabs.query({ url: u }))[0].id!, url);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+  const label = page.locator('[data-page-modeller="label"]');
+
+  // Role first, then the accessible name — the label previews what getByRole
+  // will match on.
+  await page.getByRole('button', { name: 'Save' }).hover();
+  await expect(label).toHaveText('button "Save"');
+
+  // Tag shown only when it differs from the role. This is the case it was
+  // written for: a <div role="button"> and the plain <div> wrapping it have the
+  // same bounding box and both used to read just "div".
+  await page.getByRole('button', { name: 'Continue to checkout' }).hover();
+  await expect(label).toHaveText('button (div) "Continue to checkout"');
+
+  // The wrapper is now plainly distinguishable from the control inside it.
+  await page.locator('.cta-wrapper').hover({ position: { x: 2, y: 2 } });
+  await expect(label).toHaveText('div');
+
+  // Formatting details — truncation, role="none", missing names — are covered
+  // by tests/unit/describe.test.ts against the same function. This test exists
+  // for the thing only a real browser can show: that hovering two elements with
+  // identical bounding boxes now tells them apart.
+});

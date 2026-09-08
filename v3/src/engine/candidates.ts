@@ -25,7 +25,7 @@ function pseudoText(el: Element, pseudo: '::before' | '::after'): string {
   }
 }
 
-function safeName(el: Element): string {
+export function safeName(el: Element): string {
   try {
     let name = norm(computeAccessibleName(el));
     // Pseudo content only contributes when the name is derived from content

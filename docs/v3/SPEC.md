@@ -40,6 +40,12 @@ does not exist in Playwright). The user knows their target before they start.
 
 ## 4. Capture
 
+**The overlay labels what you are about to pick** — the computed role, then the accessible name, with
+the tag shown only when it differs from the role: `button "Save"`, `button (div) "Log in"`, or plain
+`div` for a wrapper. It previews the locator rather than naming the tag, which matters because a wrapper
+`<div>` and the `<div role="button">` inside it have the same bounding box and both used to read `div`.
+**[settled]**
+
 **Scan Page** — pick a *container*: the whole page or any subsection (typically a `div` or `form`). Its
 **interactive descendants** enter the model. Non-interactive elements (`p`, `span`, …) are skipped. The
 container itself is not added, only children. Scan is **once per model**; Add is how you extend it.
