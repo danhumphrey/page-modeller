@@ -162,19 +162,25 @@ export default defineContentScript({
       highlight(el);
     };
 
+    /** Commit the current target. Shared by clicking and by Enter. */
+    function pickCurrent() {
+      if (!active || !current) return;
+      const result = generate(current);
+      // Both modes are one-shot (SPEC §4) — stop before reporting, so the
+      // overlay is gone by the time the panel re-renders.
+      stop({ notify: false });
+      // Rejects when no panel is open; that's fine, drop it.
+      browser.runtime.sendMessage({ type: 'ELEMENT_PICKED', result }).catch(() => {});
+    }
+
     const onClick = (e: MouseEvent) => {
       if (!active) return;
       e.preventDefault();
       e.stopPropagation();
       // The CURRENT target, not e.target: the arrows may have walked away from
       // the element under the cursor, and that is the whole point of them.
-      const el = current ?? (e.target as Element);
-      const result = generate(el);
-      // Both modes are one-shot (SPEC §4) — stop before reporting, so the
-      // overlay is gone by the time the panel re-renders.
-      stop({ notify: false });
-      // Rejects when no panel is open; that's fine, drop it.
-      browser.runtime.sendMessage({ type: 'ELEMENT_PICKED', result }).catch(() => {});
+      if (!current) current = e.target as Element;
+      pickCurrent();
     };
 
     /** The child of `of` that contains `hovered`, for walking back down. */
@@ -208,6 +214,14 @@ export default defineContentScript({
     const onKey = (e: KeyboardEvent) => {
       if (!active) return;
       if (e.key === 'Escape') return stop();
+
+      if (e.key === 'Enter') {
+        // Hands are already on the arrows; Enter is the obvious commit.
+        e.preventDefault();
+        e.stopPropagation();
+        return pickCurrent();
+      }
+
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
 
       // Swallow the key even at the ends of the chain, so the page does not
@@ -246,6 +260,7 @@ export default defineContentScript({
       else if (m.type === 'STOP_PICKING') stop();
       else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
       else if (m.type === 'MOVE_TARGET') moveTarget(m.direction);
+      else if (m.type === 'PICK_TARGET') pickCurrent();
       else if (m.type === 'HIGHLIGHT') {
         // This script runs in every frame, but only the top one answers — a
         // sub-frame with no matches would otherwise report 0 over the top

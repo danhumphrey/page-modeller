@@ -160,6 +160,15 @@ function onPanelKey(e: KeyboardEvent) {
     // Swallowed even at the ends of the chain, so the panel does not scroll.
     e.preventDefault();
     send(tabId.value, { type: 'MOVE_TARGET', direction: e.key === 'ArrowUp' ? 'up' : 'down' });
+    return;
+  }
+
+  if (e.key === 'Enter') {
+    // Must be intercepted, not merely forwarded: the Add Element button still
+    // has focus after being clicked, so an unhandled Enter would re-activate it
+    // and cancel the pick instead of committing it.
+    e.preventDefault();
+    send(tabId.value, { type: 'PICK_TARGET' });
   }
 }
 

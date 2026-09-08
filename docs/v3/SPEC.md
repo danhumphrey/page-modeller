@@ -51,7 +51,10 @@ tag shown only when it differs from the role. It previews the locator rather tha
 at three ancestors, elided with `…` beyond that. **[settled]**
 
 **Arrow keys move the target up and down the chain** — ↑ to the parent, ↓ back towards the element under
-the cursor; moving the mouse starts again from there, and a click picks whatever is currently targeted.
+the cursor; moving the mouse starts again from there. **Enter commits the target**, as does a click —
+whichever is currently targeted, not what is under the pointer. Enter matters because hands are already
+on the arrows by then, and because the Add Element button still has focus: an unhandled Enter would
+re-activate it and cancel the pick.
 The mouse alone cannot reliably hit a nested element: a wrapper `<div>` and the `<div role="button">`
 inside it share a bounding box, so selecting the wrapper meant finding a sliver of padding. Arrow keys
 are swallowed while picking even at the ends of the chain, so the page cannot scroll out from under a

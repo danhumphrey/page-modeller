@@ -580,9 +580,11 @@ test('arrow keys walk the target up and down the DOM', async () => {
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'MOVE_TARGET', direction: 'down' }), tabId);
   await expect(label).toHaveText('body › main › div › button (div) "Continue to checkout"');
 
-  // Clicking picks the walked-to target, not what is under the pointer.
+  // Enter commits the walked-to target: hands are already on the arrows, and
+  // the Add Element button still has focus, so an unhandled Enter would
+  // re-activate it and cancel the pick.
   await page.keyboard.press('ArrowUp');
-  await page.getByRole('button', { name: 'Continue to checkout' }).click();
+  await page.keyboard.press('Enter');
 
   await expect
     .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string }[] }).__picks)).length)
