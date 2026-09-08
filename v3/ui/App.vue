@@ -201,7 +201,7 @@ function onRuntimeMessage(msg: unknown) {
   } else if (incoming.type === 'FROM_TAB') {
     const m = incoming.message;
     if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
-    else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count);
+    else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count, m.hidden);
   }
 }
 
@@ -326,7 +326,7 @@ function saveEdit(payload: { name: string; selectedIndex: number; override?: Loc
   editing.value = undefined;
 }
 
-function showMatchCount(count: number) {
+function showMatchCount(count: number, hidden = 0) {
   const tone =
     count === 1
       ? { icon: 'check_circle', color: 'positive' }
@@ -334,9 +334,13 @@ function showMatchCount(count: number) {
         ? { icon: 'error', color: 'negative' }
         : { icon: 'warning', color: 'warning' };
 
+  // Say when a match is hidden. Otherwise "1 element matches" with nothing
+  // outlined reads as a failure, when the locator is doing exactly its job.
+  const aside = hidden > 0 ? ` — ${hidden === count ? (count === 1 ? 'it is' : 'all') : hidden} hidden` : '';
+
   notice('matchCount', {
     ...tone,
-    message: `${count} element${count === 1 ? '' : 's'} match${count === 1 ? 'es' : ''} that locator`,
+    message: `${count} element${count === 1 ? '' : 's'} match${count === 1 ? 'es' : ''} that locator${aside}`,
     // Close takes the highlight with it, so the page is never left marked up
     // with no explanation. Only on the explicit action: a dismiss handler would
     // also fire when this notice is replaced by the next eye click, wiping the

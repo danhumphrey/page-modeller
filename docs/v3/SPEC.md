@@ -222,6 +222,13 @@ locator can be tested before saving. **[settled]**
 | 0 | red error | *0 elements match that locator* |
 | >1 | amber warning | *N elements match that locator* |
 
+**A hidden match is still shown, and said.** With `modelHiddenElements` on (§14) a locator can resolve to
+something with no box to outline, and the eye then reported *1 element matches* while drawing nothing —
+a true count that reads as a failure. Such a match is marked on its **nearest visible ancestor**, dashed
+rather than solid and captioned *hidden element*, so it says where on the page the thing lives without
+pretending to be it. With no visible ancestor at all, a banner says how many matches have no position.
+The count appends *— it is hidden* / *— N hidden*. **[settled]**
+
 **Every candidate must find the element it was generated from.** A locator can be well-formed, resolve
 to something, and still be useless: `getByRole` excludes a11y-hidden elements, so a hidden button's role
 candidate finds the *other* buttons; `getByText` matches the innermost element, so a `<fieldset>`'s text

@@ -92,20 +92,22 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    the count — green for 1, red for 0, amber for more. Highlight clears after ~3s, or at once on
    **Close**. Clicking it repeatedly replaces the message rather than stacking a counter badge, and the
    new highlight survives the replacement.
-10. **Edit** (pencil or double-click): name validation rejects blank, spaced and duplicate names;
+10. With **Model hidden elements** on, the eye on a hidden row marks its nearest visible ancestor
+    with a dashed outline captioned *hidden element*, and the count says so.
+11. **Edit** (pencil or double-click): name validation rejects blank, spaced and duplicate names;
    switching type fills the fields from a generated locator or blanks them; the eye tests what is
    typed; Save updates the row in **both** surfaces.
-11. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
+12. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
    still opens the editor.
-12. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
+13. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
     rows, and a pick in either appears in both. Close one; the model survives in the other. Close them
     all and reopen; that tab's model is gone. Check this with a second tab modelled too — closing one
     tab's panels must not touch the other's.
-13. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
+14. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
    switch to B, add something different, switch back — A must be intact.
-14. **Navigate within a tab** with a model built: a banner names the page it was built on and offers
+15. **Navigate within a tab** with a model built: a banner names the page it was built on and offers
     Delete Model. Navigate back and the banner clears.
-15. Table headers stay visible at the narrowest side-panel width.
+16. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
 engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a

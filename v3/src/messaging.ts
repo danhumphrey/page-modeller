@@ -39,7 +39,9 @@ export type ContentToPanel =
   // single model update, so the table does not animate in row by row.
   | { type: 'ELEMENTS_PICKED'; results: ElementResult[] }
   | { type: 'PICKING_STOPPED' }
-  | { type: 'HIGHLIGHT_RESULT'; count: number };
+  // `hidden` is how many of those matches have no box of their own, so the
+  // count can say why nothing was outlined where you expected it.
+  | { type: 'HIGHLIGHT_RESULT'; count: number; hidden: number };
 
 // Messages panel → background.
 //

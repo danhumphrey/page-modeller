@@ -71,6 +71,11 @@
     <!-- 18. duplicate accessible name (ambiguous role+name) -->
     <button data-spike="dup-name-a">Continue</button>
     <button data-spike="dup-name-b">Continue</button>
-  </main>
+    <!-- A hidden control inside a visible box: the eye has nothing of its own to
+       outline, so it marks the nearest ancestor that does have one. -->
+  <div id="hidden-host" style="width: 200px; height: 40px; border: 1px solid #ccc">
+    <button data-spike="hidden-in-visible-parent" style="display: none">Ghost action</button>
+  </div>
+</main>
 </body>
 </html>

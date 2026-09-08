@@ -744,3 +744,45 @@ test('scan adds a container\'s interactive descendants, not the container (SPEC 
   // of a page would otherwise return every piece of text on it.
   expect(elements).toHaveLength(4);
 });
+
+test('a hidden match is marked on its nearest visible ancestor', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'hidden-eye', 'edgecases.html');
+  await collectMessages(sw as never);
+
+  const marks = page.locator('[data-page-modeller="highlight"]');
+
+  // A visible control marks itself, solid.
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: '#hidden-host' } }),
+    tabId
+  );
+  await expect(marks).toHaveCount(1);
+  await expect(marks.first()).not.toHaveAttribute('data-hidden', 'true');
+
+  // A hidden one has no box of its own, so it is marked on the nearest
+  // ancestor that has one — dashed, and captioned, rather than drawn nowhere.
+  await sw.evaluate(
+    (id) =>
+      chrome.tabs.sendMessage(id, {
+        type: 'HIGHLIGHT',
+        candidate: { kind: 'css', value: '[data-spike="hidden-in-visible-parent"]' },
+      }),
+    tabId
+  );
+  await expect(marks).toHaveCount(1);
+  await expect(marks.first()).toHaveAttribute('data-hidden', 'true');
+  await expect(marks.first()).toContainText('hidden element');
+
+  // And the count says so, or "1 element matches" with nothing outlined where
+  // you expected it reads as a failure.
+  await expect
+    .poll(async () =>
+      (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string; hidden?: number }[] }).__picks))
+        .filter((m) => m.type === 'HIGHLIGHT_RESULT')
+        .at(-1)?.hidden
+    )
+    .toBe(1);
+});
