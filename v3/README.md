@@ -13,7 +13,7 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
 - **Panel UI** (`ui/`) — Quasar: `AppToolbar` (SPEC §3) over `ModelTable` (SPEC §6). One app, three
   surfaces. Shell only so far — capture, generation and the dialogs are the next increments.
 - **Generators** (`src/generators/`) — `classify.ts` maps role to method bucket; `selenium-java.ts` is
-  the reference template (SPEC §11).
+  the reference template (SPEC §11), `playwright-ts.ts` the primary target (SPEC §12).
 - **Frameworks** (`src/frameworks.ts`) — the targets and the locator types each can express (SPEC §7).
 - **Settings** (`src/settings.ts`, `ui/OptionsPage.vue`) — `storage.sync`, read live by every surface
   (SPEC §14).
