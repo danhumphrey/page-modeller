@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { generatePlaywrightTs } from '../../src/generators/playwright-ts';
+import {
+  generatePlaywrightPageObject,
+  generatePlaywrightLocators,
+} from '../../src/generators/playwright-ts';
 import { emptyModel, type ModelElement, type TabModel } from '../../src/model';
 import type { LocatorCandidate } from '../../src/engine/types';
 
 function model(...elements: Array<Partial<ModelElement> & { name: string; candidate: LocatorCandidate }>): TabModel {
   const m = emptyModel('playwright-ts');
+  m.url = 'https://example.com/account/login.html';
   m.elements = elements.map(({ candidate, ...el }, i) => ({
     id: `el-${i}`,
     tag: 'div',
@@ -19,87 +23,83 @@ function model(...elements: Array<Partial<ModelElement> & { name: string; candid
   return m;
 }
 
-const gen = (...args: Parameters<typeof model>) => generatePlaywrightTs(model(...args));
+const email: Parameters<typeof model>[0] = {
+  name: 'EmailAddress',
+  role: 'textbox',
+  tag: 'input',
+  candidate: { kind: 'label', text: 'Email address', exact: true },
+};
+const signIn: Parameters<typeof model>[0] = {
+  name: 'SignIn',
+  role: 'button',
+  tag: 'button',
+  candidate: { kind: 'role', role: 'button', name: 'Sign in', exact: true },
+};
 
-describe('generatePlaywrightTs', () => {
-  it('emits a lazy locator getter, not an element lookup', () => {
-    // A Locator is lazy, so it never goes stale and costs nothing to hold.
-    const out = gen({
-      name: 'SignIn',
-      role: 'button',
-      tag: 'button',
-      candidate: { kind: 'role', role: 'button', name: 'Sign in', exact: true },
-    });
-    expect(out).toContain('getSignInLocator(): Locator {');
-    expect(out).toContain("return page.getByRole('button', { name: 'Sign in', exact: true });");
+describe('generatePlaywrightPageObject', () => {
+  it('names the class from the page URL', () => {
+    expect(generatePlaywrightPageObject(model(email))).toContain('export class LoginPage {');
   });
 
-  it('keeps exact: true, which the engine guarantees', () => {
-    const out = gen({ name: 'About', role: 'link', tag: 'a', candidate: { kind: 'text', text: 'About', exact: true } });
-    expect(out).toContain("getByText('About', { exact: true })");
-  });
-
-  it('awaits every action and types the promise', () => {
-    const out = gen({ name: 'SignIn', role: 'button', tag: 'button', candidate: { kind: 'css', value: 'button' } });
-    expect(out).toContain('async clickSignIn(): Promise<void> {');
-    expect(out).toContain('await getSignInLocator().click();');
-  });
-
-  it('fills a text field, and can append instead', () => {
-    // fill() clears by construction, so v2.5.1's accidental append cannot
-    // happen — but appending stays reachable, as in the Selenium template.
-    const out = gen({ name: 'Email', role: 'textbox', tag: 'input', candidate: { kind: 'label', text: 'Email', exact: true } });
-    expect(out).toContain('async setEmail(value: string, clearFirst = true): Promise<void> {');
-    expect(out).toContain('.fill(value);');
-    expect(out).toContain('.pressSequentially(value);');
-    expect(out).toContain('.inputValue();');
-  });
-
-  it('uses check and uncheck rather than clicking to toggle', () => {
-    const out = gen({ name: 'Remember', role: 'checkbox', tag: 'input', candidate: { kind: 'css', value: '#r' } });
-    expect(out).toContain('await (checked ? getRememberLocator().check() : getRememberLocator().uncheck());');
-    expect(out).not.toContain('.click()');
-  });
-
-  it('gives a radio check() only — uncheck() throws on one', () => {
-    // Playwright agreeing that v2.5.1's set(false) never meant anything.
-    const out = gen({ name: 'Pro', role: 'radio', tag: 'input', candidate: { kind: 'css', value: '#p' } });
-    expect(out).toContain('async selectPro(): Promise<void> {');
-    expect(out).toContain('.check();');
-    expect(out).not.toContain('uncheck');
-  });
-
-  it('selects by value or label on a single select', () => {
-    const out = gen({ name: 'Country', role: 'combobox', tag: 'select', candidate: { kind: 'css', value: '#c' } });
-    expect(out).toContain('await getCountryLocator().selectOption({ value });');
-    expect(out).toContain('await getCountryLocator().selectOption({ label });');
-  });
-
-  it('replaces the whole selection on a multi-select', () => {
-    // selectOption replaces, so there is no deselectAll step and no way to
-    // accidentally add to what was already chosen — unlike Selenium.
-    const out = gen({ name: 'Toppings', role: 'listbox', tag: 'select', candidate: { kind: 'css', value: '#t' } });
-    expect(out).toContain('async setToppingsByValues(...values: string[]): Promise<void> {');
-    expect(out).toContain('values.map((value) => ({ value }))');
-    expect(out).toContain('async deselectAllToppings(): Promise<void> {');
-    expect(out).toContain('.selectOption([]);');
-  });
-
-  it('reads a static element, and an image by its alt', () => {
-    expect(gen({ name: 'Welcome', role: 'heading', tag: 'h1', candidate: { kind: 'css', value: 'h1' } })).toContain(
-      '.textContent();'
+  it('declares readonly fields and assigns them in the constructor', () => {
+    const out = generatePlaywrightPageObject(model(email, signIn));
+    expect(out).toContain('  readonly emailAddress: Locator;');
+    expect(out).toContain('  readonly signIn: Locator;');
+    expect(out).toContain('  constructor(private readonly page: Page) {');
+    expect(out).toContain("    this.emailAddress = page.getByLabel('Email address', { exact: true });");
+    expect(out).toContain(
+      "    this.signIn = page.getByRole('button', { name: 'Sign in', exact: true });"
     );
-    const img = gen({ name: 'Logo', role: 'img', tag: 'img', candidate: { kind: 'altText', text: 'Acme' } });
-    expect(img).toContain("getAttribute('alt');");
-    expect(img).not.toContain('clickLogo');
   });
 
-  it('classifies a password field as text despite it having no role', () => {
-    const out = gen({ name: 'Password', role: null, tag: 'input', inputType: 'password', candidate: { kind: 'css', value: '#p' } });
-    expect(out).toContain('async setPassword(');
+  it('assigns from the constructor parameter, not this.page', () => {
+    // `this.page` is not assigned until the parameter property is applied, so
+    // reading it in the constructor body is the classic undefined-locator bug.
+    expect(generatePlaywrightPageObject(model(email))).not.toContain('this.page.getBy');
+  });
+
+  it('imports both types, type-only', () => {
+    expect(generatePlaywrightPageObject(model(email))).toContain(
+      "import { type Locator, type Page } from '@playwright/test';"
+    );
+  });
+
+  it('wraps no actions — a Locator is already the action API', () => {
+    // The whole point of the reshape: `page.signIn.click()` beats
+    // `page.clickSignIn()`. Composite methods are the user's to add.
+    const out = generatePlaywrightPageObject(model(email, signIn));
+    expect(out).not.toContain('async ');
+    expect(out).not.toContain('click');
+    expect(out).not.toContain('fill');
+  });
+
+  it('emits a usable empty class, with no unused Locator import', () => {
+    const out = generatePlaywrightPageObject(emptyModel('playwright-ts'));
+    expect(out).toBe(
+      [
+        "import { type Page } from '@playwright/test';",
+        '',
+        'export class GeneratedPage {',
+        '  constructor(private readonly page: Page) {}',
+        '}',
+        '',
+      ].join('\n')
+    );
+  });
+});
+
+describe('generatePlaywrightLocators', () => {
+  it('emits bare consts, with no class around them', () => {
+    const out = generatePlaywrightLocators(model(email, signIn));
+    expect(out).toBe(
+      [
+        "const emailAddress = page.getByLabel('Email address', { exact: true });",
+        "const signIn = page.getByRole('button', { name: 'Sign in', exact: true });",
+      ].join('\n')
+    );
   });
 
   it('emits nothing for an empty model', () => {
-    expect(generatePlaywrightTs(emptyModel('playwright-ts'))).toBe('');
+    expect(generatePlaywrightLocators(emptyModel('playwright-ts'))).toBe('');
   });
 });

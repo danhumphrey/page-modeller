@@ -5,6 +5,7 @@
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import type { LocatorCandidate } from '../engine/types';
 import { classify, isImage } from './classify';
+import { lowerCamel } from './names';
 
 /** Java string literal: only `\` and `"` need escaping for our values. */
 const q = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
@@ -117,6 +118,16 @@ function methods(el: ModelElement): string[] {
   }
 
   return out;
+}
+
+/**
+ * Locators only (SPEC §11): `By` fields to paste into your own page object.
+ * `final`, because a `By` is an immutable description of how to find something.
+ */
+export function generateSeleniumJavaLocators(model: TabModel): string {
+  return model.elements
+    .map((el) => `private final By ${lowerCamel(el.name)} = ${by(activeCandidate(el))};`)
+    .join('\n');
 }
 
 export function generateSeleniumJava(model: TabModel): string {

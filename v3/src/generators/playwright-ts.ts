@@ -6,87 +6,62 @@
 // replace several hand-rolled sequences.
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { playwrightExpr } from '../locators/display';
-import { classify, isImage } from './classify';
+import { classNameFor } from './class-name';
+import { lowerCamel } from './names';
 
-function banner(name: string): string {
-  return `/*\n * ${name}\n * ***************************************************************\n */`;
+/** `page.getByRole(…)` for one element. */
+function expr(el: ModelElement): string {
+  return `page.${playwrightExpr(activeCandidate(el))}`;
 }
 
-/** The locator getter every element gets. `page` is assumed in scope, as
- *  `driver` is in the Selenium template. */
-function locator(el: ModelElement): string {
-  return `get${el.name}Locator(): Locator {\n    return page.${playwrightExpr(activeCandidate(el))};\n}`;
-}
-
-function methods(el: ModelElement): string[] {
-  const n = el.name;
-  const loc = `get${n}Locator()`;
-  const out: string[] = [locator(el)];
-
-  switch (classify(el)) {
-    case 'actionable':
-      out.push(`async click${n}(): Promise<void> {\n    await ${loc}.click();\n}`);
-      break;
-
-    case 'text':
-      out.push(
-        `async get${n}(): Promise<string> {\n    return ${loc}.inputValue();\n}`,
-        // fill() clears by construction, so v2.5.1's append-by-accident cannot
-        // happen here. Appending is still reachable, as in the Selenium
-        // template — TypeScript has default arguments, so it is one method.
-        `async set${n}(value: string, clearFirst = true): Promise<void> {\n    if (clearFirst) {\n        await ${loc}.fill(value);\n    } else {\n        await ${loc}.pressSequentially(value);\n    }\n}`
-      );
-      break;
-
-    case 'toggle':
-      out.push(
-        `async is${n}Checked(): Promise<boolean> {\n    return ${loc}.isChecked();\n}`,
-        // check/uncheck are real primitives; no click-to-toggle dance, and they
-        // verify the resulting state themselves.
-        `async set${n}(checked: boolean): Promise<void> {\n    await (checked ? ${loc}.check() : ${loc}.uncheck());\n}`
-      );
-      break;
-
-    case 'radio':
-      // uncheck() throws on a radio, which is Playwright agreeing that
-      // v2.5.1's set(false) never meant anything.
-      out.push(
-        `async is${n}Selected(): Promise<boolean> {\n    return ${loc}.isChecked();\n}`,
-        `async select${n}(): Promise<void> {\n    await ${loc}.check();\n}`
-      );
-      break;
-
-    case 'select':
-      out.push(
-        `async get${n}Value(): Promise<string> {\n    return ${loc}.inputValue();\n}`,
-        `async set${n}ByValue(value: string): Promise<void> {\n    await ${loc}.selectOption({ value });\n}`,
-        `async set${n}ByText(label: string): Promise<void> {\n    await ${loc}.selectOption({ label });\n}`
-      );
-      break;
-
-    case 'multiSelect':
-      out.push(
-        `async get${n}Values(): Promise<string[]> {\n    return ${loc}.evaluate((el: HTMLSelectElement) =>\n        Array.from(el.selectedOptions, (o) => o.value)\n    );\n}`,
-        // selectOption replaces the whole selection, so there is no deselectAll
-        // step and no way to accidentally add to what was already chosen.
-        `async set${n}ByValues(...values: string[]): Promise<void> {\n    await ${loc}.selectOption(values.map((value) => ({ value })));\n}`,
-        `async set${n}ByTexts(...labels: string[]): Promise<void> {\n    await ${loc}.selectOption(labels.map((label) => ({ label })));\n}`,
-        `async deselectAll${n}(): Promise<void> {\n    await ${loc}.selectOption([]);\n}`
-      );
-      break;
-
-    case 'static':
-      out.push(
-        isImage(el)
-          ? `async get${n}AltText(): Promise<string | null> {\n    return ${loc}.getAttribute('alt');\n}`
-          : `async get${n}(): Promise<string | null> {\n    return ${loc}.textContent();\n}`
-      );
-      break;
+/**
+ * The idiomatic page object: readonly locators assigned in the constructor,
+ * which is the shape Playwright's own documentation shows.
+ *
+ * No per-element action wrappers, deliberately. A `Locator` is lazy, reusable
+ * and *is* the action API, so `clickLogIn()` around `.click()` adds a name and
+ * nothing else — the test reads better as `loginPage.logIn.click()`. Those
+ * wrappers earn their place in Selenium, where `findElement` returns something
+ * that goes stale; here they are ceremony.
+ *
+ * Composite methods — `login(email, password)` — are the point of a page
+ * object, and they need domain knowledge this tool does not have. The user
+ * writes those.
+ */
+export function generatePlaywrightPageObject(model: TabModel): string {
+  const className = classNameFor(model.url);
+  if (model.elements.length === 0) {
+    return [
+      "import { type Page } from '@playwright/test';",
+      '',
+      `export class ${className} {`,
+      '  constructor(private readonly page: Page) {}',
+      '}',
+      '',
+    ].join('\n');
   }
 
-  return out;
+  const fields = model.elements.map((el) => `  readonly ${lowerCamel(el.name)}: Locator;`);
+  const assignments = model.elements.map((el) => `    this.${lowerCamel(el.name)} = ${expr(el)};`);
+
+  return [
+    "import { type Locator, type Page } from '@playwright/test';",
+    '',
+    `export class ${className} {`,
+    ...fields,
+    '',
+    '  constructor(private readonly page: Page) {',
+    ...assignments,
+    '  }',
+    '}',
+    '',
+  ].join('\n');
 }
 
-export function generatePlaywrightTs(model: TabModel): string {
-  return model.elements.map((el) => [banner(el.name), ...methods(el)].join('\n\n')).join('\n\n');
+/**
+ * Locators only (SPEC §11) — the escape hatch for anyone with their own page
+ * object conventions, which is most teams. Our locators, none of our opinions.
+ */
+export function generatePlaywrightLocators(model: TabModel): string {
+  return model.elements.map((el) => `const ${lowerCamel(el.name)} = ${expr(el)};`).join('\n');
 }

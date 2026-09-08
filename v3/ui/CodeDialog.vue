@@ -3,6 +3,18 @@
     <q-card class="code-card">
       <q-toolbar class="dialog-header">
         <q-toolbar-title class="text-subtitle1">{{ frameworkLabel }}</q-toolbar-title>
+        <!-- Shapes are per-framework, so this is hidden when there is only one. -->
+        <q-btn-toggle
+          v-if="shapes.length > 1"
+          v-model="shapeId"
+          :options="shapeOptions"
+          flat
+          dense
+          no-caps
+          toggle-color="primary"
+          class="shape-toggle q-mr-sm"
+          data-testid="code-shape"
+        />
         <q-btn flat dense no-caps icon="content_copy" label="Copy" data-testid="code-copy" @click="copy" />
       </q-toolbar>
 
@@ -22,7 +34,7 @@
 import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { frameworkById } from '@/src/frameworks';
-import { generateCode } from '@/src/generators';
+import { generateCode, shapesFor } from '@/src/generators';
 import type { TabModel } from '@/src/model';
 
 const props = defineProps<{ model: TabModel }>();
@@ -32,7 +44,14 @@ const $q = useQuasar();
 const open = ref(true);
 
 const frameworkLabel = computed(() => frameworkById(props.model.frameworkId).label);
-const code = computed(() => generateCode(props.model));
+
+// Dialog-local, not stored on the model: which shape you want to read is a
+// property of this glance at the code, not of the elements you have captured.
+const shapes = computed(() => shapesFor(props.model.frameworkId));
+const shapeOptions = computed(() => shapes.value.map((s) => ({ label: s.label, value: s.id })));
+const shapeId = ref(shapes.value[0]?.id);
+
+const code = computed(() => generateCode(props.model, shapeId.value));
 
 async function copy() {
   try {
@@ -59,6 +78,11 @@ async function copy() {
   color: var(--pm-toolbar-fg);
   border-bottom: 1px solid var(--pm-rule);
   min-height: 44px;
+}
+
+.shape-toggle {
+  border: 1px solid var(--pm-rule);
+  border-radius: 4px;
 }
 
 .code {

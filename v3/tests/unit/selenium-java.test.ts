@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateSeleniumJava } from '../../src/generators/selenium-java';
+import { generateSeleniumJava, generateSeleniumJavaLocators } from '../../src/generators/selenium-java';
 import { emptyModel, type ModelElement, type TabModel } from '../../src/model';
 import type { LocatorCandidate } from '../../src/engine/types';
 
@@ -137,5 +137,26 @@ describe('generateSeleniumJava', () => {
     expect(out).toContain('* A');
     expect(out).toContain('* B');
     expect(generateSeleniumJava(emptyModel('selenium-java'))).toBe('');
+  });
+});
+
+describe('generateSeleniumJavaLocators', () => {
+  it('emits By fields and no methods', () => {
+    const out = generateSeleniumJavaLocators(
+      model(
+        { name: 'EmailAddress', role: 'textbox', tag: 'input', candidate: { kind: 'name', value: 'email' } },
+        { name: 'SignIn', role: 'button', tag: 'button', candidate: { kind: 'id', value: 'go' } }
+      )
+    );
+    expect(out).toBe(
+      [
+        'private final By emailAddress = By.name("email");',
+        'private final By signIn = By.id("go");',
+      ].join('\n')
+    );
+  });
+
+  it('emits nothing for an empty model', () => {
+    expect(generateSeleniumJavaLocators(emptyModel('selenium-java'))).toBe('');
   });
 });

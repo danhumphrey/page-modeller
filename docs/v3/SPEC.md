@@ -280,7 +280,36 @@ dialog.
 ## 11. Generate Code
 
 Read-only view of the generated code, titled with the framework, with a **copy to clipboard** button.
-Per element: a banner comment, a getter, and interaction methods keyed to what the element is. **[settled]**
+**[settled]**
+
+### Output shapes **[settled]**
+
+The same locators, arranged the way that framework's users arrange them. The dialog offers the shapes
+its framework has; the first is the default. Shape is a dialog-local choice — it does not touch the
+model.
+
+| Framework | Shapes |
+|---|---|
+| Selenium (all languages) | **Methods** (default) · Locators only |
+| Playwright (all languages) | **Page object** (default) · Locators only |
+| Puppeteer | **Locators only** |
+
+**Locators only** exists for every framework: locator declarations and nothing else, for the many teams
+with their own page-object conventions. Our locators, none of our opinions — and the one output still
+useful when the surrounding structure is wrong for them.
+
+```java
+private final By emailAddress = By.name("email");
+private final By signIn = By.id("go");
+```
+
+User-supplied templates are deliberately **not** offered. Two shapes cover the split that matters —
+take our structure, or take just the locators. **[settled]**
+
+### Selenium's Methods shape
+
+Per element: a banner comment, a getter, and interaction methods keyed to what the element is.
+**[settled]**
 
 ```java
 /*
@@ -424,35 +453,41 @@ undermines that afterwards: a later "About us" link turns a unique `About` locat
 one. `exact` still trims surrounding whitespace. A renamed element then fails loudly rather than
 drifting onto the wrong target.
 
-### Method bodies **[settled]**
+### Page object shape **[settled]**
 
-Not a substitution of the Selenium templates; the API differs enough to change shape.
+Not a translation of the Selenium template. `readonly` fields assigned in the constructor — the shape
+Playwright's own docs show.
 
-| Bucket | Playwright |
-|---|---|
-| element | `get{Name}Locator()` returns a lazy `Locator` — no staleness, no explicit waits |
-| actionable | `await get{Name}().click()` |
-| text | `fill(value)` — one call, replaces `clear()` + `sendKeys()`; read with `inputValue()` |
-| toggle | `check()` / `uncheck()` / `isChecked()` — real primitives, so no click-to-toggle dance |
-| select (single) | `selectOption(value)` |
-| select (multi) | `selectOption([...])` — one call, no `deselectAll` loop |
-| static | `textContent()` |
+```ts
+import { type Locator, type Page } from '@playwright/test';
 
-Two v2.5.1 bugs cannot occur here: `fill()` clears first by construction, and radio `set(false)` is
-expressible only as `uncheck()`, which Playwright rejects on a radio rather than silently doing nothing.
+export class LoginPage {
+  readonly emailAddress: Locator;
+  readonly signIn: Locator;
 
-All methods are `async`; TypeScript returns `Promise<...>`. Methods reference a bare `page`, mirroring
-how the Selenium templates reference a bare `driver` — the surrounding class supplies it.
+  constructor(private readonly page: Page) {
+    this.emailAddress = page.getByLabel('Email address', { exact: true });
+    this.signIn = page.getByRole('button', { name: 'Sign in', exact: true });
+  }
+}
+```
 
-The getter is `get{Name}Locator()`, not `get{Name}()`: a text field needs `get{Name}()` for its value,
-and a Locator is not an element, so borrowing Selenium's `get{Name}Element()` would be doubly wrong.
+**No per-element action wrappers.** A `Locator` is lazy, reusable and *is* the action API, so
+`clickSignIn()` wrapping `.click()` adds a name and nothing else — `loginPage.signIn.click()` reads
+better. Those wrappers earn their place in Selenium, where `findElement` returns something that goes
+stale; here they are ceremony, and they multiply per bucket into a wall of code nobody asked for.
 
-Three differences from Selenium worth naming, all because Playwright has a primitive where Selenium
-needs a sequence: `fill()` clears by construction; `check()`/`uncheck()` verify the resulting state
-rather than clicking and hoping; and `selectOption()` replaces the whole selection, so a multi-select
-needs no `deselectAll` step and cannot accidentally add to what was already chosen. Appending to a text
-field stays reachable via `pressSequentially`, as `clearFirst` does in Selenium — one method here, since
-TypeScript has default arguments.
+**No composite methods.** `login(email, password)` is the point of a page object and needs domain
+knowledge this tool does not have. The user adds those — the tool exists to shortcut the locators.
+
+Field names are the element name, lower-camel. Assignment reads the constructor **parameter** `page`,
+not `this.page`: the parameter property is not assigned until the constructor body completes.
+
+Class name comes from the last path segment of the model's URL — `/account/login.html` → `LoginPage`,
+`facebook.com` → `FacebookPage`, no URL → `GeneratedPage`. Rename it; the tool cannot know what you call
+the page. **[inferred]**
+
+No banner comments. Field names carry the same information in a fifth of the lines.
 
 ### Test IDs **[inferred]**
 
@@ -598,17 +633,15 @@ guaranteed-broken reference. Emit the actions only. **[settled]**
 
 Nested frames extend the chain — one `switchTo().frame()` per level, outermost first.
 
-## 17. Page-object wrapper
+## 17. Selenium page-object wrapper
 
-The code dialog carries a **Methods / Full page object** toggle that re-renders in place. One Generate
-Code button, both outputs visible without regenerating, toolbar unchanged. **[settled]**
+The shape selector is built (§11), and Playwright's default shape is already a full page object. What is
+left is a **third Selenium shape** — Methods · Page object · Locators only — wrapping the methods in a
+class declaration, imports, and a constructor taking the `driver` they currently reference bare.
+**[inferred]**
 
-Methods-only stays the default (§11). The wrapper adds the class declaration, imports, and a constructor
-taking the `page`/`driver` the methods already reference bare. **[inferred]**
-
-A wrapper needs a **class name**, which methods-only does not — so the field belongs in this mode and
-nowhere else. It is an editable field in the dialog, prefilled from the page title or URL path
-(`/checkout` → `CheckoutPage`): right most of the time, always overridable. **[inferred]**
+Class name is derived as it is for Playwright (§12). Making it an **editable field** in the dialog is
+the obvious next step and is not built. **[open]**
 
 ## 18. Still open
 

@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
-import { Quasar, QBtn, QDialog, QCard, QCardSection, QCardActions, QToolbar, QToolbarTitle } from 'quasar';
+import { Quasar, QBtn, QBtnToggle, QDialog, QCard, QCardSection, QCardActions, QToolbar, QToolbarTitle } from 'quasar';
 import CodeDialog from '../../ui/CodeDialog.vue';
 import { emptyModel, type ModelElement, type TabModel } from '../../src/model';
 
@@ -38,7 +38,7 @@ async function render(model: TabModel) {
     props: { model },
     global: {
       plugins: [Quasar],
-      components: { QBtn, QDialog, QCard, QCardSection, QCardActions, QToolbar, QToolbarTitle },
+      components: { QBtn, QBtnToggle, QDialog, QCard, QCardSection, QCardActions, QToolbar, QToolbarTitle },
     },
     attachTo: document.body,
   }) as ReturnType<typeof mount>;
@@ -47,6 +47,15 @@ async function render(model: TabModel) {
 }
 
 const codeText = () => document.body.querySelector('[data-testid="code-output"]')?.textContent ?? '';
+
+/** Click one of the shape toggle's buttons by its label. */
+async function chooseShape(label: string) {
+  const buttons = document.body.querySelectorAll('[data-testid="code-shape"] button');
+  const button = [...buttons].find((b) => b.textContent?.trim() === label);
+  if (!button) throw new Error(`no shape button labelled ${label}`);
+  (button as HTMLElement).click();
+  await nextTick();
+}
 
 describe('CodeDialog', () => {
   it('is titled with the framework, as v2.5.1 was', async () => {
@@ -62,7 +71,16 @@ describe('CodeDialog', () => {
 
   it('generates for Playwright too', async () => {
     await render(modelWith('playwright-ts', { name: 'Email' }));
-    expect(codeText()).toContain('getEmailLocator(): Locator {');
+    expect(codeText()).toContain('readonly email: Locator;');
+  });
+
+  it('switches shape without touching the model', async () => {
+    const model = modelWith('playwright-ts', { name: 'Email' });
+    await render(model);
+    await chooseShape('Locators only');
+    expect(codeText()).toContain('const email = page.');
+    expect(codeText()).not.toContain('export class');
+    expect(model.elements).toHaveLength(1);
   });
 
   it('says which target is missing rather than showing nothing', async () => {

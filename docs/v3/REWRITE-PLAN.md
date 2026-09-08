@@ -366,9 +366,15 @@ before starting the next.
     IR and engine work to find and verify a scoping ancestor, not just a change of output. Until then an
     ambiguous role+name falls back to css or xpath, which works but is not idiomatic.
 
-13. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python.
+13. **Output shapes** (SPEC §11). ✅ **Done** — every framework offers "Locators only" alongside its
+    structured shape, chosen in the code dialog. Playwright's structured shape was reshaped to a page
+    object of constructor-assigned `readonly` fields; its per-element action wrappers are gone, because
+    a `Locator` is already the action API. Awaiting hand-test.
 
-14. **Frames** (SPEC §16) and the **page-object wrapper** (SPEC §17).
+14. **Remaining generators** — Selenium C#/Python, Puppeteer, Playwright Python. Each supplies both
+    shapes.
+
+15. **Frames** (SPEC §16) and the **page-object wrapper** (SPEC §17).
 
 **Considered, not scheduled — capture from the Elements tree.** `devtools.panels.elements
 .onSelectionChanged` plus `inspectedWindow.eval` with `$0` would let a button add whatever is selected
