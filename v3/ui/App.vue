@@ -1,6 +1,6 @@
 <template>
   <q-layout view="hHh lpR fFf">
-    <q-header elevated>
+    <q-header>
       <AppToolbar
         v-model:framework-id="frameworkId"
         :has-model="elements.length > 0"

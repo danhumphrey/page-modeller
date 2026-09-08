@@ -61,6 +61,8 @@ defineEmits<{
 <style scoped>
 .model-table {
   overflow-x: auto;
+  /* v2.5.1 insets the table from the panel edges rather than running it flush. */
+  padding: 8px var(--pm-gutter) 0;
 }
 
 table {
@@ -72,18 +74,18 @@ table {
 th {
   text-align: left;
   font-size: 12px;
-  font-weight: 500;
-  color: var(--q-dark-page, #666);
-  opacity: 0.7;
+  font-weight: 600;
+  color: var(--pm-text-muted);
   padding: 10px 8px;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+  border-bottom: 1px solid var(--pm-rule);
   white-space: nowrap;
 }
 
 td {
   padding: 6px 8px;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+  border-bottom: 1px solid var(--pm-rule);
   font-size: 13px;
+  color: var(--pm-text);
 }
 
 /* table-layout: fixed needs real widths — `width: 1%` collapses the Actions
@@ -113,12 +115,12 @@ td {
 }
 
 .row:hover {
-  background: rgba(128, 128, 128, 0.08);
+  background: var(--pm-row-hover);
 }
 
 .empty {
   padding: 24px 8px;
-  opacity: 0.6;
+  color: var(--pm-text-muted);
   text-align: center;
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <q-toolbar class="bg-primary text-white">
+  <q-toolbar class="app-toolbar">
     <!-- Enablement rules are SPEC §3. Scan and the framework selector lock once
          a model exists; the framework is chosen up front because locator types
          are framework-specific. -->
@@ -69,14 +69,23 @@ const isPicking = computed(() => props.isScanning || props.isAdding);
 <style scoped>
 /* The side panel can be ~350px wide, so the framework name has to be able to
    give up space rather than push the right-hand buttons off the edge. */
+.app-toolbar {
+  background: var(--pm-toolbar-bg);
+  color: var(--pm-toolbar-fg);
+  border-bottom: 1px solid var(--pm-rule);
+  min-height: 44px;
+  padding: 0 4px;
+}
+
 .framework {
   min-width: 0;
   overflow: hidden;
+  font-weight: 500;
 }
 
-/* Quasar's default disabled opacity is hard to read against the primary
-   toolbar, and enablement is the toolbar's main signal (SPEC §3). */
-.q-toolbar :deep(.disabled) {
-  opacity: 0.4 !important;
+/* Enablement is the toolbar's main signal (SPEC §3), so disabled has to read
+   clearly against the neutral ground. */
+.app-toolbar :deep(.disabled) {
+  opacity: 0.35 !important;
 }
 </style>
