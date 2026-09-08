@@ -12,6 +12,8 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
 - **Inspector overlay** (`entrypoints/content/`) — highlight + click to pick; runs in all frames.
 - **Panel UI** (`ui/`) — Quasar: `AppToolbar` (SPEC §3) over `ModelTable` (SPEC §6). One app, three
   surfaces. Shell only so far — capture, generation and the dialogs are the next increments.
+- **Generators** (`src/generators/`) — `classify.ts` maps role to method bucket; `selenium-java.ts` is
+  the reference template (SPEC §11).
 - **Frameworks** (`src/frameworks.ts`) — the targets and the locator types each can express (SPEC §7).
 - **Settings** (`src/settings.ts`, `ui/OptionsPage.vue`) — `storage.sync`, read live by every surface
   (SPEC §14).
@@ -114,7 +116,10 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    switch to B, add something different, switch back — A must be intact.
 15. **Navigate within a tab** with a model built: a banner names the page it was built on and offers
     Delete Model. Navigate back and the banner clears.
-16. Table headers stay visible at the narrowest side-panel width.
+16. **Generate Code** with Selenium WebDriver Java selected: the dialog is titled with the framework,
+    the code is read-only and scrolls, and Copy puts it on the clipboard. Any other target says it is
+    not generated yet rather than showing an empty dialog.
+17. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
 engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a

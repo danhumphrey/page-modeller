@@ -36,6 +36,12 @@ export interface ElementResult {
   accessibleName: string | null;
   /** Name derived in the page, before de-duplication (see naming.ts). */
   suggestedName: string;
+  /**
+   * `input`'s type, when it is one. Needed because several input types have no
+   * ARIA role at all — `password` most notably — so role alone would classify
+   * a field you type into as static (SPEC §11).
+   */
+  inputType?: string;
   candidates: RankedCandidate[];
   /** Index of the first predicted-unique candidate, or -1 if none. */
   preferredIndex: number;

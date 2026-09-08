@@ -303,5 +303,13 @@ export function generate(el: Element): ElementResult {
 
   const preferredIndex = candidates.findIndex((c) => c.predictedCount === 1);
 
-  return { tag, role, accessibleName: name || null, suggestedName: baseName(el), candidates, preferredIndex };
+  return {
+    tag,
+    role,
+    accessibleName: name || null,
+    suggestedName: baseName(el),
+    inputType: tag === 'input' ? (el as HTMLInputElement).type : undefined,
+    candidates,
+    preferredIndex,
+  };
 }

@@ -305,10 +305,11 @@ Classification is by **computed a11y role**, not `tagName`. Five buckets: **[set
 |---|---|---|
 | **actionable** | button, link, menuitem, tab, option | `click{Name}()` |
 | **text** | textbox, searchbox, spinbutton | `get{Name}()` · `set{Name}(String)` |
-| **toggle** | checkbox, radio, switch | `get{Name}(): boolean` · `set{Name}(boolean)` |
+| **toggle** | checkbox, switch | `is{Name}Checked()` · `set{Name}(boolean)` |
 | **select (single)** | combobox | `get{Name}Select()` · `get{Name}Text()` · `get{Name}Value()` · `set{Name}ByValue()` · `set{Name}ByText()` |
 | **select (multi)** | listbox | `get{Name}Select()` · `get{Name}Texts()` · `get{Name}Values()` · `set{Name}ByValues(...)` · `set{Name}ByTexts(...)` · `deselectAll{Name}()` |
-| **static** | everything else | `get{Name}()` → text |
+| **radio** | radio | `is{Name}Selected()` · `select{Name}()` |
+| **static** | everything else | `get{Name}()` → text, or `get{Name}AltText()` for an image |
 
 Every element also gets a banner comment and `get{Name}Element()`.
 
@@ -324,7 +325,9 @@ Every element also gets a banner comment and `get{Name}Element()`.
 4. **`img` is static, not clickable.** It was in both `isClickable` and `isInteractive`, so images got
    `click{Name}()` and no text accessor. The accessor must read **`alt`** (or the accessible name) —
    `getText()` returns an empty string for an image.
-5. **Radio `set(false)` was a no-op.** Clicking a checked radio does not uncheck it.
+5. **Radio `set(false)` was a no-op.** Clicking a checked radio does not uncheck it, so a radio gets
+   `is{Name}Selected()` and `select{Name}()` — selecting is the only verb that means anything — rather
+   than a `set{Name}(boolean)` half of which silently did nothing.
 
 6. **Multi-selects were silently wrong.** On a `<select multiple>`, `selectByValue()` *adds* to the
    selection rather than replacing it, so the generated `set{Name}ByValue()` left prior selections in
