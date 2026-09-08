@@ -32,8 +32,12 @@ test.afterAll(async () => {
  * accumulate across tests in one persistent context, and tabs.query({url})
  * would otherwise return an earlier test's tab.
  */
-async function openFixture(sw: { evaluate: (fn: never, arg?: unknown) => Promise<unknown> }, caseName: string) {
-  const url = `http://localhost:${PORT}/login.html?case=${caseName}`;
+async function openFixture(
+  sw: { evaluate: (fn: never, arg?: unknown) => Promise<unknown> },
+  caseName: string,
+  file = 'login.html'
+) {
+  const url = `http://localhost:${PORT}/${file}?case=${caseName}`;
   const page = await context.newPage();
   await page.goto(url);
   const tabId = (await (sw as unknown as { evaluate: (f: (u: string) => Promise<number>, a: string) => Promise<number> }).evaluate(
@@ -514,31 +518,70 @@ test('the overlay label previews the locator, not just the tag', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
 
-  const url = `http://localhost:${PORT}/widgets.html`;
-  const page = await context.newPage();
-  await page.goto(url);
-  const tabId: number = await sw.evaluate(async (u) => (await chrome.tabs.query({ url: u }))[0].id!, url);
-
+  const { page, tabId } = await openFixture(sw as never, 'label', 'widgets.html');
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
   const label = page.locator('[data-page-modeller="label"]');
 
-  // Role first, then the accessible name — the label previews what getByRole
-  // will match on.
+  // The label is a breadcrumb ending in the target; the chain itself is covered
+  // by the arrow-key test. Here it is the target's description that matters:
+  // role first, then the accessible name, previewing what getByRole matches on.
   await page.getByRole('button', { name: 'Save' }).hover();
-  await expect(label).toHaveText('button "Save"');
+  await expect(label).toHaveText(/› button "Save"$/);
 
   // Tag shown only when it differs from the role. This is the case it was
   // written for: a <div role="button"> and the plain <div> wrapping it have the
   // same bounding box and both used to read just "div".
   await page.getByRole('button', { name: 'Continue to checkout' }).hover();
-  await expect(label).toHaveText('button (div) "Continue to checkout"');
+  await expect(label).toHaveText(/› button \(div\) "Continue to checkout"$/);
 
   // The wrapper is now plainly distinguishable from the control inside it.
   await page.locator('.cta-wrapper').hover({ position: { x: 2, y: 2 } });
-  await expect(label).toHaveText('div');
+  await expect(label).toHaveText(/› div$/);
 
   // Formatting details — truncation, role="none", missing names — are covered
   // by tests/unit/describe.test.ts against the same function. This test exists
   // for the thing only a real browser can show: that hovering two elements with
   // identical bounding boxes now tells them apart.
+});
+
+test('arrow keys walk the target up and down the DOM', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'arrows', 'widgets.html');
+
+  await sw.evaluate(() => {
+    const g = globalThis as unknown as { __picks: unknown[]; __collecting?: boolean };
+    g.__picks = [];
+    if (g.__collecting) return;
+    g.__collecting = true;
+    chrome.runtime.onMessage.addListener((m) => g.__picks.push(m));
+  });
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+
+  const label = page.locator('[data-page-modeller="label"]');
+  await page.getByRole('button', { name: 'Continue to checkout' }).hover();
+  // Ancestors are role-or-tag only; the target carries its accessible name.
+  await expect(label).toHaveText('body › main › div › button (div) "Continue to checkout"');
+
+  // Up moves to the wrapper — the element that needed a 2px sliver of padding
+  // to hit with the mouse.
+  await page.keyboard.press('ArrowUp');
+  await expect(label).toHaveText('body › main › div');
+
+  // Down walks back towards the element under the cursor.
+  await page.keyboard.press('ArrowDown');
+  await expect(label).toHaveText('body › main › div › button (div) "Continue to checkout"');
+
+  // Clicking picks the walked-to target, not what is under the pointer.
+  await page.keyboard.press('ArrowUp');
+  await page.getByRole('button', { name: 'Continue to checkout' }).click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string }[] }).__picks)).length)
+    .toBe(1);
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = picks[0].result as { tag: string; role: string | null };
+  expect(result.tag, 'picked the wrapper, not the button under the cursor').toBe('div');
+  expect(result.role).toBeNull();
 });

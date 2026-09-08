@@ -40,11 +40,22 @@ does not exist in Playwright). The user knows their target before they start.
 
 ## 4. Capture
 
-**The overlay labels what you are about to pick** — the computed role, then the accessible name, with
-the tag shown only when it differs from the role: `button "Save"`, `button (div) "Log in"`, or plain
-`div` for a wrapper. It previews the locator rather than naming the tag, which matters because a wrapper
-`<div>` and the `<div role="button">` inside it have the same bounding box and both used to read `div`.
-**[settled]**
+**The overlay labels what you are about to pick**, as a breadcrumb of the nesting ending in the target:
+
+```
+body › main › div › button (div) "Continue to checkout"
+```
+
+Ancestors are role-or-tag only; the target carries its computed role, then the accessible name, with its
+tag shown only when it differs from the role. It previews the locator rather than naming the tag. Capped
+at three ancestors, elided with `…` beyond that. **[settled]**
+
+**Arrow keys move the target up and down the chain** — ↑ to the parent, ↓ back towards the element under
+the cursor; moving the mouse starts again from there, and a click picks whatever is currently targeted.
+The mouse alone cannot reliably hit a nested element: a wrapper `<div>` and the `<div role="button">`
+inside it share a bounding box, so selecting the wrapper meant finding a sliver of padding. Arrow keys
+are swallowed while picking even at the ends of the chain, so the page cannot scroll out from under a
+pick. ↑ stops at `<body>`. **[settled]**
 
 **Scan Page** — pick a *container*: the whole page or any subsection (typically a `div` or `form`). Its
 **interactive descendants** enter the model. Non-interactive elements (`p`, `span`, …) are skipped. The
