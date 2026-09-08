@@ -363,7 +363,12 @@ Also: the templates emit a stray leading space on every line.
 
 ### Locator lists per framework
 
-Selenium Java / C# / Python: `id, linkText, partialLinkText, name, css, xpath, className, tagName`.
+Selenium Java / C# / Python: `name, id, linkText, partialLinkText, css, xpath, className, tagName`.
+
+**`name` ahead of `id`, unlike v2.5.1.** A name is semantic and submitted with the form, so frameworks
+almost never generate one; ids they generate constantly — React's `useId` gave Facebook's password field
+`id="_r_6_"` alongside `name="pass"`. Only form controls have a name, so everywhere else `id` still wins,
+and a shared name (a radio group) is never chosen because a candidate must resolve uniquely (§7).
 Puppeteer: `css, xpath`. Robot Framework and Protractor are dropped.
 
 Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
@@ -478,7 +483,7 @@ alone rather than becoming `SubmitButtonButton`. Read per pick, so the setting t
 name anyone would choose, and it changes on the next build of the site under test. Detected by known
 CSS-in-JS shapes (emotion, styled-components, CSS Modules, leading-underscore hashes, React `useId`) and
 by a run of four or more consonants, which real words and abbreviations — `btn`, `nav`, `col` — stay
-under. Deliberately conservative in the cheap direction: a false positive only falls through to the next
+under. React's `useId` is covered in both its forms: `:r6:` / `«r6»` from React 18, `_r_6_` from 19. Deliberately conservative in the cheap direction: a false positive only falls through to the next
 rule, while a false negative ships a name that rots. **[settled]**
 
 De-dupe by counter: a second `About` becomes `About2`.

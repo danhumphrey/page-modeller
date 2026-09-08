@@ -48,8 +48,9 @@ export function looksGenerated(value: string): boolean {
   if (/^(css|sc|emotion)-[a-z0-9]+$/i.test(value)) return true;
   if (/__[A-Za-z0-9]{4,}$/.test(value)) return true;
   if (/^_+[A-Za-z0-9]{4,}$/.test(value)) return true;
-  // React's useId: ":r1:", "«r1»".
+  // React's useId: ":r1:" and "«r1»" from React 18, "_r_6_" from React 19.
   if (/^[:«][a-z0-9]+[:»]$/i.test(value)) return true;
+  if (/^_r_[a-z0-9]+_$/i.test(value)) return true;
   // No pronounceable structure: a run of 4+ letters without a vowel. Real
   // words and abbreviations ("btn", "nav", "col") stay under that bar.
   return /[^aeiouy\W\d]{4,}/i.test(value);
