@@ -14,9 +14,19 @@ export default defineBackground(() => {
   // panel page, whose logs do not reliably surface anywhere convenient.
   console.log('[Page Modeller] background ready', import.meta.env.MODE, import.meta.env.BROWSER);
 
-  browser.runtime.onMessage.addListener((msg: unknown) => {
+  browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: number } }) => {
     if (!isMessage(msg)) return;
     const m = msg as Message;
+
+    // Content → panel. Re-broadcast with the tab stamped on it, because only
+    // the background reliably sees sender.tab — a DevTools page does not.
+    if (m.type === 'ELEMENT_PICKED' || m.type === 'PICKING_STOPPED' || m.type === 'HIGHLIGHT_RESULT') {
+      const tabId = sender.tab?.id;
+      if (tabId == null) return;
+      browser.runtime.sendMessage({ type: 'FROM_TAB', tabId, message: m }).catch(() => {});
+      return;
+    }
+
     if (m.type !== 'RELAY_TO_TAB') return;
 
     if (import.meta.env.DEV) console.log('[Page Modeller] relay', m.message.type, '→ tab', m.tabId);

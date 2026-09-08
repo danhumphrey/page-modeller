@@ -174,3 +174,48 @@ test('the background relays panel messages, and reports an unreachable tab', asy
     )
     .toEqual([missingTabId]);
 });
+
+test('a pick reaches a panel page stamped with its tab', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  const { page, tabId } = await openFixture(sw as never, 'frompanel');
+
+  // A real extension page, which is what a panel is. The panel cannot filter on
+  // sender.tab — Firefox does not populate it for a DevTools page — so the
+  // background re-broadcasts content traffic as FROM_TAB with the tab stamped
+  // on it, and this is what proves that arrives.
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  await panel.evaluate(
+    (id) =>
+      chrome.runtime.sendMessage({
+        type: 'RELAY_TO_TAB',
+        tabId: id,
+        message: { type: 'START_PICKING', mode: 'add' },
+      }),
+    tabId
+  );
+
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  await expect
+    .poll(async () =>
+      (
+        await panel.evaluate(
+          () => (window as unknown as { __msgs: { type: string; tabId?: number; message?: { type: string } }[] }).__msgs
+        )
+      )
+        .filter((m) => m.type === 'FROM_TAB' && m.message?.type === 'ELEMENT_PICKED')
+        .map((m) => m.tabId)
+    )
+    .toEqual([tabId]);
+});

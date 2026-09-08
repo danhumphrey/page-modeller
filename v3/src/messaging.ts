@@ -39,9 +39,17 @@ export type ContentToPanel =
 // per-surface branch.
 export type PanelToBackground = { type: 'RELAY_TO_TAB'; tabId: number; message: PanelToContent };
 
-// Messages background → panel. Delivery is reported back rather than returned,
-// for the same portability reason as HIGHLIGHT_RESULT.
-export type BackgroundToPanel = { type: 'TAB_UNREACHABLE'; tabId: number };
+// Messages background → panel.
+//
+// Content traffic is re-broadcast from the background with the tab stamped on
+// it. The panel cannot do that filtering itself: Firefox does not reliably
+// populate `sender.tab` for a message delivered to a DevTools page, so a
+// `sender.tab.id === myTab` check drops every pick without a trace. The
+// background always sees the sender, so it is the one context that can say
+// which tab a message came from.
+export type BackgroundToPanel =
+  | { type: 'TAB_UNREACHABLE'; tabId: number }
+  | { type: 'FROM_TAB'; tabId: number; message: ContentToPanel };
 
 export type Message = PanelToContent | ContentToPanel | PanelToBackground | BackgroundToPanel;
 

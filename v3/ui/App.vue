@@ -37,7 +37,7 @@ import { defaultFrameworkId } from '@/src/frameworks';
 import { displayLocator } from '@/src/locators/display';
 import { ModelStore, activeCandidate, type ModelElement } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
-import { isMessage, type BackgroundToPanel, type ContentToPanel, type PanelToContent } from '@/src/messaging';
+import { isMessage, type BackgroundToPanel, type PanelToContent } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 import { defaultSettings } from '@/src/settings';
 
@@ -146,12 +146,12 @@ let idSeq = 0;
  * store and refs are per-instance, so a pick could land in an instance that is
  * no longer rendered — the table simply stayed empty.
  */
-function onRuntimeMessage(msg: unknown, sender: { tab?: { id?: number } }) {
+function onRuntimeMessage(msg: unknown) {
   if (!isMessage(msg)) return;
+  const incoming = msg as BackgroundToPanel;
 
-  // The background has no sender.tab, so it is matched on the tab it names.
-  if ((msg as BackgroundToPanel).type === 'TAB_UNREACHABLE') {
-    if ((msg as BackgroundToPanel).tabId !== tabId.value) return;
+  if (incoming.type === 'TAB_UNREACHABLE') {
+    if (incoming.tabId !== tabId.value) return;
     isAdding.value = isScanning.value = false;
     notice('unreachable', {
       message: 'Page Modeller can’t reach this page. Reload the tab, or try a normal http(s) page.',
@@ -161,10 +161,12 @@ function onRuntimeMessage(msg: unknown, sender: { tab?: { id?: number } }) {
     return;
   }
 
-  // Content traffic: only this panel's tab. Without it, a DevTools panel would
-  // absorb every other tab's picks.
-  if (sender.tab?.id !== tabId.value || tabId.value == null) return;
-  const m = msg as ContentToPanel;
+  // Content traffic arrives re-broadcast from the background with its tab
+  // stamped on it, since sender.tab is not reliable in a DevTools page. Only
+  // this panel's tab, or a DevTools panel would absorb every other tab's picks.
+  if (incoming.type !== 'FROM_TAB') return;
+  if (incoming.tabId !== tabId.value || tabId.value == null) return;
+  const m = incoming.message;
 
   if (m.type === 'ELEMENT_PICKED') {
     const model = store.get(tabId.value);
