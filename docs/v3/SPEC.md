@@ -130,9 +130,15 @@ it is deleted, so the panel needs to say the model has gone stale.
 
 **Stale models and hidden elements are one problem, not two.** Both end in the eye reporting *0 elements
 match* when nothing is actually wrong — the model was built on another page, or the element is
-deliberately not rendered yet. One mechanism covers both: the model records the URL it was built against,
-the panel shows a stale banner when the tab has navigated away from it, and the 0-match snackbar names
-the likely reason rather than just the count. **[inferred]**
+deliberately not rendered yet.
+
+The model records the URL of the page its first element came from, and the **background** decides
+staleness on `tabs.onUpdated`, because a DevTools panel cannot read the tab's URL for itself. The panel
+shows a banner naming that page, with **Delete Model** to hand — the model also blocks scanning the new
+page, since scan is once-per-model (§4). Navigating back makes the model current again rather than
+leaving it flagged. **[settled]**
+
+Still to do: the 0-match snackbar naming the likely reason rather than just the count. **[inferred]**
 
 ## 6. Model table
 

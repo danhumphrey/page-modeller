@@ -92,8 +92,10 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
     tab's panels must not touch the other's.
 12. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
    switch to B, add something different, switch back — A must be intact.
-13. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
-14. Table headers stay visible at the narrowest side-panel width.
+13. **Navigate within a tab** with a model built: a banner names the page it was built on and offers
+    Delete Model. Navigate back and the banner clears.
+14. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).
+15. Table headers stay visible at the narrowest side-panel width.
 
 `npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
 engine was validated on — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a
