@@ -333,6 +333,13 @@ Four agreed changes: **[settled]**
 Keep v2.5.1's **plain names** — `About`, not `AboutLink`. No role suffix; the user can rename before
 exporting.
 
+**Build-generated identifiers are skipped**, in both the class-name and `id` rules. `Xtvsq51` is not a
+name anyone would choose, and it changes on the next build of the site under test. Detected by known
+CSS-in-JS shapes (emotion, styled-components, CSS Modules, leading-underscore hashes, React `useId`) and
+by a run of four or more consonants, which real words and abbreviations — `btn`, `nav`, `col` — stay
+under. Deliberately conservative in the cheap direction: a false positive only falls through to the next
+rule, while a false negative ships a name that rots. **[settled]**
+
 De-dupe by counter: a second `About` becomes `About2`.
 
 Name churn versus v2.5.1 is acceptable — no stored model survives the upgrade, so nothing breaks.

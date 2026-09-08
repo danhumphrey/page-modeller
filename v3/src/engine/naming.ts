@@ -33,8 +33,31 @@ function accessibleName(el: Element): string {
   }
 }
 
+/**
+ * Build-generated identifiers make terrible names: they are meaningless to read
+ * and they change on the next build of the site under test. `Xtvsq51` is not a
+ * name anyone would choose.
+ *
+ * Two signals, both deliberately conservative — a false positive only falls
+ * through to the next naming rule, while a false negative ships a name that
+ * will rot.
+ */
+function looksGenerated(value: string): boolean {
+  // Known CSS-in-JS shapes: emotion (css-1q2w3e), styled-components (sc-bdVaJa),
+  // CSS Modules (Button_root__2xK9f), and leading-underscore hashes (_2xK9f).
+  if (/^(css|sc|emotion)-[a-z0-9]+$/i.test(value)) return true;
+  if (/__[A-Za-z0-9]{4,}$/.test(value)) return true;
+  if (/^_+[A-Za-z0-9]{4,}$/.test(value)) return true;
+  // React's useId: ":r1:", "«r1»".
+  if (/^[:«][a-z0-9]+[:»]$/i.test(value)) return true;
+  // No pronounceable structure: a run of 4+ letters without a vowel. Real
+  // words and abbreviations ("btn", "nav", "col") stay under that bar.
+  return /[^aeiouy\W\d]{4,}/i.test(value);
+}
+
 function uniqueClassName(el: Element): string {
   for (const cls of Array.from(el.classList)) {
+    if (looksGenerated(cls)) continue;
     if (el.ownerDocument.getElementsByClassName(cls).length === 1) return cls;
   }
   return '';
@@ -53,7 +76,7 @@ const rules: Array<(el: Element) => string> = [
   (el) => attr(el, 'placeholder'),
   (el) => (el.tagName === 'BUTTON' || ['submit', 'reset'].includes((el as HTMLInputElement).type) ? attr(el, 'value') : ''),
   (el) => attr(el, 'name'),
-  (el) => attr(el, 'id'),
+  (el) => (looksGenerated(attr(el, 'id')) ? '' : attr(el, 'id')),
   uniqueClassName,
   (el) => (el.tagName === 'INPUT' && SELF_DESCRIBING.has((el as HTMLInputElement).type) ? `${(el as HTMLInputElement).type}Element` : ''),
   tagIndexName,

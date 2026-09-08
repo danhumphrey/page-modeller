@@ -71,6 +71,40 @@ describe('baseName', () => {
   });
 });
 
+describe('build-generated identifiers', () => {
+  // These change on the next build of the site under test, so a name derived
+  // from one rots. Falling through to the next rule is always better.
+  const rejected = [
+    ['emotion', '<div data-t class="css-1q2w3e"></div>'],
+    ['styled-components', '<div data-t class="sc-bdVaJa"></div>'],
+    ['CSS Modules', '<div data-t class="Button_root__2xK9f"></div>'],
+    ['leading underscore', '<div data-t class="_2xK9f"></div>'],
+    ['no vowels', '<div data-t class="Xtvsq51"></div>'],
+    ['hashed id', '<div data-t id="Xtvsq51"></div>'],
+  ] as const;
+
+  for (const [label, html] of rejected) {
+    it(`skips ${label}`, () => {
+      // Falls through to the tag+index rule.
+      expect(name(el(html))).toBe('Div1');
+    });
+  }
+
+  const kept = [
+    ['btn', '<div data-t class="btn"></div>', 'Btn'],
+    ['nav', '<div data-t class="nav"></div>', 'Nav'],
+    ['hyphenated', '<div data-t class="col-md-6"></div>', 'ColMd6'],
+    ['real word', '<div data-t class="site-header"></div>', 'SiteHeader'],
+    ['readable id', '<div data-t id="login-form"></div>', 'LoginForm'],
+  ] as const;
+
+  for (const [label, html, expected] of kept) {
+    it(`keeps ${label}`, () => {
+      expect(name(el(html))).toBe(expected);
+    });
+  }
+});
+
 describe('uniqueName', () => {
   it('de-dupes by counter', () => {
     const mk = () => name(el('<a href="#" data-t>About</a>'));
