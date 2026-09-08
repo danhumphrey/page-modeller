@@ -1,0 +1,59 @@
+/* Panel theme tokens.
+ *
+ * The panel sits inside DevTools or a browser side panel, so it reads as part
+ * of that chrome rather than as a branded surface — hence a neutral toolbar,
+ * as in v2.5.1, not a saturated one.
+ *
+ * SPEC §14 makes this a three-way System / Light / Dark setting. Until the
+ * options page lands (REWRITE-PLAN §12 step 13) the tokens follow the host via
+ * prefers-color-scheme, and the setting will override by stamping the root. */
+:root {
+  --pm-page-bg: #ffffff;
+  --pm-toolbar-bg: #f5f6f7;
+  --pm-toolbar-fg: #1f2328;
+  --pm-text: #1f2328;
+  --pm-text-muted: #656d76;
+  --pm-rule: #d8dce0;
+  --pm-row-hover: rgba(31, 111, 235, 0.07);
+  /* Horizontal inset for the table; v2.5.1 used 2em, too much at side-panel
+     width where the whole panel can be ~350px. */
+  --pm-gutter: 16px;
+  --pm-warning-bg: #fff4e0;
+  --pm-warning-fg: #7a4a00;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-pm-theme='light']) {
+    --pm-page-bg: #1e1f22;
+    --pm-toolbar-bg: #2b2d31;
+    --pm-toolbar-fg: #e6e6e6;
+    --pm-text: #e6e6e6;
+    --pm-text-muted: #9aa0a6;
+    --pm-rule: #3c4043;
+    --pm-row-hover: rgba(138, 180, 248, 0.12);
+    /* Quasar themes its own overlays (dialog, notify) from these. */
+    --q-dark-page: #1e1f22;
+    --q-dark: #2b2d31;
+    --pm-warning-bg: #3a2f18;
+    --pm-warning-fg: #ffcc80;
+  }
+}
+
+:root[data-pm-theme='dark'] {
+  --pm-page-bg: #1e1f22;
+  --pm-toolbar-bg: #2b2d31;
+  --pm-toolbar-fg: #e6e6e6;
+  --pm-text: #e6e6e6;
+  --pm-text-muted: #9aa0a6;
+  --pm-rule: #3c4043;
+  --pm-row-hover: rgba(138, 180, 248, 0.12);
+  --q-dark-page: #1e1f22;
+  --q-dark: #2b2d31;
+  --pm-warning-bg: #3a2f18;
+  --pm-warning-fg: #ffcc80;
+}
+
+body {
+  background: var(--pm-page-bg);
+  color: var(--pm-text);
+}
