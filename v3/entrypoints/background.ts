@@ -114,6 +114,19 @@ export default defineBackground(() => {
         publish(m.tabId, model);
         return;
       }
+      case 'UPDATE_ELEMENT': {
+        const model = store.get(m.tabId);
+        const el = model.elements.find((e) => e.id === m.id);
+        if (!el) return;
+        el.name = m.name;
+        el.selectedIndex = m.selectedIndex;
+        // Absent means "use the generated candidate again", so it must be
+        // deleted rather than set to undefined — the model is serialised.
+        if (m.override) el.override = m.override;
+        else delete el.override;
+        publish(m.tabId, model);
+        return;
+      }
       case 'DELETE_MODEL':
         store.clear(m.tabId);
         publish(m.tabId, store.get(m.tabId));

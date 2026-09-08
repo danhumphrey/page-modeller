@@ -338,7 +338,14 @@ before starting the next.
    innermost element only. The fidelity spec now asserts **every** candidate's predicted count against
    real Playwright, not just the preferred one — which is how those three were found.
 
-8. **Edit dialog** (SPEC §9) and **Delete Model** (SPEC §10).
+8. **Edit dialog** (SPEC §9) and **Delete Model** (SPEC §10). ✅ **Done** — `ui/EditElementDialog.vue`,
+   with per-type fields (`src/locators/fields.ts`) so `getByRole`'s role + name is expressible.
+   Delete Model landed earlier.
+
+   The IR gained Selenium's `id`, `name`, `className`, `tagName`, `linkText` and `partialLinkText`,
+   with resolution so the eye can test them. The engine still does not *generate* them — that is the
+   superset generator below — but the dialog offers the full framework list, so the model has to be
+   able to hold a hand-typed one.
 
 9. **Scan** (SPEC §4). Container pick, interactive-role descendants, a11y-tree filtered.
 

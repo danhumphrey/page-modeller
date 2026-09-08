@@ -29,6 +29,11 @@ export function playwrightExpr(c: LocatorCandidate): string {
     case 'css':
     case 'xpath':
       return `locator(${q(c.value)})`;
+    default:
+      // Selenium's By strategies have no Playwright call. They should not reach
+      // a Playwright model, but if one is hand-typed and the framework changes,
+      // show it plainly rather than inventing an expression.
+      return typeValue(c);
   }
 }
 
@@ -47,7 +52,14 @@ export function typeValue(c: LocatorCandidate): string {
       return `${c.kind}: ${c.text}`;
     case 'css':
     case 'xpath':
+    case 'id':
+    case 'name':
+    case 'className':
+    case 'tagName':
       return `${c.kind}: ${c.value}`;
+    case 'linkText':
+    case 'partialLinkText':
+      return `${c.kind}: ${c.text}`;
   }
 }
 

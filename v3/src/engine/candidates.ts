@@ -179,6 +179,22 @@ export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] 
         return [];
       }
     }
+
+    // Selenium's By strategies, so the eye can test a hand-typed one.
+    case 'id':
+      return c.value ? Array.from(doc.querySelectorAll(`#${CSS.escape(c.value)}`)) : [];
+    case 'name':
+      return c.value ? Array.from(doc.querySelectorAll(`[name="${CSS.escape(c.value)}"]`)) : [];
+    case 'className':
+      // By.className takes ONE class name, not a selector.
+      return c.value ? Array.from(doc.getElementsByClassName(c.value)) : [];
+    case 'tagName':
+      return c.value ? Array.from(doc.getElementsByTagName(c.value)) : [];
+    case 'linkText':
+      // Selenium matches links on their rendered text, trimmed.
+      return Array.from(doc.querySelectorAll('a')).filter((a) => norm(a.textContent) === norm(c.text));
+    case 'partialLinkText':
+      return Array.from(doc.querySelectorAll('a')).filter((a) => norm(a.textContent).includes(norm(c.text)));
   }
 }
 

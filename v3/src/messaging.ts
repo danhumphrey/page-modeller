@@ -59,6 +59,7 @@ export type PanelToBackground =
   // changes rather than making them, and every panel on the tab sees the result.
   | { type: 'GET_MODEL'; tabId: number }
   | { type: 'DELETE_ELEMENT'; tabId: number; id: string }
+  | { type: 'UPDATE_ELEMENT'; tabId: number; id: string; name: string; selectedIndex: number; override?: LocatorCandidate }
   | { type: 'DELETE_MODEL'; tabId: number }
   | { type: 'SET_FRAMEWORK'; tabId: number; frameworkId: string };
 

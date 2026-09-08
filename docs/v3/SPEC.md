@@ -185,8 +185,18 @@ candidate against real Playwright rather than reasoning about it:
 
 ## 9. Edit dialog
 
-Title **Edit Element**. Fields: **Name** · locator **type** dropdown · editable locator **value** · eye.
+Title **Edit Element**. Fields: **Name** · locator **type** dropdown · the fields that type needs · eye.
 CANCEL / SAVE. **[settled]**
+
+- **Name** is required, unique within the model, and cannot contain spaces — v2.5.1's rules.
+- **Type** offers the full framework list (§7). Switching to a type the engine generated fills the
+  fields in; switching to one it did not leaves them blank to type.
+- The **eye** tests what is currently in the fields, not what is saved, so a locator can be checked
+  before committing to it.
+- A hand-edited locator that happens to equal a generated one is stored as that **selection** rather
+  than an override, so it keeps tracking the engine's own verification.
+- `exact: true` survives editing. The dialog does not expose `exact`, so dropping it on save would
+  quietly loosen the locator (§12).
 
 ## 10. Delete Model
 
