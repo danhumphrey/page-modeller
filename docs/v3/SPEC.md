@@ -446,8 +446,16 @@ Four agreed changes: **[settled]**
    "Submit" is named `Btn1`; what a human calls the element should win.
 4. **Drop the ng-model and ng-binding rules.**
 
-Keep v2.5.1's **plain names** — `About`, not `AboutLink`. No role suffix; the user can rename before
+Keep v2.5.1's **plain names** by default — `About`, not `AboutLink`. The user can rename before
 exporting.
+
+**`appendTypeToName`** (§14, off by default) turns the suffix on: `DiscoverTheDifference` becomes
+`DiscoverTheDifferenceLink`. The vocabulary is the one test authors use rather than raw ARIA — `textbox`
+and `searchbox` become `Input`, `combobox` and `listbox` become `Select`, `img` becomes `Image` — since
+these names are read by people writing page objects. A role with no entry falls back to the role itself,
+so an unmapped one still produces something sensible, and a name already ending in its type is left
+alone rather than becoming `SubmitButtonButton`. Read per pick, so the setting takes effect at once.
+**[settled]**
 
 **Build-generated identifiers are skipped**, in both the class-name and `id` rules. `Xtvsq51` is not a
 name anyone would choose, and it changes on the next build of the site under test. Detected by known
@@ -470,9 +478,20 @@ Stored in `chrome.storage.sync` under the key `options`. Defaults as shipped: **
 | Key | Default | Effect |
 |---|---|---|
 | `showTooltips` | `true` | Tooltips on toolbar and row action buttons |
-| `darkMode` | `false` | Dark theme for the panel |
+| `theme` | `system` | Panel theme; `system` follows the browser and DevTools |
 | `modelHiddenElements` | `false` | Include non-visible elements when scanning |
 | `clickTableRowsToViewMatchedElements` | `false` | Single-click a row highlights matches |
+| `appendTypeToName` | `false` | Append the element's type to its derived name |
+
+v2.5.1's `darkMode` boolean is replaced by `theme`; the rest keep their keys so an in-place upgrade
+keeps the user's choices (NFR-6).
+
+**Applying the theme moves two things**, and both surfaces go through one function: our CSS tokens,
+stamped on the root, and Quasar's own dark mode, which paints its dialogs, notifications and the body
+background. Setting only the first gives dark text on Quasar's dark ground.
+
+Settings are read live — the options page is a separate tab, so a change reaches an open panel only
+through `storage.onChanged`.
 
 ### v3 changes **[settled]**
 

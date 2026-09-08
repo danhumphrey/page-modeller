@@ -26,13 +26,13 @@
           <td class="col-locator"><span :title="el.locator">{{ el.locator }}</span></td>
           <td class="col-actions">
             <q-btn flat dense round size="sm" icon="visibility" @click.stop="$emit('highlight', el.id)">
-              <q-tooltip>View Matched Elements</q-tooltip>
+              <q-tooltip v-if="showTooltips">View Matched Elements</q-tooltip>
             </q-btn>
             <q-btn flat dense round size="sm" icon="edit" @click.stop="$emit('edit', el.id)">
-              <q-tooltip>Edit</q-tooltip>
+              <q-tooltip v-if="showTooltips">Edit</q-tooltip>
             </q-btn>
             <q-btn flat dense round size="sm" icon="delete" @click.stop="$emit('remove', el.id)">
-              <q-tooltip>Delete</q-tooltip>
+              <q-tooltip v-if="showTooltips">Delete</q-tooltip>
             </q-btn>
           </td>
         </tr>
@@ -54,6 +54,7 @@ defineProps<{
   elements: ModelRow[];
   /** Single-click a row runs View Matched Elements — off by default (SPEC §6). */
   clickToHighlight: boolean;
+  showTooltips: boolean;
 }>();
 
 defineEmits<{

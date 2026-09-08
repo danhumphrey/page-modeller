@@ -6,6 +6,7 @@
         :has-model="model.elements.length > 0"
         :is-scanning="isScanning"
         :is-adding="isAdding"
+        :show-tooltips="settings.showTooltips"
         @update:framework-id="setFramework"
         @scan="notYet('Scan')"
         @add="toggleAdd"
@@ -31,6 +32,7 @@
         <ModelTable
           :elements="rows"
           :click-to-highlight="settings.clickTableRowsToViewMatchedElements"
+          :show-tooltips="settings.showTooltips"
           @highlight="highlight"
           @edit="openEditor"
           @remove="removeElement"
@@ -63,8 +65,9 @@ import { displayLocator } from '@/src/locators/display';
 import { activeCandidate, emptyModel, type ModelElement, type TabModel } from '@/src/model';
 import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, type PanelToContent } from '@/src/messaging';
 import { hostKey } from '@/host/types';
+import { applyTheme } from './theme';
 import type { LocatorCandidate } from '@/src/engine/types';
-import { defaultSettings } from '@/src/settings';
+import { defaultSettings, loadSettings, watchSettings } from '@/src/settings';
 
 // The panel is a VIEW. The background owns the model, one per tab (SPEC §5), so
 // a sidebar and a DevTools panel on the same tab show the same rows and a pick
@@ -72,9 +75,12 @@ import { defaultSettings } from '@/src/settings';
 const $q = useQuasar();
 const host = inject(hostKey)!;
 
-// Storage and the options page arrive with REWRITE-PLAN §12 step 13; until then
-// the panel runs on the defaults.
+// Loaded on mount and kept current: the options page is a separate tab, so a
+// change there reaches the panel only through storage (SPEC §14).
 const settings = ref({ ...defaultSettings });
+let unwatchSettings: (() => void) | undefined;
+
+
 const tabId = ref<number | undefined>();
 const model = ref<TabModel>(emptyModel(defaultFrameworkId));
 const isScanning = ref(false);
@@ -229,6 +235,13 @@ function reportViewing() {
 }
 
 onMounted(async () => {
+  settings.value = await loadSettings();
+  applyTheme($q, settings.value.theme);
+  unwatchSettings = watchSettings((next) => {
+    settings.value = next;
+    applyTheme($q, next.theme);
+  });
+
   tabId.value = await host.getTabId();
   connectToBackground();
   if (tabId.value != null) toBackground({ type: 'GET_MODEL', tabId: tabId.value });
@@ -240,6 +253,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   closing = true;
+  unwatchSettings?.();
   window.removeEventListener('keydown', onPanelKey, true);
   browser.runtime.onMessage.removeListener(onRuntimeMessage);
   port?.disconnect();

@@ -4,6 +4,8 @@ import { ModelStore, usedNames, type TabModel } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
 import { defaultFrameworkId } from '@/src/frameworks';
 import { chooseCandidate } from '@/src/locators/select';
+import { withTypeSuffix } from '@/src/locators/type-name';
+import { loadSettings } from '@/src/settings';
 
 // Background service worker / event page.
 //
@@ -41,11 +43,13 @@ export default defineBackground(() => {
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (!changeInfo.url) return;
     const url = changeInfo.url;
-    void store.mutate(tabId, (model) => {
-      if (model.url == null) return;
-      // Navigating back to where it was built makes it current again.
-      model.stale = model.url !== url;
-    }).then((model) => publish(tabId, model));
+    void store
+      .mutate(tabId, (model) => {
+        if (model.url == null) return;
+        // Navigating back to where it was built makes it current again.
+        model.stale = model.url !== url;
+      })
+      .then((model) => publish(tabId, model));
   });
 
   // A model with no panel watching it is abandoned work (SPEC §5). Each panel
@@ -95,20 +99,25 @@ export default defineBackground(() => {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
         const url = sender.tab?.url ?? null;
-        void change(tabId, (model) => {
-          // The page the model belongs to, recorded when the first element lands.
-          if (model.url == null) model.url = url;
-          model.elements.push({
-            ...m.result,
-            // Unique within the model rather than a worker-lifetime counter:
-            // the worker restarts, and the counter would restart with it.
-            id: `el-${Date.now().toString(36)}-${model.elements.length}`,
-            name: uniqueName(m.result.suggestedName, usedNames(model)),
-            // Not the engine's preferredIndex: that is framework-agnostic, and
-            // would hand a Selenium model a Playwright-only locator.
-            selectedIndex: chooseCandidate(m.result.candidates, model.frameworkId),
-          });
-        });
+        // Read before mutating: the change callback is synchronous, and naming
+        // depends on a setting the user can change at any time (SPEC §13).
+        void loadSettings().then((settings) =>
+          change(tabId, (model) => {
+            // The page the model belongs to, recorded when the first element
+            // lands.
+            if (model.url == null) model.url = url;
+            model.elements.push({
+              ...m.result,
+              // Unique within the model rather than a worker-lifetime counter:
+              // the worker restarts, and the counter would restart with it.
+              id: `el-${Date.now().toString(36)}-${model.elements.length}`,
+              name: uniqueName(settings.appendTypeToName ? withTypeSuffix(m.result.suggestedName, m.result.role) : m.result.suggestedName, usedNames(model)),
+              // Not the engine's preferredIndex: that is framework-agnostic,
+              // and would hand a Selenium model a Playwright-only locator.
+              selectedIndex: chooseCandidate(m.result.candidates, model.frameworkId),
+            });
+          })
+        );
         // Picking is one-shot (SPEC §4); tell the panels so they can un-arm.
         browser.runtime.sendMessage({ type: 'FROM_TAB', tabId, message: { type: 'PICKING_STOPPED' } }).catch(() => {});
         return;
@@ -153,7 +162,10 @@ export default defineBackground(() => {
         });
         return;
       case 'DELETE_MODEL':
-        void store.clear(m.tabId).then(() => store.get(m.tabId)).then((model) => publish(m.tabId, model));
+        void store
+          .clear(m.tabId)
+          .then(() => store.get(m.tabId))
+          .then((model) => publish(m.tabId, model));
         return;
       case 'SET_FRAMEWORK':
         void change(m.tabId, (model) => {

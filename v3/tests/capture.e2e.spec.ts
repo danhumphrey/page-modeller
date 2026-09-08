@@ -637,3 +637,50 @@ test('the model lives outside the service worker, not in it', async () => {
     )
     .toEqual(['SignIn']);
 });
+
+test('appendTypeToName changes how a pick is named (SPEC §13)', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  const namesFor = async (id: number) =>
+    (await panel.evaluate(() => (window as unknown as { __msgs: { type: string; tabId?: number; model?: { elements: { name: string }[] } }[] }).__msgs))
+      .filter((m) => m.type === 'MODEL' && m.tabId === id)
+      .at(-1)
+      ?.model?.elements.map((e) => e.name);
+
+  async function pickSignIn(caseName: string) {
+    const fixture = await openFixture(sw as never, caseName);
+    await panel.evaluate(
+      (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'START_PICKING', mode: 'add' } }),
+      fixture.tabId
+    );
+    await fixture.page.getByRole('button', { name: 'Sign in' }).click();
+    return fixture.tabId;
+  }
+
+  // Off by default — v2.5.1's plain names.
+  const plain = await pickSignIn('suffix-off');
+  await expect.poll(() => namesFor(plain)).toEqual(['SignIn']);
+
+  // The setting is read per pick, so turning it on takes effect immediately
+  // rather than only for a new session.
+  await panel.evaluate(() => chrome.storage.sync.set({ options: { appendTypeToName: true } }));
+  const suffixed = await pickSignIn('suffix-on');
+  await expect.poll(() => namesFor(suffixed)).toEqual(['SignInButton']);
+
+  await panel.evaluate(() => chrome.storage.sync.remove('options'));
+});

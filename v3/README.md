@@ -13,6 +13,8 @@ the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript,
 - **Panel UI** (`ui/`) — Quasar: `AppToolbar` (SPEC §3) over `ModelTable` (SPEC §6). One app, three
   surfaces. Shell only so far — capture, generation and the dialogs are the next increments.
 - **Frameworks** (`src/frameworks.ts`) — the targets and the locator types each can express (SPEC §7).
+- **Settings** (`src/settings.ts`, `ui/OptionsPage.vue`) — `storage.sync`, read live by every surface
+  (SPEC §14).
 - **Session model** (`src/model.ts`) — one model per tab, owned by the background; panels are views
   (SPEC §5).
 - **Naming** (`src/engine/naming.ts`) — split across the message boundary: `baseName` runs in the page,
