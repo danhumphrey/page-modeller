@@ -44,6 +44,15 @@ export type ContentToPanel =
  */
 export const PANEL_PORT = 'page-modeller-panel';
 
+/**
+ * Sent over the port whenever a panel changes which tab it is showing. The
+ * background needs it to decide, when a panel closes, whether any panel is
+ * still watching the tab it was on.
+ */
+export interface PanelViewing {
+  tabId: number | undefined;
+}
+
 export type PanelToBackground =
   | { type: 'RELAY_TO_TAB'; tabId: number; message: PanelToContent }
   // Model commands. The background owns the model (SPEC §5), so panels ask for

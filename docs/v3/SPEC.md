@@ -96,8 +96,8 @@ assumptions: it is per *window*, it follows the active tab, and it outlives navi
 | Switch tab | table swaps to that tab's model |
 | Navigate within a tab | model kept — may be stale |
 | Close the tab | that model is gone |
-| Close a panel | model survives; the other surface still has it |
-| Close the **last** panel | session over — every model is dropped |
+| Close a panel | model survives if another panel is still on that tab |
+| Close the **last panel watching a tab** | that tab's model is dropped |
 | Both surfaces open | **the same model**, and a pick in one appears in the other |
 
 A model can therefore never be displayed against a page it was not built from. Nothing is persisted to
@@ -112,12 +112,18 @@ sidebar should not lose the work.
 The framework selection lives in the model for the same reason: two surfaces rendering one model in
 different frameworks would show different locators for the same row.
 
-**A model with no panel attached is abandoned work**, so closing the last panel ends the session and
-drops everything. Panels hold a `runtime.connect` port for their lifetime and the background counts
-them; `onDisconnect` covers closing the sidebar, closing DevTools, and the tab hosting them going away.
-The count is deliberately global rather than per tab — a side panel follows the active tab, so a per-tab
-port would drop tab A's model the moment you looked at tab B, and switching away and back must not lose
-work.
+**A model with no panel watching it is abandoned work.** Panels hold a `runtime.connect` port for their
+lifetime and report which tab they are showing; when a panel closes, that tab's model goes unless another
+panel is still on it. `onDisconnect` covers closing the sidebar, closing DevTools, and the tab hosting
+them going away.
+
+Two things this gets right that simpler rules do not:
+
+- **Evaluated on disconnect, never on a tab change.** A side panel follows the active tab, so dropping
+  whenever no panel is watching would lose tab A's model the moment you looked at tab B. Switching away
+  and back must not lose work; closing the panel is what ends it.
+- **Scoped to the tab the closing panel was on, not to a global count.** A global count meant a panel
+  open on tab 1 kept tab 2's model alive after both of tab 2's panels had been closed.
 
 Because scan is once-per-model (§4), a model kept across a navigation blocks scanning the new page until
 it is deleted, so the panel needs to say the model has gone stale.

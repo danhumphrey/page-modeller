@@ -85,7 +85,8 @@ Automated tests are a net; this is the gate. Per increment, on **both** browsers
    still opens the editor.
 10. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
     rows, and a pick in either appears in both. Close one; the model survives in the other. Close them
-    all and reopen; the model is gone, because the session ended.
+    all and reopen; that tab's model is gone. Check this with a second tab modelled too — closing one
+    tab's panels must not touch the other's.
 11. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
    switch to B, add something different, switch back — A must be intact.
 12. Navigate within a tab: the model stays (it may be stale; the banner for that is not built yet).

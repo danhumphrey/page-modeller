@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { isMessage, PANEL_PORT, type Message } from '@/src/messaging';
+import { isMessage, PANEL_PORT, type Message, type PanelViewing } from '@/src/messaging';
 import { ModelStore, usedNames, type TabModel } from '@/src/model';
 import { uniqueName } from '@/src/engine/naming';
 import { defaultFrameworkId } from '@/src/frameworks';
@@ -30,27 +30,34 @@ export default defineBackground(() => {
 
   browser.tabs.onRemoved.addListener((tabId) => store.clear(tabId));
 
-  // A model with no panel attached is abandoned work, so the last panel closing
-  // ends the session and drops everything. Ports are how the background can
-  // tell: onDisconnect fires when the page goes away, which covers closing the
-  // sidebar, closing DevTools, and the tab hosting them being closed.
+  // A model with no panel watching it is abandoned work (SPEC §5). Each panel
+  // holds a port and reports which tab it is showing; when a panel closes, the
+  // tab it was on loses its model unless another panel is still on that tab.
   //
-  // Deliberately not per-tab. A side panel follows the active tab, so a
-  // per-tab port would drop tab A's model the moment you looked at tab B —
-  // switching away and back must not lose work (SPEC §5).
-  const panels = new Set<{ onDisconnect: { addListener(cb: () => void): void } }>();
+  // Evaluated on DISCONNECT, never on a tab change. A side panel follows the
+  // active tab, so dropping whenever no panel is watching would lose tab A's
+  // model the moment you looked at tab B. Switching away and back must not
+  // lose work; closing the panel is what ends it.
+  type PanelPort = { onDisconnect: { addListener(cb: () => void): void } };
+  const viewing = new Map<PanelPort, number | undefined>();
 
   browser.runtime.onConnect.addListener((port) => {
     if (port.name !== PANEL_PORT) return;
-    panels.add(port);
+    viewing.set(port, undefined);
+
+    port.onMessage.addListener((msg: unknown) => {
+      viewing.set(port, (msg as PanelViewing)?.tabId);
+    });
+
     port.onDisconnect.addListener(() => {
-      panels.delete(port);
-      if (panels.size > 0) return;
-      const dropped = store.tabIds();
-      store.clearAll();
-      // Anything still listening should show an empty table rather than stale
-      // rows, in the window before it too goes away.
-      for (const tabId of dropped) publish(tabId, store.get(tabId));
+      const wasOn = viewing.get(port);
+      viewing.delete(port);
+      if (wasOn == null) return;
+      const stillWatched = [...viewing.values()].includes(wasOn);
+      if (stillWatched) return;
+      store.clear(wasOn);
+      // Any panel still listening shows an empty table rather than stale rows.
+      publish(wasOn, store.get(wasOn));
     });
   });
 

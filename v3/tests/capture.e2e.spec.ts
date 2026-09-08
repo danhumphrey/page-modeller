@@ -286,62 +286,75 @@ test('both panels on a tab see the same model (SPEC §5)', async () => {
     .toEqual(['SignIn']);
 });
 
-test('closing the last panel ends the session and drops the models', async () => {
+test('a model dies when the last panel watching its tab closes', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
   const extId = new URL(sw.url()).host;
 
   // Earlier tests leave panel pages open, and the real app connects a port on
-  // mount — so the background would never see the count reach zero.
+  // mount — each is a panel as far as the background is concerned.
   for (const open of context.pages()) {
     if (open.url().startsWith('chrome-extension://')) await open.close();
   }
 
-  const { page, tabId } = await openFixture(sw as never, 'session');
+  const a = await openFixture(sw as never, 'session-a');
+  const b = await openFixture(sw as never, 'session-b');
 
-  /** A panel page holding a port, as the real panels do. */
-  async function openPanel() {
+  /** A panel page holding a port and watching `tab`, as the real panels do. */
+  async function openPanel(tab: number) {
     const p = await context.newPage();
     await p.goto(`chrome-extension://${extId}/devtools-panel.html`);
-    await p.evaluate((name) => {
-      (window as unknown as { __port: unknown }).__port = chrome.runtime.connect({ name });
-      (window as unknown as { __msgs: unknown[] }).__msgs = [];
-      chrome.runtime.onMessage.addListener((m) => {
-        (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
-      });
-    }, 'page-modeller-panel');
+    await p.evaluate(
+      ([name, id]) => {
+        const port = chrome.runtime.connect({ name: name as string });
+        port.postMessage({ tabId: id as number });
+        (window as unknown as { __port: unknown }).__port = port;
+        (window as unknown as { __msgs: unknown[] }).__msgs = [];
+        chrome.runtime.onMessage.addListener((m) => {
+          (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+        });
+      },
+      ['page-modeller-panel', tab] as [string, number]
+    );
     return p;
   }
 
-  const first = await openPanel();
-  const second = await openPanel();
+  async function pick(fixture: { page: import('@playwright/test').Page; tabId: number }, panel: import('@playwright/test').Page) {
+    await panel.evaluate(
+      (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'START_PICKING', mode: 'add' } }),
+      fixture.tabId
+    );
+    await fixture.page.getByRole('button', { name: 'Sign in' }).click();
+  }
 
-  await first.evaluate(
-    (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'START_PICKING', mode: 'add' } }),
-    tabId
-  );
-  await page.getByRole('button', { name: 'Sign in' }).click();
-
-  const namesIn = async (p: typeof first) =>
+  const namesIn = async (p: import('@playwright/test').Page) =>
     (await p.evaluate(() => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string }[] } }[] }).__msgs))
       .filter((m) => m.type === 'MODEL')
       .at(-1)
       ?.model?.elements.map((e) => e.name);
 
-  await expect.poll(() => namesIn(second)).toEqual(['SignIn']);
+  // Two panels on tab A, one on tab B; a model built on each.
+  const a1 = await openPanel(a.tabId);
+  const a2 = await openPanel(a.tabId);
+  const b1 = await openPanel(b.tabId);
+  await pick(a, a1);
+  await pick(b, b1);
+  await expect.poll(() => namesIn(a2)).toEqual(['SignIn']);
 
-  // Closing ONE panel must not end the session — that was the whole point of
-  // moving the model out of the panel.
-  await first.close();
-  const survivor = await openPanel();
-  await survivor.evaluate((id) => chrome.runtime.sendMessage({ type: 'GET_MODEL', tabId: id }), tabId);
-  await expect.poll(() => namesIn(survivor)).toEqual(['SignIn']);
+  // Closing one of tab A's two panels leaves its model alone.
+  await a1.close();
+  const a3 = await openPanel(a.tabId);
+  await a3.evaluate((id) => chrome.runtime.sendMessage({ type: 'GET_MODEL', tabId: id }), a.tabId);
+  await expect.poll(() => namesIn(a3)).toEqual(['SignIn']);
 
-  // Closing them all does: a model with no panel attached is abandoned work.
-  await second.close();
-  await survivor.close();
+  // Closing tab B's only panel drops B — and must NOT depend on whether any
+  // panel happens to be open on another tab, which a global count got wrong.
+  await b1.close();
+  const b2 = await openPanel(b.tabId);
+  await b2.evaluate((id) => chrome.runtime.sendMessage({ type: 'GET_MODEL', tabId: id }), b.tabId);
+  await expect.poll(() => namesIn(b2)).toEqual([]);
 
-  const reopened = await openPanel();
-  await reopened.evaluate((id) => chrome.runtime.sendMessage({ type: 'GET_MODEL', tabId: id }), tabId);
-  await expect.poll(() => namesIn(reopened)).toEqual([]);
+  // Tab A is untouched by any of that.
+  await a3.evaluate((id) => chrome.runtime.sendMessage({ type: 'GET_MODEL', tabId: id }), a.tabId);
+  await expect.poll(() => namesIn(a3)).toEqual(['SignIn']);
 });

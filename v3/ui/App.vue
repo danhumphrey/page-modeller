@@ -147,11 +147,17 @@ function onRuntimeMessage(msg: unknown) {
 // the last panel has closed, at which point the session is over and the models
 // go (SPEC §5). Disconnect happens on its own when the page unloads, which is
 // what covers closing the sidebar or closing DevTools.
-let port: { disconnect(): void } | undefined;
+let port: { disconnect(): void; postMessage(msg: unknown): void } | undefined;
+
+/** Tell the background which tab this panel is showing (SPEC §5). */
+function reportViewing() {
+  port?.postMessage({ tabId: tabId.value });
+}
 
 onMounted(async () => {
   port = browser.runtime.connect({ name: PANEL_PORT });
   tabId.value = await host.getTabId();
+  reportViewing();
   if (tabId.value != null) toBackground({ type: 'GET_MODEL', tabId: tabId.value });
   // The content script listens for Escape too, but after clicking Add Element
   // focus is in the panel, so the page never sees the keydown. Cover both.
@@ -169,6 +175,7 @@ host.onTabChanged((next) => {
   if (isPicking() && tabId.value != null) send(tabId.value, { type: 'STOP_PICKING' });
   isScanning.value = isAdding.value = false;
   tabId.value = next;
+  reportViewing();
   model.value = emptyModel(defaultFrameworkId);
   if (next != null) toBackground({ type: 'GET_MODEL', tabId: next });
 });
