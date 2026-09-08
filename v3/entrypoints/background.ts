@@ -46,15 +46,19 @@ export default defineBackground(() => {
     viewing.set(port, undefined);
 
     port.onMessage.addListener((msg: unknown) => {
-      viewing.set(port, (msg as PanelViewing)?.tabId);
+      const tabId = (msg as PanelViewing)?.tabId;
+      if (import.meta.env.DEV) console.log('[Page Modeller] panel now watching tab', tabId);
+      viewing.set(port, tabId);
     });
 
     port.onDisconnect.addListener(() => {
       const wasOn = viewing.get(port);
       viewing.delete(port);
-      if (wasOn == null) return;
-      const stillWatched = [...viewing.values()].includes(wasOn);
-      if (stillWatched) return;
+      const stillWatched = wasOn != null && [...viewing.values()].includes(wasOn);
+      if (import.meta.env.DEV) {
+        console.log('[Page Modeller] panel closed; was watching tab', wasOn, stillWatched ? '— still watched' : '— dropping model');
+      }
+      if (wasOn == null || stillWatched) return;
       store.clear(wasOn);
       // Any panel still listening shows an empty table rather than stale rows.
       publish(wasOn, store.get(wasOn));

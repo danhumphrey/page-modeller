@@ -358,3 +358,63 @@ test('a model dies when the last panel watching its tab closes', async () => {
   await a3.evaluate((id) => chrome.runtime.sendMessage({ type: 'GET_MODEL', tabId: id }), a.tabId);
   await expect.poll(() => namesIn(a3)).toEqual(['SignIn']);
 });
+
+test('a roaming sidebar closing on one tab leaves the other tab\'s model', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const a = await openFixture(sw as never, 'roam-a');
+  const b = await openFixture(sw as never, 'roam-b');
+
+  // ONE panel, standing in for a side panel that follows the active tab.
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate((name) => {
+    const port = chrome.runtime.connect({ name: name as string });
+    (window as unknown as { __port: chrome.runtime.Port }).__port = port;
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  }, 'page-modeller-panel');
+
+  const watch = (id: number) =>
+    panel.evaluate((t) => (window as unknown as { __port: chrome.runtime.Port }).__port.postMessage({ tabId: t }), id);
+
+  // Build a model on tab A.
+  await watch(a.tabId);
+  await panel.evaluate(
+    (id) => chrome.runtime.sendMessage({ type: 'RELAY_TO_TAB', tabId: id, message: { type: 'START_PICKING', mode: 'add' } }),
+    a.tabId
+  );
+  await a.page.getByRole('button', { name: 'Sign in' }).click();
+
+  // Roam to tab B, then close the panel there.
+  await watch(b.tabId);
+  await panel.close();
+
+  // Tab A's model must survive: the panel was not watching it when it closed,
+  // and roaming away is not the same as finishing.
+  const probe = await context.newPage();
+  await probe.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await probe.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+  await probe.evaluate((id) => chrome.runtime.sendMessage({ type: 'GET_MODEL', tabId: id }), a.tabId);
+  await expect
+    .poll(async () =>
+      (await probe.evaluate(() => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string }[] } }[] }).__msgs))
+        .filter((m) => m.type === 'MODEL')
+        .at(-1)
+        ?.model?.elements.map((e) => e.name)
+    )
+    .toEqual(['SignIn']);
+});
