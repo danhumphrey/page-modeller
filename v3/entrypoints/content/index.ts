@@ -135,11 +135,38 @@ export default defineContentScript({
       return span;
     }
 
+    /**
+     * A frame with no content script inside it, drawn in the same red as a
+     * hidden element (SPEC §8) rather than the ordinary blue.
+     *
+     * The pointer being inside such a frame is exactly when nothing works and
+     * nothing can say so: the click belongs to that document and there is
+     * nobody there to hear it, so no message is ever sent. But this frame keeps
+     * drawing the overlay the whole time — an unreadable child never takes
+     * ownership — so the warning stays on screen for as long as the pointer is
+     * over it, which is the only moment it is any use.
+     */
+    function setTone(warn: boolean) {
+      Object.assign(box!.style, {
+        background: warn ? 'rgba(211, 47, 47, 0.18)' : 'rgba(56,139,253,0.25)',
+        // Dashed, as for a hidden element: a box around something you cannot
+        // reach should not look like one you can.
+        border: warn ? '2px dashed #d32f2f' : '1px solid rgba(56,139,253,0.9)',
+      } as CSSStyleDeclaration);
+      label!.style.background = warn ? '#d32f2f' : '#1f6feb';
+    }
+
     function highlight(el: Element) {
       ensureOverlay();
       const r = el.getBoundingClientRect();
       Object.assign(box!.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+      const unreadable = isFrame(el) && !isReadableFrame(el);
+      setTone(unreadable);
       renderBreadcrumb(el);
+      if (unreadable) {
+        const warn = crumb('cannot be read \u2014 sandboxed', true);
+        label!.appendChild(warn);
+      }
       label!.style.left = `${r.left}px`;
       label!.style.top = `${Math.max(0, r.top - 18)}px`;
     }
@@ -285,6 +312,27 @@ export default defineContentScript({
     const NEED_PATH = '__pageModellerNeedPath';
     /** A frame confirming it heard a scan request, so silence means something. */
     const SCAN_ACK = '__pageModellerScanAck';
+    /** A frame confirming it has a script at all, in answer to its path. */
+    const FRAME_ALIVE = '__pageModellerFrameAlive';
+
+    /**
+     * Child frames known to have a content script inside them.
+     *
+     * On Firefox a sandboxed frame has a null principal and never gets one, so
+     * clicking inside it does nothing — the click belongs to that document and
+     * there is nobody there to hear it. Only its 2px border reaches this frame,
+     * which is not an affordance anyone can be asked to find. So the overlay
+     * says so on hover instead of leaving the user clicking at nothing.
+     *
+     * Liveness costs no extra round trip: a frame that answers its path push
+     * has a script by definition.
+     */
+    const readableFrames = new WeakSet<Window>();
+
+    function isReadableFrame(el: Element): boolean {
+      const win = (el as HTMLIFrameElement).contentWindow;
+      return !win || readableFrames.has(win);
+    }
 
     /** Tell one child frame, or every child frame, where it sits. */
     function pushPaths(only?: Window) {
@@ -334,12 +382,19 @@ export default defineContentScript({
 
       if (e.source !== window.parent) return;
 
+      if (data[FRAME_ALIVE] && e.source && e.source !== window.parent) {
+        readableFrames.add(e.source as Window);
+        return;
+      }
+
       if (data[FRAME_PATH]) {
         // Not authenticated by the picking nonce: this runs at load, before
         // any nonce exists. `e.source === window.parent` is the guard. A page
         // could lie about its own frame structure and get a wrong locator into
         // its own model — visible in the table, and no worse than that.
         myPath = (data.path as FrameStep[]) ?? [];
+        // Tell the parent something is alive in here.
+        window.parent.postMessage({ [FRAME_ALIVE]: true }, '*');
         // Pass it on: the chain is built one level at a time.
         pushPaths();
         return;

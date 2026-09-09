@@ -686,6 +686,16 @@ locator, and so does every other frame API in reach, so `getByTitle('Payment')` 
 however well it identifies one. `cssFor` already prefers a test id, then a name, then an id (§7), so
 little is lost.
 
+**An unreadable frame is drawn as one.** Hovering it during Add or Scan shows the overlay in the red
+dashed treatment a hidden element gets (§8), labelled *cannot be read — sandboxed*. That moment is the
+only one where saying anything is any use: a click inside such a frame belongs to that document, and
+there is nobody in there to hear it, so no message is ever sent and nothing can report it afterwards.
+The frame keeps drawing the overlay throughout, because an unreadable child never takes ownership.
+**[settled]**
+
+Liveness costs no extra round trip — a frame that answers the frame-path push has a script by
+definition.
+
 **An unreachable frame says so.** A frame asked to scan itself acknowledges the request before it
 starts, so the parent can tell the difference between "scanning" and "nothing there". No answer within
 half a second and the panel says *This frame is sandboxed and cannot be read in Firefox*, or *This frame
