@@ -53,7 +53,7 @@ const ADD = (multiKey: string) => ({
   title: 'Adding elements',
   lead: 'Click any element on the page to add it to the model.',
   keys: [
-    { key: '↑↓', what: 'walk up and down the DOM while hovering, for a precise pick' },
+    { key: '↑↓', what: 'walk the DOM while hovering, for a precise pick' },
     { key: `${multiKey}+Click`, what: 'keep adding without arming Add again' },
     { key: 'Esc', what: 'stop' },
   ],
@@ -63,7 +63,7 @@ const SCAN = {
   title: 'Scanning a page',
   lead: 'Click a container and everything interactive inside it is modelled at once — a form, a panel, or the page itself.',
   keys: [
-    { key: '↑↓', what: 'walk up and down the DOM to widen or narrow what you are about to scan' },
+    { key: '↑↓', what: 'walk the DOM to widen or narrow what you are about to scan' },
     { key: 'Esc', what: 'stop' },
   ],
 };
