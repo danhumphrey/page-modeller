@@ -5,6 +5,7 @@ import { mount } from '@vue/test-utils';
 import { Quasar, QBtn, QBtnToggle, QDialog, QCard, QCardSection, QCardActions, QToolbar, QToolbarTitle } from 'quasar';
 import CodeDialog from '../../ui/CodeDialog.vue';
 import { emptyModel, type ModelElement, type TabModel } from '../../src/model';
+import { frameworks } from '../../src/frameworks';
 
 function modelWith(frameworkId: string, ...elements: Array<Partial<ModelElement> & { name: string }>): TabModel {
   const m = emptyModel(frameworkId);
@@ -83,11 +84,15 @@ describe('CodeDialog', () => {
     expect(model.elements).toHaveLength(1);
   });
 
-  it('says which target is missing rather than showing nothing', async () => {
-    // Not every target exists yet; an empty dialog would look broken.
-    await render(modelWith('puppeteer', { name: 'Email' }));
-    expect(codeText()).toContain('Puppeteer is not generated yet');
-    expect(codeText()).toContain('Available so far:');
+  it('generates something for every framework in the selector', async () => {
+    // An empty dialog looks broken, and a framework in the toolbar that
+    // produces nothing is worse than one that is not offered.
+    for (const f of frameworks) {
+      await render(modelWith(f.id, { name: 'Email' }));
+      expect(codeText(), f.label).not.toBe('');
+      wrapper?.unmount();
+      document.body.innerHTML = '';
+    }
   });
 
   it('renders an empty model without failing', async () => {

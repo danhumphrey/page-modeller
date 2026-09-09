@@ -6,7 +6,11 @@ describe('displayLocator', () => {
     expect(displayLocator({ kind: 'role', role: 'button', name: 'Sign in', exact: true }, 'playwright-ts')).toBe(
       "getByRole('button', { name: 'Sign in', exact: true })"
     );
-    expect(displayLocator({ kind: 'testId', value: 'submit' }, 'playwright-python')).toBe("getByTestId('submit')");
+    // Playwright Python is the same decisions in Python spelling.
+    expect(displayLocator({ kind: 'testId', value: 'submit' }, 'playwright-python')).toBe('get_by_test_id("submit")');
+    expect(displayLocator({ kind: 'role', role: 'button', name: "It's here", exact: true }, 'playwright-python')).toBe(
+      'get_by_role("button", name="It\'s here", exact=True)'
+    );
   });
 
   it('renders exact faithfully rather than forcing it', () => {
@@ -32,9 +36,16 @@ describe('displayLocator', () => {
     expect(playwrightExpr({ kind: 'css', value: 'button.pay' })).toBe("locator('button.pay')");
   });
 
-  it('renders other frameworks as type: value', () => {
+  it('renders Selenium as type: value', () => {
     expect(displayLocator({ kind: 'css', value: 'button.pay' }, 'selenium-java')).toBe('css: button.pay');
-    expect(displayLocator({ kind: 'xpath', value: '//a[1]' }, 'puppeteer')).toBe('xpath: //a[1]');
+    expect(displayLocator({ kind: 'xpath', value: '//a[1]' }, 'selenium-csharp')).toBe('xpath: //a[1]');
+  });
+
+  it('renders Puppeteer as its own selector', () => {
+    const pup = (c: Parameters<typeof displayLocator>[0]) => displayLocator(c, 'puppeteer');
+    expect(pup({ kind: 'css', value: 'a[href="/forgot"]' })).toBe('locator(\'a[href="/forgot"]\')');
+    // `xpath/` prefix, not Playwright's `xpath=`; the doubled slash is right.
+    expect(pup({ kind: 'xpath', value: '//a[1]' })).toBe("locator('xpath///a[1]')");
   });
 
   it('escapes quotes so the expression stays valid', () => {

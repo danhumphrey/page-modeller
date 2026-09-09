@@ -28,7 +28,8 @@ describe('chooseCandidate', () => {
   });
 
   it('never picks a Playwright-only strategy for Puppeteer', () => {
-    // Puppeteer has only css and xpath.
+    // Puppeteer has only css and xpath — its P-selectors cannot be generated
+    // reliably, see tests/puppeteer.fidelity.spec.ts.
     expect(kindFor('puppeteer')).toBe('css');
   });
 

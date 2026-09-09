@@ -204,9 +204,25 @@ offers the **full framework list**, not just the generated ones — selecting a 
 value leaves the value field **blank** for the user to type. The generated set is a convenience, never a
 constraint. **[settled]**
 
-Selenium Java types, in order: `id, linkText, partialLinkText, name, css, xpath, className, tagName`.
+The per-framework type lists are in §11. Adding a framework changes those lists, not the model's shape.
 
-Adding Playwright changes the per-framework type list, not the model's shape.
+### What the css candidate is built from **[settled]**
+
+CSS is not only a structural fallback. For Puppeteer it is the *only* expressible type, so the
+preference the other frameworks get from their type ordering, Puppeteer can only get here. Same order:
+
+1. `[data-testid="…"]` — most change-resistant
+2. `[name="…"]` — author-chosen
+3. `#id` — but only when the id does not look generated, the same rule the `id` candidate uses
+4. `tag[aria-label|placeholder|alt|title|href|type="…"]` — the rest of what a person actually wrote,
+   tag-qualified because `[type="submit"]` says nothing on its own and `button[type="submit"]` does
+5. a `>` path, anchored on the nearest ancestor with a real id
+
+Each step is taken only if it singles the element out, so a radio group's shared name falls through.
+
+Without this, Facebook's email field came out as `css: #_R_1h6kqsqppb6amH1_` — a React `useId` value,
+sitting next to `name="email"`. Under Selenium that was cosmetic, because its `name` type ranks first
+anyway. Under Puppeteer it was the whole locator.
 
 ## 8. View Matched Elements (the eye)
 
@@ -290,17 +306,35 @@ model.
 
 | Framework | Shapes |
 |---|---|
-| Selenium (all languages) | **Methods** (default) · Locators only |
-| Playwright (all languages) | **Page object** (default) · Locators only |
-| Puppeteer | **Locators only** |
+| Selenium — Java, C#, Python | **Methods** (default) · Locators only |
+| Playwright — TypeScript, Python | **Page object** (default) · Locators only |
+| Puppeteer | **Page object** (default) · Locators only |
+
+Puppeteer's page object is TypeScript, emitted by the same code as Playwright's — Puppeteer 20's
+`page.locator()` is a lazy handle like Playwright's, so the shape is identical and only the import and
+the selector syntax differ. Puppeteer ships its own types and its docs are TS-first; a JS user deletes
+the annotations. **[settled]**
+
+Shape ids are shared, so `Locators only` means the same thing in every framework. The choice is not
+remembered between openings of the dialog. **[inferred]**
 
 **Locators only** exists for every framework: locator declarations and nothing else, for the many teams
 with their own page-object conventions. Our locators, none of our opinions — and the one output still
 useful when the surrounding structure is wrong for them.
 
+Each language declares them the way that language declares locators:
+
 ```java
-private final By emailAddress = By.name("email");
-private final By signIn = By.id("go");
+private final By emailAddress = By.name("email");         // Java
+```
+```csharp
+private readonly By _emailAddress = By.Name("email");     // C#, underscore per .NET convention
+```
+```python
+EMAIL_ADDRESS = (By.NAME, "email")                        # Python — a locator is a tuple
+```
+```ts
+const emailAddress = page.getByLabel('Email address', { exact: true });   // Playwright
 ```
 
 User-supplied templates are deliberately **not** offered. Two shapes cover the split that matters —
@@ -393,6 +427,21 @@ through the element rather than a dedicated API. **[inferred]**
 
 Also: the templates emit a stray leading space on every line.
 
+### Language idiom, not translation **[settled]**
+
+Same decisions, each language's spelling. Where a language has a feature Java lacks, the output uses
+it rather than carrying Java's workaround across:
+
+| | Java | C# | Python |
+|---|---|---|---|
+| clear-before-type | two overloads | `bool clearFirst = true` | `clear_first=True` |
+| varargs | `String...` | `params string[]` | `*values` |
+| read a property | `getText()` | `.Text` | `.text` |
+| collections | `stream().map().collect()` | `.Select().ToList()` | list comprehension |
+| braces / layout | K&R | Allman | PEP 8, two blank lines |
+
+C# `checked` is a keyword, so the toggle setter takes `isChecked`.
+
 ### Locator lists per framework
 
 Selenium Java / C# / Python: `name, id, linkText, partialLinkText, css, xpath, className, tagName`.
@@ -403,6 +452,21 @@ framework-generated; ids are generated constantly — React's `useId` gave Faceb
 `<map>` and `<object>` do too — but wherever it exists it was written by hand, which is the point. A
 shared name (a radio group) is never chosen, because a candidate must resolve uniquely (§7).
 Puppeteer: `css, xpath`. Robot Framework and Protractor are dropped.
+
+**Puppeteer's P-selectors were tried and rejected.** `::-p-aria` and `::-p-text` looked like they would
+buy role and text parity. `tests/puppeteer.fidelity.spec.ts` resolved them in a real Puppeteer and they
+cannot be generated reliably: **[settled]**
+
+- `::-p-text` is **substring** matching with no exact variant, so `::-p-text("Sign in")` also matched the
+  heading *Sign in to your account*. §12 emits `exact: true` precisely to stop that.
+- `::-p-aria([role=…])` wants **Chrome's** AX role names, not ARIA's — `img` is `image` there — and
+  `role="presentation"` is not in the tree at all.
+- `::-p-aria([name=…])` compares exactly against Chrome's own name string, which keeps whitespace we
+  normalise away: `<a>  Read   more  </a>` is named `"Read more "`, trailing space included.
+
+What closes the gap instead is a better css candidate (§7): `a[href="/forgot"]` rather than seven levels
+of `div:nth-of-type`. XPath keeps Puppeteer's `xpath/` prefix, so an absolute path doubles the slash —
+`xpath//html[1]/body[1]` is correct.
 
 Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
 engine's existing ranking, testId first as the most change-resistant.

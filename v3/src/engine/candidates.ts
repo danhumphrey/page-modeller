@@ -51,16 +51,64 @@ export function safeRole(el: Element): string | null {
 
 // ---- selector builders (deterministic fallbacks) ----
 
+/**
+ * An attribute selector, if it singles the element out.
+ *
+ * CSS is not only a structural fallback: for Puppeteer it is the ONLY
+ * expressible type (SPEC §7), so whatever preference the other frameworks get
+ * from their locator-type ordering, Puppeteer can only get from here.
+ */
+function attrSelector(el: Element, attr: string): string | null {
+  const value = el.getAttribute(attr);
+  if (!value) return null;
+  // Tag-qualified for the weaker attributes: `[type="submit"]` says nothing on
+  // its own, `button[type="submit"]` is a locator. Uniqueness is still what
+  // decides, so qualifying can only ever help.
+  const prefix = attr === 'data-testid' || attr === 'name' ? '' : el.localName;
+  // A quoted attribute value is a CSS *string*, where only `\` and `"` need
+  // escaping. CSS.escape is for identifiers and would render `/forgot` as
+  // `\/forgot` — still valid, but nobody writes that.
+  const sel = `${prefix}[${attr}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
+  return el.ownerDocument.querySelectorAll(sel).length === 1 ? sel : null;
+}
+
+/** `#id`, unless the id is framework-generated — same rule as the id candidate. */
+function idSelector(el: Element): string | null {
+  const id = el.getAttribute('id');
+  if (!id || looksGenerated(id)) return null;
+  const sel = `#${CSS.escape(id)}`;
+  return el.ownerDocument.querySelectorAll(sel).length === 1 ? sel : null;
+}
+
+/**
+ * Attributes worth building a selector from, in order of how much a person
+ * meant them. Anything here is authored: none of it is emitted by a framework
+ * the way ids are, and none of it is positional the way a `>` path is.
+ *
+ * The tail matters most for Puppeteer, whose only other option is that path —
+ * `a[href="/forgot"]` instead of seven levels of `div:nth-of-type`.
+ */
+const CSS_ATTRS = ['data-testid', 'name', 'aria-label', 'placeholder', 'alt', 'title', 'href', 'type'];
+
 function cssFor(el: Element): string {
-  if (el.id) {
-    const byId = `#${CSS.escape(el.id)}`;
-    if (el.ownerDocument.querySelectorAll(byId).length === 1) return byId;
-  }
+  // A test id is the most change-resistant, then an author-chosen name, then an
+  // id — which is only author-chosen when it does not look generated. React's
+  // useId gave Facebook's email field `id="_R_1h6kqsqppb6amH1_"` next to
+  // `name="email"`.
+  const direct =
+    attrSelector(el, 'data-testid') ??
+    attrSelector(el, 'name') ??
+    idSelector(el) ??
+    CSS_ATTRS.reduce<string | null>((found, attr) => found ?? attrSelector(el, attr), null);
+  if (direct) return direct;
+
   const parts: string[] = [];
   let cur: Element | null = el;
   while (cur && cur.nodeType === 1 && cur !== cur.ownerDocument.documentElement) {
-    if (cur.id) {
-      parts.unshift(`#${CSS.escape(cur.id)}`);
+    // Anchoring the path on a generated id would defeat the point.
+    const anchor = idSelector(cur);
+    if (anchor) {
+      parts.unshift(anchor);
       break;
     }
     let sel = cur.tagName.toLowerCase();

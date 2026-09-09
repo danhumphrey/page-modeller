@@ -10,7 +10,11 @@
 import { frameworkById } from '../frameworks';
 import type { TabModel } from '../model';
 import { generatePlaywrightPageObject, generatePlaywrightLocators } from './playwright-ts';
+import { generatePlaywrightPythonPageObject, generatePlaywrightPythonLocators } from './playwright-python';
 import { generateSeleniumJava, generateSeleniumJavaLocators } from './selenium-java';
+import { generateSeleniumCSharp, generateSeleniumCSharpLocators } from './selenium-csharp';
+import { generateSeleniumPython, generateSeleniumPythonLocators } from './selenium-python';
+import { generatePuppeteerPageObject, generatePuppeteerLocators } from './puppeteer';
 
 export interface OutputShape {
   id: string;
@@ -19,15 +23,20 @@ export interface OutputShape {
   generate: (model: TabModel) => string;
 }
 
+// Shape ids are shared across frameworks on purpose — `locators` means the same
+// thing everywhere, so the choice is about what you want, not about which
+// framework's vocabulary you are in.
+const pageObject = (generate: OutputShape['generate']): OutputShape => ({ id: 'page-object', label: 'Page object', generate });
+const methods = (generate: OutputShape['generate']): OutputShape => ({ id: 'methods', label: 'Methods', generate });
+const locators = (generate: OutputShape['generate']): OutputShape => ({ id: 'locators', label: 'Locators only', generate });
+
 const SHAPES: Record<string, readonly OutputShape[]> = {
-  'playwright-ts': [
-    { id: 'page-object', label: 'Page object', generate: generatePlaywrightPageObject },
-    { id: 'locators', label: 'Locators only', generate: generatePlaywrightLocators },
-  ],
-  'selenium-java': [
-    { id: 'methods', label: 'Methods', generate: generateSeleniumJava },
-    { id: 'locators', label: 'Locators only', generate: generateSeleniumJavaLocators },
-  ],
+  'playwright-ts': [pageObject(generatePlaywrightPageObject), locators(generatePlaywrightLocators)],
+  'playwright-python': [pageObject(generatePlaywrightPythonPageObject), locators(generatePlaywrightPythonLocators)],
+  'selenium-java': [methods(generateSeleniumJava), locators(generateSeleniumJavaLocators)],
+  'selenium-csharp': [methods(generateSeleniumCSharp), locators(generateSeleniumCSharpLocators)],
+  'selenium-python': [methods(generateSeleniumPython), locators(generateSeleniumPythonLocators)],
+  'puppeteer': [pageObject(generatePuppeteerPageObject), locators(generatePuppeteerLocators)],
 };
 
 /** The shapes a framework offers; empty when the framework is not generated yet. */
