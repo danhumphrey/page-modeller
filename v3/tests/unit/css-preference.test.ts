@@ -44,6 +44,30 @@ describe('the css candidate', () => {
     expect(cssFor('<div id="login_form"><span></span><b data-target></b></div>')).toBe('#login_form > b');
   });
 
+  it('reaches past id for other authored attributes', () => {
+    // The tail of the cascade is what Puppeteer lives on: it has no linkText,
+    // no getByLabel, nothing but css and xpath.
+    expect(cssFor('<div><a href="/forgot" data-target>Forgotten password?</a><a href="/x">x</a></div>')).toBe(
+      'a[href="/forgot"]'
+    );
+    expect(cssFor('<div><input aria-label="Search products" data-target><input></div>')).toBe(
+      'input[aria-label="Search products"]'
+    );
+    expect(cssFor('<div><img alt="Acme logo" data-target><img alt="other"></div>')).toBe('img[alt="Acme logo"]');
+    expect(cssFor('<form><button type="submit" data-target>Go</button><button>x</button></form>')).toBe(
+      'button[type="submit"]'
+    );
+  });
+
+  it('qualifies the weaker attributes with the tag', () => {
+    // `[type="submit"]` is not a locator; `button[type="submit"]` is. name and
+    // data-testid are strong enough to stand alone.
+    expect(cssFor('<input name="email" id="t">')).toBe('[name="email"]');
+    expect(cssFor('<div><input placeholder="Comment" data-target><input></div>')).toBe(
+      'input[placeholder="Comment"]'
+    );
+  });
+
   it('ignores a name that does not single the element out', () => {
     // A radio group shares its name; the css candidate must still be unique.
     const out = cssFor('<input type="radio" name="plan"><input type="radio" name="plan" data-target>');

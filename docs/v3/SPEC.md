@@ -214,7 +214,9 @@ preference the other frameworks get from their type ordering, Puppeteer can only
 1. `[data-testid="…"]` — most change-resistant
 2. `[name="…"]` — author-chosen
 3. `#id` — but only when the id does not look generated, the same rule the `id` candidate uses
-4. a `>` path, anchored on the nearest ancestor with a real id
+4. `tag[aria-label|placeholder|alt|title|href|type="…"]` — the rest of what a person actually wrote,
+   tag-qualified because `[type="submit"]` says nothing on its own and `button[type="submit"]` does
+5. a `>` path, anchored on the nearest ancestor with a real id
 
 Each step is taken only if it singles the element out, so a radio group's shared name falls through.
 
@@ -449,27 +451,22 @@ framework-generated; ids are generated constantly — React's `useId` gave Faceb
 `id="_r_6_"` alongside `name="pass"`. It is not only form controls that carry one — `<a>`, `<iframe>`,
 `<map>` and `<object>` do too — but wherever it exists it was written by hand, which is the point. A
 shared name (a radio group) is never chosen, because a candidate must resolve uniquely (§7).
-Puppeteer: `role, text, css, xpath` — Playwright's order, minus what has no P-selector. Robot Framework
-and Protractor are dropped.
+Puppeteer: `css, xpath`. Robot Framework and Protractor are dropped.
 
-**Puppeteer is not css-only.** `::-p-aria` queries the accessibility tree and `::-p-text` matches
-rendered text, so role and text are expressible after all: **[settled]**
+**Puppeteer's P-selectors were tried and rejected.** `::-p-aria` and `::-p-text` looked like they would
+buy role and text parity. `tests/puppeteer.fidelity.spec.ts` resolved them in a real Puppeteer and they
+cannot be generated reliably: **[settled]**
 
-```js
-page.locator('::-p-aria([name="Log in"][role="button"])')
-page.locator('::-p-text("Create new account")')
-page.locator('xpath//html[1]/body[1]/div[2]')   // `xpath/` prefix, so an absolute path doubles the slash
-```
+- `::-p-text` is **substring** matching with no exact variant, so `::-p-text("Sign in")` also matched the
+  heading *Sign in to your account*. §12 emits `exact: true` precisely to stop that.
+- `::-p-aria([role=…])` wants **Chrome's** AX role names, not ARIA's — `img` is `image` there — and
+  `role="presentation"` is not in the tree at all.
+- `::-p-aria([name=…])` compares exactly against Chrome's own name string, which keeps whitespace we
+  normalise away: `<a>  Read   more  </a>` is named `"Read more "`, trailing space included.
 
-Both P-selector arguments are quoted, which is the only safe form — a link named `Forgotten password?`
-would otherwise end the selector early. Without this every link and button fell back to a seven-level
-`>` path, because CSS cannot say "the one that says Log in".
-
-`label`, `placeholder`, `testId`, `altText` and `title` have no P-selector. A test id still reaches
-Puppeteer, because the css candidate is built from `[data-testid]` first (§7).
-
-**None of the Puppeteer output is verified against a real Puppeteer** — it is not a dependency of this
-repo, so nothing resolves the generated string the way the fidelity spec does for Playwright. **[open]**
+What closes the gap instead is a better css candidate (§7): `a[href="/forgot"]` rather than seven levels
+of `div:nth-of-type`. XPath keeps Puppeteer's `xpath/` prefix, so an absolute path doubles the slash —
+`xpath//html[1]/body[1]` is correct.
 
 Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
 engine's existing ranking, testId first as the most change-resistant.

@@ -80,30 +80,18 @@ export function playwrightPyExpr(c: LocatorCandidate): string {
 /**
  * The Puppeteer selector string for this candidate.
  *
- * Puppeteer's P-selectors reach past CSS: `::-p-aria` queries the
- * accessibility tree and `::-p-text` matches rendered text, so role and text
- * candidates are expressible after all. Both take a quoted argument, which is
- * the only safe form — a link named `Forgotten password?` would otherwise end
- * the selector early.
- *
- * Not verified against a real Puppeteer anywhere: it is not a dependency here.
+ * css and xpath only — see frameworks.ts for what the fidelity spec found when
+ * we tried `::-p-aria` and `::-p-text`.
  */
 export function puppeteerSelector(c: LocatorCandidate): string {
   switch (c.kind) {
-    case 'role':
-      // `[name=…][role=…]`, not the bare `::-p-aria(Name)` shorthand: the role
-      // is half of what makes the locator unique.
-      return c.name === undefined
-        ? `::-p-aria([role=${qq(c.role)}])`
-        : `::-p-aria([name=${qq(c.name)}][role=${qq(c.role)}])`;
-    case 'text':
-      return `::-p-text(${qq(c.text)})`;
     case 'css':
       return c.value;
     case 'xpath':
-      // `xpath/` here, not Playwright's `xpath=`. Everything after that first
-      // slash is the expression, so an absolute path doubles the slash —
-      // `xpath//html[1]/body[1]` is correct, not a typo.
+      // Puppeteer's documented prefix is `xpath/`, and everything after that
+      // first slash is the expression — so an absolute path doubles the slash.
+      // `xpath//html[1]/body[1]` is correct, not a typo. The prefix itself is
+      // not optional: without it Chrome rejects the string as invalid CSS.
       return `xpath/${c.value}`;
     default:
       // Not expressible; selection never picks one (SPEC §7).

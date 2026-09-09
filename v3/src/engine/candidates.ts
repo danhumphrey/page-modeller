@@ -61,7 +61,14 @@ export function safeRole(el: Element): string | null {
 function attrSelector(el: Element, attr: string): string | null {
   const value = el.getAttribute(attr);
   if (!value) return null;
-  const sel = `[${attr}="${CSS.escape(value)}"]`;
+  // Tag-qualified for the weaker attributes: `[type="submit"]` says nothing on
+  // its own, `button[type="submit"]` is a locator. Uniqueness is still what
+  // decides, so qualifying can only ever help.
+  const prefix = attr === 'data-testid' || attr === 'name' ? '' : el.localName;
+  // A quoted attribute value is a CSS *string*, where only `\` and `"` need
+  // escaping. CSS.escape is for identifiers and would render `/forgot` as
+  // `\/forgot` — still valid, but nobody writes that.
+  const sel = `${prefix}[${attr}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
   return el.ownerDocument.querySelectorAll(sel).length === 1 ? sel : null;
 }
 
@@ -73,12 +80,26 @@ function idSelector(el: Element): string | null {
   return el.ownerDocument.querySelectorAll(sel).length === 1 ? sel : null;
 }
 
+/**
+ * Attributes worth building a selector from, in order of how much a person
+ * meant them. Anything here is authored: none of it is emitted by a framework
+ * the way ids are, and none of it is positional the way a `>` path is.
+ *
+ * The tail matters most for Puppeteer, whose only other option is that path —
+ * `a[href="/forgot"]` instead of seven levels of `div:nth-of-type`.
+ */
+const CSS_ATTRS = ['data-testid', 'name', 'aria-label', 'placeholder', 'alt', 'title', 'href', 'type'];
+
 function cssFor(el: Element): string {
-  // Same order of preference as everywhere else: a test id is the most
-  // change-resistant, then an author-chosen name, then an id — which is only
-  // author-chosen when it does not look generated. React's useId gave
-  // Facebook's email field `id="_R_1h6kqsqppb6amH1_"` next to `name="email"`.
-  const direct = attrSelector(el, 'data-testid') ?? attrSelector(el, 'name') ?? idSelector(el);
+  // A test id is the most change-resistant, then an author-chosen name, then an
+  // id — which is only author-chosen when it does not look generated. React's
+  // useId gave Facebook's email field `id="_R_1h6kqsqppb6amH1_"` next to
+  // `name="email"`.
+  const direct =
+    attrSelector(el, 'data-testid') ??
+    attrSelector(el, 'name') ??
+    idSelector(el) ??
+    CSS_ATTRS.reduce<string | null>((found, attr) => found ?? attrSelector(el, attr), null);
   if (direct) return direct;
 
   const parts: string[] = [];

@@ -41,17 +41,9 @@ describe('displayLocator', () => {
     expect(displayLocator({ kind: 'xpath', value: '//a[1]' }, 'selenium-csharp')).toBe('xpath: //a[1]');
   });
 
-  it('renders Puppeteer as its own selector, P-selectors and all', () => {
+  it('renders Puppeteer as its own selector', () => {
     const pup = (c: Parameters<typeof displayLocator>[0]) => displayLocator(c, 'puppeteer');
-    // ::-p-aria reads the accessibility tree, so role survives into Puppeteer.
-    expect(pup({ kind: 'role', role: 'link', name: 'Forgotten password?', exact: true })).toBe(
-      'locator(\'::-p-aria([name="Forgotten password?"][role="link"])\')'
-    );
-    expect(pup({ kind: 'role', role: 'button' })).toBe('locator(\'::-p-aria([role="button"])\')');
-    expect(pup({ kind: 'text', text: 'Create new account', exact: true })).toBe(
-      'locator(\'::-p-text("Create new account")\')'
-    );
-    expect(pup({ kind: 'css', value: '[name="email"]' })).toBe('locator(\'[name="email"]\')');
+    expect(pup({ kind: 'css', value: 'a[href="/forgot"]' })).toBe('locator(\'a[href="/forgot"]\')');
     // `xpath/` prefix, not Playwright's `xpath=`; the doubled slash is right.
     expect(pup({ kind: 'xpath', value: '//a[1]' })).toBe("locator('xpath///a[1]')");
   });

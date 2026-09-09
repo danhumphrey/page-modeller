@@ -27,18 +27,10 @@ describe('chooseCandidate', () => {
     expect(kindFor('selenium-java')).toBe('id');
   });
 
-  it('picks role for Puppeteer, which can express it as ::-p-aria', () => {
-    expect(kindFor('puppeteer')).toBe('role');
-  });
-
-  it('still refuses a strategy Puppeteer cannot express', () => {
-    // getByLabel and getByTestId have no P-selector; css must catch them.
-    const labelled: RankedCandidate[] = [
-      { candidate: { kind: 'label', text: 'Email', exact: true }, predictedCount: 1 },
-      { candidate: { kind: 'testId', value: 'email' }, predictedCount: 1 },
-      { candidate: { kind: 'css', value: '[name="email"]' }, predictedCount: 1 },
-    ];
-    expect(labelled[chooseCandidate(labelled, 'puppeteer')].candidate.kind).toBe('css');
+  it('never picks a Playwright-only strategy for Puppeteer', () => {
+    // Puppeteer has only css and xpath — its P-selectors cannot be generated
+    // reliably, see tests/puppeteer.fidelity.spec.ts.
+    expect(kindFor('puppeteer')).toBe('css');
   });
 
   it('chooses something expressible for every framework', () => {
