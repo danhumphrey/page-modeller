@@ -106,10 +106,13 @@ async function copy() {
   border-bottom: 1px solid var(--pm-rule);
 }
 
-/* `spread` divides the row evenly, so the labels stay readable however narrow
-   the panel gets rather than truncating the widest one. */
+/* `spread` divides the control evenly, so labels stay readable however narrow
+   the panel gets. Capped, because at DevTools width a full-bleed segmented
+   control reads as a banner rather than a choice — it takes the width it needs
+   and no more. */
 .shape-toggle {
   width: 100%;
+  max-width: 460px;
   border: 1px solid var(--pm-rule);
   border-radius: 4px;
 }

@@ -304,8 +304,10 @@ The same locators, arranged the way that framework's users arrange them. The dia
 its framework has; the first is the default. Shape is a dialog-local choice — it does not touch the
 model.
 
-The selector sits on **its own row** under the title, spread across the width. In the sidebar there is
-no width to share: three shapes plus Copy beside the title truncated it to *Seleniu…*. **[settled]**
+The selector sits on **its own row** under the title, left-aligned, taking the width it needs up to a
+cap. In the sidebar there is no width to share — three shapes plus Copy beside the title truncated it to
+*Seleniu…* — and at DevTools width a full-bleed segmented control reads as a banner rather than a
+choice. **[settled]**
 
 | Framework | Shapes |
 |---|---|
