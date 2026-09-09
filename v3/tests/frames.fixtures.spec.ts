@@ -65,6 +65,7 @@ test('frames.html builds the frame tree the fixture describes', async ({ page })
   // srcdoc and sandbox both load and hold their controls.
   await expect(page.frameLocator('#srcdoc-frame').locator('[data-spike="srcdoc-coupon"]')).toBeVisible();
   await expect(page.frameLocator('#sandboxed-frame').locator('[data-spike="sandbox-submit"]')).toBeVisible();
+
 });
 
 test('the Submit buttons collide, so only a frame path separates them', async ({ page }) => {

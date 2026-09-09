@@ -283,6 +283,8 @@ export default defineContentScript({
     const FRAME_PATH = '__pageModellerFramePath';
     /** A frame that loaded after its parent pushed, asking to be told. */
     const NEED_PATH = '__pageModellerNeedPath';
+    /** A frame confirming it heard a scan request, so silence means something. */
+    const SCAN_ACK = '__pageModellerScanAck';
 
     /** Tell one child frame, or every child frame, where it sits. */
     function pushPaths(only?: Window) {
@@ -320,6 +322,16 @@ export default defineContentScript({
         return;
       }
 
+      // An ack comes from a child, everything else from the parent.
+      if (data[SCAN_ACK] && e.source !== window.parent) {
+        const pending = awaitingAck.get(e.source as Window);
+        if (pending && data[SCAN_ACK] === nonce) {
+          clearTimeout(pending);
+          awaitingAck.delete(e.source as Window);
+        }
+        return;
+      }
+
       if (e.source !== window.parent) return;
 
       if (data[FRAME_PATH]) {
@@ -333,13 +345,51 @@ export default defineContentScript({
         return;
       }
 
-      if (!nonce || data[SCAN_FRAME] !== nonce) return;
+      if (!nonce) return;
+
+      if (data[SCAN_ACK] === nonce) {
+        const pending = awaitingAck.get(e.source as Window);
+        if (pending) {
+          clearTimeout(pending);
+          awaitingAck.delete(e.source as Window);
+        }
+        return;
+      }
+
+      if (data[SCAN_FRAME] !== nonce) return;
+      // Answer before scanning: the parent is timing this.
+      (e.source as Window).postMessage({ [SCAN_ACK]: nonce }, '*');
       scanDocument();
     });
 
-    /** Ask a nested frame to scan itself, and everything below it. */
+    /** Frames asked to scan that have not yet answered. */
+    const awaitingAck = new Map<Window, ReturnType<typeof setTimeout>>();
+
+    /**
+     * Ask a nested frame to scan itself, and everything below it.
+     *
+     * A frame with no content script inside it cannot answer, and the user sees
+     * nothing happen at all — which is indistinguishable from a bug. So the
+     * frame acknowledges the request, and silence is reported.
+     */
     function delegateScan(frame: Element) {
-      (frame as HTMLIFrameElement).contentWindow?.postMessage({ [SCAN_FRAME]: nonce }, '*');
+      const win = (frame as HTMLIFrameElement).contentWindow;
+      if (!win) return;
+      win.postMessage({ [SCAN_FRAME]: nonce }, '*');
+      awaitingAck.set(
+        win,
+        setTimeout(() => {
+          awaitingAck.delete(win);
+          // `allow-same-origin` hands the frame its parent's origin back; a
+          // sandbox without it has a null principal, and Firefox will not
+          // inject into one. `allow-scripts` is a red herring — a bare sandbox
+          // stops the page's own scripts, not a content script's isolated
+          // world, so it makes no difference to whether we can read the frame.
+          const sandbox = frame.getAttribute('sandbox');
+          const sandboxed = sandbox !== null && !sandbox.split(/\s+/).includes('allow-same-origin');
+          browser.runtime.sendMessage({ type: 'FRAME_UNREADABLE', sandboxed }).catch(() => {});
+        }, 500)
+      );
     }
 
     /**

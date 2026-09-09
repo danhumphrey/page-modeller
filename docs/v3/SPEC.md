@@ -686,11 +686,18 @@ locator, and so does every other frame API in reach, so `getByTitle('Payment')` 
 however well it identifies one. `cssFor` already prefers a test id, then a name, then an id (§7), so
 little is lost.
 
+**An unreachable frame says so.** A frame asked to scan itself acknowledges the request before it
+starts, so the parent can tell the difference between "scanning" and "nothing there". No answer within
+half a second and the panel says *This frame is sandboxed and cannot be read in Firefox*, or *This frame
+could not be read* when there is no sandbox to blame. Silence is indistinguishable from a bug, which is
+how the case below presented. **[settled]**
+
 **A sandboxed frame cannot be reached on Firefox.** `sandbox="allow-scripts"` without
 `allow-same-origin` gives the document a **null** principal. Firefox's `match_about_blank` injects only
 where the document *inherits* its parent's principal, so there is nothing to inherit and no content
 script runs; Chrome's `match_origin_as_fallback` exists for exactly this case and Firefox has no
-equivalent. The parent cannot reach in either — the frame's origin is opaque to it too. Verified by
+equivalent. `allow-scripts` is not the deciding token — a bare `sandbox` stops the page's own scripts,
+not a content script's isolated world, and Chrome reads such a frame perfectly well. The parent cannot reach in either — the frame's origin is opaque to it too. Verified by
 hand: on Firefox every other frame kind works and the sandboxed one does not. **[settled]**
 
 **Reaching a frame at all** comes first. A `srcdoc` iframe's URL is `about:srcdoc`, which `<all_urls>`

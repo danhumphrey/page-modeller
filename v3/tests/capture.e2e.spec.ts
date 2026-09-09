@@ -491,6 +491,28 @@ test('a new highlight clears the last one, in whichever frame it was', async () 
   expect(await marked(), 'a frame that did not answer kept its mark').toBe(1);
 });
 
+test('a frame that can be read reports nothing', async () => {
+  // The timeout must not fire for frames that simply took a moment.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'readable-frame', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'scan', nonce: 'n' }), tabId);
+  const box = (await page.locator('#same-frame').boundingBox())!;
+  await page.mouse.move(box.x + 1, box.y + 1);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.waitForTimeout(1200);
+
+  const reports = (await sw.evaluate(
+    () => (globalThis as unknown as { __picks: { type: string }[] }).__picks
+  )).filter((m) => m.type === 'FRAME_UNREADABLE');
+  expect(reports, 'a readable frame must not be reported').toEqual([]);
+});
+
 test('the background relays panel messages, and reports an unreachable tab', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
