@@ -27,6 +27,9 @@ const has = (cmd: string, args: string[]) => {
     return false;
   }
 };
+// A gated check that skips is invisible on CI, which is the one place every
+// toolchain is guaranteed. Set there, so a missing one fails instead.
+const REQUIRED = process.env.PM_REQUIRE_COMPILE_CHECKS === '1';
 const jars = existsSync(LIB) ? readdirSync(LIB).filter((f) => f.endsWith('.jar')) : [];
 const javaReady = has('javac', ['--version']) && jars.length > 0;
 const dotnetReady = has('dotnet', ['--version']) && existsSync(join(CSPROJ, 'obj', 'project.assets.json'));
@@ -159,10 +162,12 @@ describe('the generated TypeScript typechecks against the real libraries', () =>
 
 // An environment-gated test that says nothing is an environment-gated test that
 // has quietly stopped running.
-if (!javaReady || !dotnetReady) {
-  it('says which compile checks were skipped', () => {
-    const missing = [!javaReady && 'Java', !dotnetReady && 'C#'].filter(Boolean);
-    console.warn(`Skipped compile checks: ${missing.join(', ')} — run \`npm run fetch:test-deps\``);
-    expect(missing.length).toBeGreaterThan(0);
-  });
-}
+it('ran every compile check, or says which it did not', () => {
+  const missing = [!javaReady && 'Java', !dotnetReady && 'C#'].filter(Boolean) as string[];
+  if (REQUIRED) {
+    expect(missing, 'PM_REQUIRE_COMPILE_CHECKS is set — run `npm run fetch:test-deps`').toEqual([]);
+    return;
+  }
+  if (missing.length) console.warn(`Skipped compile checks: ${missing.join(', ')} — run \`npm run fetch:test-deps\``);
+  expect(true).toBe(true);
+});

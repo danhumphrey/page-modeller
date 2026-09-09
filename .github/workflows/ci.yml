@@ -34,3 +34,71 @@ jobs:
           name: coverage
           path: coverage/
           retention-days: 14
+
+  v3:
+    # The v3 rewrite has its own tree, package.json and toolchain (CLAUDE.md).
+    # It runs here because this is the only CI: `v3/.github/` would be ignored,
+    # GitHub reads workflows from the repo root only.
+    #
+    # No `paths:` filter on purpose. A skipped job reports as neither passing
+    # nor failing, which is exactly the ambiguity a required check should not
+    # have — and the job is a few minutes.
+    name: v3
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: v3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: v3/package-lock.json
+
+      # javac and dotnet compile the generated Selenium against the real
+      # libraries; python3 parses the generated Python. Pinned rather than
+      # taken from the runner image, so a change there cannot silently drop a
+      # check. net8.0 matches tests/compile/csharp/Verify.csproj.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('v3/package-lock.json') }}
+
+      # chromium only: the extension E2E and the Puppeteer fidelity spec both
+      # drive it, and Firefox cannot be automated here at all (SPIKE6).
+      - run: npx playwright install --with-deps chromium
+
+      - name: Fetch the Selenium jar and NuGet packages
+        run: npm run fetch:test-deps
+
+      # unit + engine bundle + both builds + manifest checks + Playwright.
+      # PM_REQUIRE_COMPILE_CHECKS turns a missing toolchain into a failure:
+      # a check that silently skips on CI is not a check.
+      - run: npm test
+        env:
+          PM_REQUIRE_COMPILE_CHECKS: '1'
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-playwright-report
+          path: |
+            v3/test-results/
+          retention-days: 14

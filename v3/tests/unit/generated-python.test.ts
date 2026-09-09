@@ -78,12 +78,16 @@ describe.skipIf(!hasPython)('the generated Python is Python', () => {
   }
 });
 
-if (!hasPython) {
-  // Silence is how an environment-gated test rots. Say it out loud instead.
-  it('python3 is not installed, so the Python output was not parsed', () => {
-    expect(hasPython).toBe(false);
-  });
-}
+// Silence is how an environment-gated test rots. Say it out loud instead — and
+// on CI, where python3 is guaranteed, refuse to skip at all.
+it('parsed the Python, or says why not', () => {
+  if (process.env.PM_REQUIRE_COMPILE_CHECKS === '1') {
+    expect(hasPython, 'PM_REQUIRE_COMPILE_CHECKS is set but python3 is missing').toBe(true);
+    return;
+  }
+  if (!hasPython) console.warn('Skipped the Python parse checks: python3 is not installed');
+  expect(true).toBe(true);
+});
 
 // ---- Playwright Python against the Playwright TypeScript we do verify ----
 //

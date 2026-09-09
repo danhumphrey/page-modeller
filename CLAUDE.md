@@ -71,8 +71,12 @@ exploited.
 
 ## Gotchas
 
-- `v3/.github/workflows/` is **inert** — GitHub only reads `.github/` at the repo root. Merge it with
-  the root CI when v3 is ready to build.
+- **Root CI runs both trees.** `.github/workflows/ci.yml` has a `test` job for v2.5.1's `src/` and a
+  `v3` job for the rewrite. GitHub reads workflows from the repo root only, so anything under
+  `v3/.github/` is inert — the v3 CI workflow lived there and never ran once.
+- `v3/.github/workflows/release.yml` is **still inert**, deliberately: at the root it would fire on any
+  `v*` tag and submit v3 to the stores. Move it when v3 is ready to ship, and give it a tag prefix that
+  cannot collide with a v2.5.1 tag.
 - **Root CI is the only CI, and it sees the whole repo.** It runs on every `pull_request`, so anything
   added anywhere in the tree lands in its path. Root Jest had no ignore patterns and walked into `v3/`,
   handing TypeScript to a Babel configured for v2.5.1's JS — three suites failed to parse the first time
