@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Frame child</title></head>
+<body style="font: 14px/1.5 system-ui, sans-serif">
+  <h2 data-spike="child-heading">Payment</h2>
+
+  <label for="child-email">Email</label>
+  <input id="child-email" name="email" data-spike="child-email" />
+
+  <!-- Deliberately the same accessible name as the Submit in the top frame and
+       in the grandchild: the frame path is the only thing that separates them. -->
+  <button data-spike="child-submit">Submit</button>
+
+  <!-- Nested one level deeper, so its contents need a two-step frame path. -->
+  <iframe id="deep-frame" title="Deep" src="frames-grandchild.html" width="380" height="110"></iframe>
+</body>
+</html>

@@ -677,7 +677,27 @@ extension is reloaded — which is every rebuild in dev — and the menu is then
 
 ## 16. Frames
 
-New in v3 — v2.5.1 has no frame support. An element records the **frame path**: the ordered list of
+New in v3 — v2.5.1 has no frame support.
+
+### Fixtures **[settled]**
+
+`tests/fixtures/frames.html` and `frameset.html`, exercising every shape a real page uses:
+
+| Frame | Why it is there |
+|---|---|
+| same-origin `iframe` | the ordinary case, and it nests one deeper |
+| cross-origin `iframe` | `127.0.0.1` against `localhost` — one server, two origins, no second process |
+| `srcdoc` | same-origin with no URL at all; nothing to identify it by but the element |
+| `sandbox="allow-scripts"` | an opaque origin, which is what a third-party widget usually is |
+| two identical `iframe`s | the frame itself needs a positional locator — the case a path can get wrong |
+| `frameset` / `frame` | `frame` is a different element from `iframe`; a selector for one misses the other |
+
+**Nine buttons across the tree share the accessible name *Submit*.** Without a frame path a locator
+cannot tell them apart, which is the property every frame test leans on.
+
+The fixtures are served over http, never `file://`: Chrome gives every `file://` document an opaque
+origin, so `localhost` against `127.0.0.1` would prove nothing. `scripts/serve-fixtures.mjs` substitutes
+the cross-origin base at request time, so it follows `FIXTURES_PORT`. An element records the **frame path**: the ordered list of
 iframes containing it, each identified by its own generated locator.
 
 ### Playwright

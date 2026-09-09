@@ -12,11 +12,24 @@ createServer(async (req, res) => {
   const requested = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname)).replace(/^(\.\.[/\\])+/, '');
   const path = requested === '/' ? 'login.html' : requested;
   try {
-    const body = await readFile(join(ROOT, path));
+    let body = await readFile(join(ROOT, path));
+    if (extname(path) === '.html') {
+      // frames.html embeds a genuinely cross-origin iframe. 127.0.0.1 and
+      // localhost are different origins to the browser while being the same
+      // server, so no second process is needed — and substituting here rather
+      // than hard-coding keeps it correct when FIXTURES_PORT changes.
+      body = body.toString().replaceAll('__CROSS_ORIGIN__', `http://127.0.0.1:${PORT}`);
+    }
     res.writeHead(200, { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream' });
     res.end(body);
   } catch {
     res.writeHead(404, { 'content-type': 'text/plain' });
     res.end('not found');
   }
-}).listen(PORT, () => console.log(`fixtures: http://localhost:${PORT}/  (login.html, widgets.html, edgecases.html, ambiguous.html)`));
+}).listen(PORT, () => {
+  const pages = ['login', 'widgets', 'edgecases', 'ambiguous', 'frames', 'frameset'];
+  console.log(`fixtures: http://localhost:${PORT}/`);
+  for (const page of pages) console.log(`  http://localhost:${PORT}/${page}.html`);
+  console.log('\nframes.html embeds 127.0.0.1 as a cross-origin child — reach it via localhost, not 127.0.0.1,');
+  console.log('or the "cross-origin" frame will be same-origin.');
+});
