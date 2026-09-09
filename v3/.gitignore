@@ -1,0 +1,4 @@
+/tests/compile/lib
+/tests/compile/csharp/obj
+/tests/compile/csharp/bin
+/tests/compile/ts/*.ts

@@ -15,6 +15,10 @@ import { tsPageObject, tsLocators, type TsTarget } from './ts-page-object';
 const PUPPETEER: TsTarget = {
   module: 'puppeteer',
   expr: (el: ModelElement) => puppeteerExpr(activeCandidate(el)),
+  // `Locator<T>` is generic over the node it yields — `page.locator('button')`
+  // is a `Locator<HTMLButtonElement>`. Element is the common supertype, and
+  // widening to it is what lets one field hold any of them.
+  locatorType: 'Locator<Element>',
 };
 
 export const generatePuppeteerPageObject = (model: TabModel) => tsPageObject(model, PUPPETEER);

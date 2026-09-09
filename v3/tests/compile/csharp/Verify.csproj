@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles the generated C# against the real Selenium API. A library, not
+       an executable: there is nothing to run, only to typecheck. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <!-- The generated code is a fragment pasted into a class; unused fields and
+         unreachable niceties are not what this build is looking for. -->
+    <NoWarn>CS0169;CS0649</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Generated.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Selenium.WebDriver" Version="4.27.0" />
+    <PackageReference Include="Selenium.Support" Version="4.27.0" />
+  </ItemGroup>
+</Project>

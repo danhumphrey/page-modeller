@@ -378,7 +378,17 @@ before starting the next.
     **Puppeteer output is not verified against a real Puppeteer** — it is not a dependency here, so
     nothing resolves the generated string the way the fidelity spec now does for Playwright.
 
-15. **Frames** (SPEC §16) and the **page-object wrapper** (SPEC §17).
+15. **Generated-code verification** ✅ **Done** — the emitted code is now compiled or parsed against
+    the real library for every target: `tsc` for Playwright TS and Puppeteer, `javac` for Java,
+    `dotnet build` for C#, `python3 -m ast` for both Python targets. Java and C# need
+    `npm run fetch:test-deps` once; all of them skip loudly rather than silently. The matrix is in
+    CLAUDE.md.
+
+    It found four real bugs on the way in: Puppeteer's `Locator` is generic, the "not expressible"
+    fallback emitted an unparseable bare comment, a newline in any value broke the string literal in
+    all five languages, and the Puppeteer P-selectors could not be generated at all.
+
+16. **Frames** (SPEC §16) and the **page-object wrapper** (SPEC §17).
 
 **Considered, not scheduled — capture from the Elements tree.** `devtools.panels.elements
 .onSelectionChanged` plus `inspectedWindow.eval` with `$0` would let a button add whatever is selected
