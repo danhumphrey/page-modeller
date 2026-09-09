@@ -718,7 +718,13 @@ script accepts from another frame — isolated worlds do not isolate `postMessag
 requires that a scan is genuinely in progress and that the sender is the parent. The worst a forged
 message can then do is what the user was already doing.
 
-Scanning a *container* that happens to hold frames does not descend into them. **[open]**
+**A scan never crosses a frame boundary on its own.** Scanning a container that happens to hold frames
+gets that document's controls and stops; the frame's contents come only when you scan the frame itself,
+or something inside it. **[settled]**
+
+Descending automatically would mean scanning `<main>` on an ordinary page could sweep in an embedded
+third-party app, an ad, or a sandboxed widget nobody asked to model — and those are exactly the frames
+whose locators are least likely to survive. Entering a frame is a decision, so it takes a click.
 
 ### The eye **[settled]**
 
