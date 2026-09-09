@@ -3,8 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
-import { generateSeleniumJava, generateSeleniumJavaLocators } from '../../src/generators/selenium-java';
-import { generateSeleniumCSharp, generateSeleniumCSharpLocators } from '../../src/generators/selenium-csharp';
+import { generateSeleniumJava, generateSeleniumJavaLocators, generateSeleniumJavaPageObject } from '../../src/generators/selenium-java';
+import { generateSeleniumCSharp, generateSeleniumCSharpLocators, generateSeleniumCSharpPageObject } from '../../src/generators/selenium-csharp';
 import { generatePlaywrightPageObject, generatePlaywrightLocators } from '../../src/generators/playwright-ts';
 import { generatePuppeteerPageObject, generatePuppeteerLocators } from '../../src/generators/puppeteer';
 import { modelOf, everyTypeFor, ALL_BUCKETS } from './fixtures/model';
@@ -63,17 +63,22 @@ describe.skipIf(!javaReady)('the generated Java compiles against real Selenium',
       generateSeleniumJavaLocators(model('selenium-java')),
       '}',
     ].join('\n');
+    // The wrapper brings its own imports and class, so it compiles on its own.
+    const wrapper = generateSeleniumJavaPageObject(model('selenium-java'));
     const file = join(dir, 'Generated.java');
     writeFileSync(file, source);
+    // A public class must live in a file of its own name.
+    const wrapperFile = join(dir, `${wrapper.match(/public class (\w+)/)?.[1]}.java`);
+    writeFileSync(wrapperFile, wrapper);
 
     try {
-      execFileSync('javac', ['-cp', jars.map((j) => join(LIB, j)).join(':'), '-d', dir, file], {
+      execFileSync('javac', ['-cp', jars.map((j) => join(LIB, j)).join(':'), '-d', dir, file, wrapperFile], {
         stdio: ['ignore', 'pipe', 'pipe'],
         encoding: 'utf8',
       });
     } catch (e) {
       const err = e as { stderr?: string; stdout?: string };
-      fail('Java', `${err.stdout ?? ''}${err.stderr ?? ''}\n\n--- source ---\n${source}`);
+      fail('Java', `${err.stdout ?? ''}${err.stderr ?? ''}\n\n--- source ---\n${source}\n${wrapper}`);
     }
     expect(true).toBe(true);
   });
@@ -99,6 +104,8 @@ describe.skipIf(!dotnetReady)('the generated C# compiles against real Selenium',
       '}',
     ].join('\n');
     writeFileSync(join(CSPROJ, 'Generated.cs'), source);
+    const wrapper = generateSeleniumCSharpPageObject(model('selenium-csharp'));
+    writeFileSync(join(CSPROJ, 'GeneratedPageObject.cs'), wrapper);
 
     try {
       execFileSync('dotnet', ['build', '--nologo', '--no-restore', '-v', 'quiet'], {
@@ -108,7 +115,7 @@ describe.skipIf(!dotnetReady)('the generated C# compiles against real Selenium',
       });
     } catch (e) {
       const err = e as { stderr?: string; stdout?: string };
-      fail('C#', `${err.stdout ?? ''}${err.stderr ?? ''}\n\n--- source ---\n${source}`);
+      fail('C#', `${err.stdout ?? ''}${err.stderr ?? ''}\n\n--- source ---\n${source}\n${wrapper}`);
     }
     expect(true).toBe(true);
   }, 120_000);

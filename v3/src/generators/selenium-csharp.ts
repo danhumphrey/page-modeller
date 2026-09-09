@@ -9,6 +9,7 @@ import { byParts, type ByKind } from './selenium';
 import { classify, isImage } from './classify';
 import { underscoreCamel } from './names';
 import { doubleQuoted } from '../quote';
+import { classNameFor } from './class-name';
 
 const q = doubleQuoted;
 
@@ -111,4 +112,43 @@ export function generateSeleniumCSharpLocators(model: TabModel): string {
 
 export function generateSeleniumCSharp(model: TabModel): string {
   return model.elements.map((el) => [banner(el.name), ...methods(el)].join('\n\n')).join('\n\n');
+}
+
+/** The methods with a class around them (SPEC §17). */
+export function generateSeleniumCSharpPageObject(model: TabModel): string {
+  const buckets = new Set(model.elements.map(classify));
+  const usings = [
+    ...(buckets.has('multiSelect') ? ['System.Collections.Generic', 'System.Linq'] : []),
+    'OpenQA.Selenium',
+    ...(buckets.has('select') || buckets.has('multiSelect') ? ['OpenQA.Selenium.Support.UI'] : []),
+  ];
+  const className = classNameFor(model.url);
+
+  return [
+    ...usings.map((u) => `using ${u};`),
+    '',
+    `public class ${className}`,
+    '{',
+    '    private readonly IWebDriver driver;',
+    '',
+    `    public ${className}(IWebDriver driver)`,
+    '    {',
+    '        this.driver = driver;',
+    '    }',
+    ...model.elements.flatMap((el) => [
+      '',
+      indent(banner(el.name)),
+      ...methods(el).map(indent).join('\n\n').split('\n'),
+    ]),
+    '}',
+    '',
+  ].join('\n');
+}
+
+/** Four spaces onto every non-blank line, so the fragment sits inside a class. */
+function indent(block: string): string {
+  return block
+    .split('\n')
+    .map((line) => (line ? `    ${line}` : line))
+    .join('\n');
 }

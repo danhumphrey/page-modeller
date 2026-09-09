@@ -11,9 +11,9 @@ import { frameworkById } from '../frameworks';
 import type { TabModel } from '../model';
 import { generatePlaywrightPageObject, generatePlaywrightLocators } from './playwright-ts';
 import { generatePlaywrightPythonPageObject, generatePlaywrightPythonLocators } from './playwright-python';
-import { generateSeleniumJava, generateSeleniumJavaLocators } from './selenium-java';
-import { generateSeleniumCSharp, generateSeleniumCSharpLocators } from './selenium-csharp';
-import { generateSeleniumPython, generateSeleniumPythonLocators } from './selenium-python';
+import { generateSeleniumJava, generateSeleniumJavaLocators, generateSeleniumJavaPageObject } from './selenium-java';
+import { generateSeleniumCSharp, generateSeleniumCSharpLocators, generateSeleniumCSharpPageObject } from './selenium-csharp';
+import { generateSeleniumPython, generateSeleniumPythonLocators, generateSeleniumPythonPageObject } from './selenium-python';
 import { generatePuppeteerPageObject, generatePuppeteerLocators } from './puppeteer';
 
 export interface OutputShape {
@@ -33,9 +33,23 @@ const locators = (generate: OutputShape['generate']): OutputShape => ({ id: 'loc
 const SHAPES: Record<string, readonly OutputShape[]> = {
   'playwright-ts': [pageObject(generatePlaywrightPageObject), locators(generatePlaywrightLocators)],
   'playwright-python': [pageObject(generatePlaywrightPythonPageObject), locators(generatePlaywrightPythonLocators)],
-  'selenium-java': [methods(generateSeleniumJava), locators(generateSeleniumJavaLocators)],
-  'selenium-csharp': [methods(generateSeleniumCSharp), locators(generateSeleniumCSharpLocators)],
-  'selenium-python': [methods(generateSeleniumPython), locators(generateSeleniumPythonLocators)],
+  // Methods stays the default: it is what v2.5.1 produced, and the wrapper is
+  // only useful once you have settled on a class per page.
+  'selenium-java': [
+    methods(generateSeleniumJava),
+    pageObject(generateSeleniumJavaPageObject),
+    locators(generateSeleniumJavaLocators),
+  ],
+  'selenium-csharp': [
+    methods(generateSeleniumCSharp),
+    pageObject(generateSeleniumCSharpPageObject),
+    locators(generateSeleniumCSharpLocators),
+  ],
+  'selenium-python': [
+    methods(generateSeleniumPython),
+    pageObject(generateSeleniumPythonPageObject),
+    locators(generateSeleniumPythonLocators),
+  ],
   'puppeteer': [pageObject(generatePuppeteerPageObject), locators(generatePuppeteerLocators)],
 };
 

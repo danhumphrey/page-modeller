@@ -11,6 +11,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Generated.cs" />
+    <!-- The page-object shape brings its own `using` lines, which C# requires
+         before anything else, so it cannot share a file with the fragments. -->
+    <Compile Include="GeneratedPageObject.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Selenium.WebDriver" Version="4.27.0" />

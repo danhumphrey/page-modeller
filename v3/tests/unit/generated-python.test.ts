@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { generatePlaywrightPythonPageObject, generatePlaywrightPythonLocators } from '../../src/generators/playwright-python';
-import { generateSeleniumPython, generateSeleniumPythonLocators } from '../../src/generators/selenium-python';
+import { generateSeleniumPython, generateSeleniumPythonLocators, generateSeleniumPythonPageObject } from '../../src/generators/selenium-python';
 import { playwrightExpr, playwrightPyExpr } from '../../src/locators/display';
 import { frameworkById } from '../../src/frameworks';
 import type { LocatorCandidate } from '../../src/engine/types';
@@ -62,6 +62,9 @@ describe.skipIf(!hasPython)('the generated Python is Python', () => {
     ['playwright locators', generatePlaywrightPythonLocators(full('playwright-python'))],
     ['selenium methods', generateSeleniumPython(full('selenium-python'))],
     ['selenium locators', generateSeleniumPythonLocators(full('selenium-python'))],
+    ['selenium page object', generateSeleniumPythonPageObject(full('selenium-python'))],
+    ['selenium page object, empty', generateSeleniumPythonPageObject(modelOf('selenium-python'))],
+    ['selenium page object, awkward values', generateSeleniumPythonPageObject(modelOf('selenium-python', ...nastySelenium))],
     ['playwright page object, awkward values', generatePlaywrightPythonPageObject(modelOf('playwright-python', ...nastyPlaywright))],
     ['selenium locators, awkward values', generateSeleniumPythonLocators(modelOf('selenium-python', ...nastySelenium))],
     ['selenium methods, awkward values', generateSeleniumPython(modelOf('selenium-python', ...nastySelenium))],
