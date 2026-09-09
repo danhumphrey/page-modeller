@@ -343,7 +343,10 @@ test('scanning a frame scans inside it, with the chain on every element (SPEC §
   await page.waitForLoadState('networkidle');
   await collectMessages(sw as never);
 
-  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'scan' }), tabId);
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'scan', nonce: 'test-nonce' }),
+    tabId
+  );
 
   // The frame element itself has to be the target, which means hitting its
   // BORDER: a click inside the box is routed to the child document, where the
@@ -354,24 +357,33 @@ test('scanning a frame scans inside it, with the chain on every element (SPEC §
   await page.mouse.down();
   await page.mouse.up();
 
-  await expect
-    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string }[] }).__picks))
-      .filter((m) => m.type === 'ELEMENTS_PICKED').length)
-    .toBe(1);
+  // Each frame reports its own haul, so two land: the frame and its child.
+  const hauls = async () => {
+    const all = await sw.evaluate(
+      () => (globalThis as unknown as { __picks: { type: string; results?: unknown[] }[] }).__picks
+    );
+    return all.filter((m) => m.type === 'ELEMENTS_PICKED');
+  };
+  await expect.poll(async () => (await hauls()).length, { message: 'the nested frame reports too' }).toBe(2);
 
-  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
-  const haul = (picks.find((m) => m.type === 'ELEMENTS_PICKED') as {
-    results: { suggestedName: string; framePath: { frame: { value: string } }[] }[];
-  }).results;
+  const results = (await hauls()).flatMap(
+    (m) => (m as { results: { suggestedName: string; framePath: { frame: { value: string } }[] }[] }).results
+  );
+  const paths = results.map((r) => r.framePath.map((s) => s.frame.value).join(' › '));
 
-  // The frame's own controls: an email field and a Submit.
-  expect(haul.length, haul.map((r) => r.suggestedName).join(', ')).toBeGreaterThanOrEqual(2);
-  // Every one of them carries the chain to the frame it was found in — the
-  // scan ran inside the frame, so the paths come out right for free.
-  for (const r of haul) {
-    expect(r.framePath.map((s) => s.frame.value)[0], r.suggestedName).toBe('#same-frame');
-  }
-  expect(haul.map((r) => r.suggestedName)).toContain('Submit');
+  // Choosing a frame means choosing its page, and a page includes what it
+  // embeds — so the grandchild's controls come too, two steps deep.
+  expect(paths, results.map((r) => r.suggestedName).join(', ')).toContain('#same-frame');
+  expect(paths).toContain('#same-frame › #deep-frame');
+
+  // The CVV field lives only in the deepest frame.
+  const cvv = results.find((r) => r.suggestedName === 'CVV');
+  expect(cvv, results.map((r) => r.suggestedName).join(', ')).toBeDefined();
+  expect(cvv!.framePath.map((s) => s.frame.value)).toEqual(['#same-frame', '#deep-frame']);
+
+  // And nothing from the main frame or a sibling: the scan started at a frame,
+  // it did not sweep the tab.
+  expect(paths.every((p) => p.startsWith('#same-frame'))).toBe(true);
 });
 
 test('the background relays panel messages, and reports an unreachable tab', async () => {

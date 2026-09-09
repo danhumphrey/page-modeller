@@ -282,7 +282,13 @@ async function startPicking(mode: PickMode) {
   const target = tabId.value ?? (await host.getTabId());
   tabId.value = target;
   if (target == null) return;
-  send(target, { type: 'START_PICKING', mode, includeHidden: settings.value.modelHiddenElements });
+  // One nonce per picking session, shared by every frame in the tab.
+  send(target, {
+    type: 'START_PICKING',
+    mode,
+    includeHidden: settings.value.modelHiddenElements,
+    nonce: Math.random().toString(36).slice(2),
+  });
   // Optimistic: TAB_UNREACHABLE resets it if the page cannot be reached.
   if (mode === 'scan') isScanning.value = true;
   else isAdding.value = true;

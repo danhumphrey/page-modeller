@@ -11,7 +11,12 @@ export type PanelToContent =
   // `includeHidden` is the modelHiddenElements setting (SPEC §14), passed in
   // rather than read in the page: the panel already has it, and a content
   // script reading storage would need its own access level.
-  | { type: 'START_PICKING'; mode: PickMode; includeHidden: boolean }
+  // `nonce` is shared by every frame in the tab for this picking session, and
+  // is how a frame recognises a scan request from its parent as ours. A page
+  // cannot read it — content scripts run in an isolated world — and it does not
+  // depend on the receiving frame still being armed, which a cascading scan
+  // cannot guarantee (SPEC §16).
+  | { type: 'START_PICKING'; mode: PickMode; includeHidden: boolean; nonce: string }
   | { type: 'STOP_PICKING' }
   // Overlay ownership. The content script runs in every frame and each draws
   // its own overlay; without a single owner, hovering down through nested

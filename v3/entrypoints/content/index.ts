@@ -15,6 +15,8 @@ export default defineContentScript({
     /** 'add' takes the element itself; 'scan' takes its interactive children. */
     let mode: PickMode = 'add';
     let includeHidden = false;
+    /** Shared by every frame in the tab for this picking session. */
+    let nonce = '';
     let box: HTMLDivElement | null = null;
     let label: HTMLDivElement | null = null;
     let current: Element | null = null;
@@ -253,19 +255,36 @@ export default defineContentScript({
     const SCAN_FRAME = '__pageModellerScanFrame';
 
     window.addEventListener('message', (e: MessageEvent) => {
-      if (!active || mode !== 'scan') return;
-      if (typeof e.data !== 'object' || e.data === null || !(e.data as Record<string, unknown>)[SCAN_FRAME]) return;
-      // Only from the document that embeds this one.
+      const data = e.data as Record<string, unknown> | null;
+      if (typeof data !== 'object' || data === null) return;
+      // Authenticated by the nonce, not by `active`: a cascading scan reaches
+      // frames after the background has already disarmed everyone, and a frame
+      // that refused then would be a hole in the middle of the tree.
+      if (!nonce || data[SCAN_FRAME] !== nonce) return;
       if (e.source !== window.parent) return;
       scanDocument();
     });
 
-    /** Everything interactive in THIS document, as one haul. */
+    /** Ask a nested frame to scan itself, and everything below it. */
+    function delegateScan(frame: Element) {
+      (frame as HTMLIFrameElement).contentWindow?.postMessage({ [SCAN_FRAME]: nonce }, '*');
+    }
+
+    /**
+     * Everything interactive in THIS document, plus everything in the frames
+     * below it. Choosing a frame means choosing its page, and a page includes
+     * what it embeds (SPEC §16) — stopping one level down was the surprise.
+     *
+     * Each frame reports its own haul, so the model simply gains rows as they
+     * arrive; nothing has to be collected back up the tree.
+     */
     function scanDocument() {
       const root = document.body ?? document.documentElement;
       const results = collectInteractive(root, includeHidden).map(generate);
+      const nested = Array.from(document.querySelectorAll('iframe, frame'));
       stop({ notify: false });
-      browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+      if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+      for (const frame of nested) delegateScan(frame);
     }
 
     /** Commit the current target. Shared by clicking and by Enter. */
@@ -285,7 +304,15 @@ export default defineContentScript({
       // every frame) and it knows its own frame path, which is exactly what
       // the elements need.
       if (mode === 'scan' && isFrame(target)) {
-        (target as HTMLIFrameElement).contentWindow?.postMessage({ [SCAN_FRAME]: true }, '*');
+        delegateScan(target);
+        return;
+      }
+
+      // Scanning a frame's own document means the same thing as scanning the
+      // frame: everything in it, frames below included. A smaller container
+      // inside it does not, which is the boundary rule (SPEC §16).
+      if (mode === 'scan' && (target === document.body || target === document.documentElement)) {
+        scanDocument();
         return;
       }
 
@@ -414,6 +441,7 @@ export default defineContentScript({
       if (m.type === 'START_PICKING') {
         mode = m.mode;
         includeHidden = m.includeHidden;
+        nonce = m.nonce;
         start();
       }
       // notify: false — STOP_PICKING only ever comes from the panel or from the

@@ -712,15 +712,22 @@ Scanning an `<iframe>` scans **inside** it. An iframe has no descendants in its 
 content is a separate document — so the obvious reading returns nothing at all, which is what it did.
 
 The frame scans itself rather than the parent reaching in: `contentDocument` throws across an origin,
-and the frame is armed already (`START_PICKING` reaches every frame) and knows its own path, so every
-element comes out with the right chain for free. The parent asks via `postMessage`, the one message this
-script accepts from another frame — isolated worlds do not isolate `postMessage`, so the handler also
-requires that a scan is genuinely in progress and that the sender is the parent. The worst a forged
-message can then do is what the user was already doing.
+and the frame knows its own path, so every element comes out with the right chain for free. The parent
+asks via `postMessage`, the one message this script accepts from another frame.
+
+**It cascades.** Choosing a frame means choosing its page, and a page includes what it embeds — so the
+scan carries on into frames below, however deep. Each frame reports its own haul, so the model simply
+gains rows as they arrive and nothing is collected back up the tree.
+
+Authenticated by a **nonce** carried in `START_PICKING`, shared by every frame in the tab for that
+picking session. Isolated worlds do not isolate `postMessage`, so a page could otherwise forge a scan;
+a page cannot read the nonce. Not by "is this frame still armed", which was the first attempt: a
+cascading scan reaches frames after the background has disarmed everyone, and a frame that refused then
+would be a hole in the middle of the tree.
 
 **A scan never crosses a frame boundary on its own.** Scanning a container that happens to hold frames
-gets that document's controls and stops; the frame's contents come only when you scan the frame itself,
-or something inside it. **[settled]**
+gets that document's controls and stops. A frame's contents come only when the scan is rooted at that
+frame — the frame element, or its document — and then everything below it is in scope. **[settled]**
 
 Descending automatically would mean scanning `<main>` on an ordinary page could sweep in an embedded
 third-party app, an ad, or a sandboxed widget nobody asked to model — and those are exactly the frames
