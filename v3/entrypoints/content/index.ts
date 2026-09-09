@@ -1,7 +1,9 @@
-import { generate, resolveCandidate } from '@/src/engine/candidates';
+import { framePathOf, generate, resolveCandidate } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
 import { collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
+import { frameSelector } from '@/src/locators/frames';
+import type { FrameStep } from '@/src/engine/types';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
 // on click, run the locator engine and report the result to the side panel.
@@ -13,6 +15,8 @@ export default defineContentScript({
     /** 'add' takes the element itself; 'scan' takes its interactive children. */
     let mode: PickMode = 'add';
     let includeHidden = false;
+    /** Shared by every frame in the tab for this picking session. */
+    let nonce = '';
     let box: HTMLDivElement | null = null;
     let label: HTMLDivElement | null = null;
     let current: Element | null = null;
@@ -20,6 +24,9 @@ export default defineContentScript({
     let hovered: Element | null = null;
 
     const Z = '2147483647';
+
+    /** Identifies this frame to the background; see OVERLAY_SHOWN. */
+    const frameToken = Math.random().toString(36).slice(2);
 
     function ensureOverlay() {
       if (box) return;
@@ -47,6 +54,9 @@ export default defineContentScript({
         whiteSpace: 'nowrap',
       } as CSSStyleDeclaration);
       document.documentElement.append(box, label);
+      // Only on creation, so this is one message per frame entered, not one
+      // per mousemove.
+      browser.runtime.sendMessage({ type: 'OVERLAY_SHOWN', token: frameToken }).catch(() => {});
     }
 
     function removeOverlay() {
@@ -233,6 +243,50 @@ export default defineContentScript({
       highlight(el);
     };
 
+    const isFrame = (el: Element) => el.localName === 'iframe' || el.localName === 'frame';
+
+    /**
+     * Marks the one message this script accepts from another frame. Isolated
+     * worlds do not isolate postMessage, so a page could forge this — which is
+     * why the handler also requires that a scan is genuinely in progress in
+     * this frame. The worst a forgery can then do is what the user was already
+     * doing.
+     */
+    const SCAN_FRAME = '__pageModellerScanFrame';
+
+    window.addEventListener('message', (e: MessageEvent) => {
+      const data = e.data as Record<string, unknown> | null;
+      if (typeof data !== 'object' || data === null) return;
+      // Authenticated by the nonce, not by `active`: a cascading scan reaches
+      // frames after the background has already disarmed everyone, and a frame
+      // that refused then would be a hole in the middle of the tree.
+      if (!nonce || data[SCAN_FRAME] !== nonce) return;
+      if (e.source !== window.parent) return;
+      scanDocument();
+    });
+
+    /** Ask a nested frame to scan itself, and everything below it. */
+    function delegateScan(frame: Element) {
+      (frame as HTMLIFrameElement).contentWindow?.postMessage({ [SCAN_FRAME]: nonce }, '*');
+    }
+
+    /**
+     * Everything interactive in THIS document, plus everything in the frames
+     * below it. Choosing a frame means choosing its page, and a page includes
+     * what it embeds (SPEC §16) — stopping one level down was the surprise.
+     *
+     * Each frame reports its own haul, so the model simply gains rows as they
+     * arrive; nothing has to be collected back up the tree.
+     */
+    function scanDocument() {
+      const root = document.body ?? document.documentElement;
+      const results = collectInteractive(root, includeHidden).map(generate);
+      const nested = Array.from(document.querySelectorAll('iframe, frame'));
+      stop({ notify: false });
+      if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+      for (const frame of nested) delegateScan(frame);
+    }
+
     /** Commit the current target. Shared by clicking and by Enter. */
     function pickCurrent() {
       if (!active || !current) return;
@@ -240,6 +294,27 @@ export default defineContentScript({
       // Both modes are one-shot (SPEC §4) — stop before reporting, so the
       // overlay is gone by the time the panel re-renders.
       stop({ notify: false });
+
+      // Scanning a frame has to be done BY that frame. An <iframe> has no
+      // descendants in this document — its content is a separate document —
+      // so collectInteractive finds nothing and the scan silently returns
+      // empty. Cross-origin it is worse than awkward: contentDocument throws.
+      //
+      // So the frame scans itself. It is already armed (START_PICKING reaches
+      // every frame) and it knows its own frame path, which is exactly what
+      // the elements need.
+      if (mode === 'scan' && isFrame(target)) {
+        delegateScan(target);
+        return;
+      }
+
+      // Scanning a frame's own document means the same thing as scanning the
+      // frame: everything in it, frames below included. A smaller container
+      // inside it does not, which is the boundary rule (SPEC §16).
+      if (mode === 'scan' && (target === document.body || target === document.documentElement)) {
+        scanDocument();
+        return;
+      }
 
       // Scan takes the container's interactive descendants, never the container
       // itself: you are modelling what is inside the section you chose.
@@ -310,10 +385,25 @@ export default defineContentScript({
       moveTarget(e.key === 'ArrowUp' ? 'up' : 'down');
     };
 
+    /**
+     * The pointer left this document — into a child frame, into the parent, or
+     * off the window. This script runs in every frame (`allFrames`), so each
+     * one draws its own overlay and, without this, leaves it behind: hovering
+     * through nested frames stacked a highlight and a breadcrumb in every frame
+     * on the way. Only the document under the pointer should show one.
+     *
+     * A null `relatedTarget` is what distinguishes leaving the document from
+     * moving between two elements inside it.
+     */
+    const onOut = (e: MouseEvent) => {
+      if (active && !e.relatedTarget) removeOverlay();
+    };
+
     function start() {
       if (active) return;
       active = true;
       document.addEventListener('mousemove', onMove, true);
+      document.addEventListener('mouseout', onOut, true);
       document.addEventListener('click', onClick, true);
       document.addEventListener('keydown', onKey, true);
     }
@@ -326,10 +416,23 @@ export default defineContentScript({
       if (!active) return;
       active = false;
       document.removeEventListener('mousemove', onMove, true);
+      document.removeEventListener('mouseout', onOut, true);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKey, true);
       removeOverlay();
       if (notify) browser.runtime.sendMessage({ type: 'PICKING_STOPPED' }).catch(() => {});
+    }
+
+    /**
+     * Is this frame the one the element was picked in? Compared by selector
+     * rather than by identity: the path in the model was built by this same
+     * code, so the strings line up, including the `:root` marker that stands
+     * for a cross-origin break.
+     */
+    function samePath(mine: FrameStep[], theirs: FrameStep[] | undefined): boolean {
+      const other = theirs ?? [];
+      if (mine.length !== other.length) return false;
+      return mine.every((step, i) => frameSelector(step) === frameSelector(other[i]));
     }
 
     browser.runtime.onMessage.addListener((msg: unknown) => {
@@ -338,19 +441,35 @@ export default defineContentScript({
       if (m.type === 'START_PICKING') {
         mode = m.mode;
         includeHidden = m.includeHidden;
+        nonce = m.nonce;
         start();
       }
-      else if (m.type === 'STOP_PICKING') stop();
+      // notify: false — STOP_PICKING only ever comes from the panel or from the
+      // background disarming the other frames, and both already know.
+      else if (m.type === 'STOP_PICKING') stop({ notify: false });
+      else if (m.type === 'OVERLAY_OWNER') {
+        // Some other frame is under the pointer now.
+        if (m.token !== frameToken) removeOverlay();
+      }
       else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
       else if (m.type === 'MOVE_TARGET') moveTarget(m.direction);
       else if (m.type === 'PICK_TARGET') pickCurrent();
       else if (m.type === 'HIGHLIGHT') {
-        // This script runs in every frame, but only the top one answers — a
-        // sub-frame with no matches would otherwise report 0 over the top
-        // frame's real count. Decided here rather than by the panel passing
-        // frameId, so the send is shaped exactly like the ones that work on
-        // both browsers. Cross-frame highlighting arrives with SPEC §16.
-        if (window.top !== window) return;
+        // This script runs in every frame and every frame hears this, so
+        // exactly one must answer or a sub-frame's 0 lands on top of the real
+        // count. The one that answers is the frame the element was picked in:
+        // each recomputes its own path and compares (SPEC §16).
+        //
+        // Decided here rather than by the panel passing a frameId, so the send
+        // is shaped exactly like the ones that work on both browsers — a
+        // DevTools panel on Firefox has no `browser.tabs` to target one with.
+        // Every frame drops whatever it was showing, including the frames
+        // that will not answer: the previous highlight may have been in one of
+        // them, and clicking a second eye while the first was still up left
+        // both elements marked. Cleared before the path check, or only the
+        // answering frame would forget.
+        clearMarks();
+        if (!samePath(framePathOf(window), m.framePath)) return;
         const targets = resolveCandidate(document, m.candidate);
         const { hidden } = highlightAll(targets);
         // Answered as a message, not a reply — sendResponse is not portable.

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Frames</title></head>
+<body>
+  <nav aria-label="Fixtures" style="font: 12px/1.6 ui-monospace, monospace; padding: 6px 8px; border-bottom: 1px solid #ddd; margin-bottom: 12px">
+    fixtures: <a href="login.html">login</a> · <a href="widgets.html">widgets</a> · <a href="edgecases.html">edgecases</a> ·
+    <a href="ambiguous.html">ambiguous</a> · <strong>frames</strong> · <a href="frameset.html">frameset</a>
+  </nav>
+  <main style="font: 14px/1.5 system-ui, sans-serif; padding: 0 8px">
+    <h1 data-spike="top-heading">Frames</h1>
+
+    <!-- The control: same accessible name as the Submit in every frame below,
+         so a locator without a frame path is ambiguous and one with it is not. -->
+    <button data-spike="top-submit">Submit</button>
+
+    <h2>Same-origin iframe</h2>
+    <!-- Nothing exotic. Also contains a nested iframe, so the deepest elements
+         need a two-step path. -->
+    <iframe id="same-frame" title="Same origin" src="frames-child.html" width="460" height="230"></iframe>
+
+    <h2>Cross-origin iframe</h2>
+    <!-- 127.0.0.1 and localhost are different origins to the browser while
+         being the same server, so this is genuinely cross-origin without a
+         second process. The server substitutes __CROSS_ORIGIN__ at request
+         time, so it follows FIXTURES_PORT. -->
+    <iframe id="cross-frame" title="Cross origin" src="__CROSS_ORIGIN__/frames-child.html" width="460" height="230"></iframe>
+
+    <h2>srcdoc iframe</h2>
+    <!-- No URL at all: same-origin, but nothing to identify it by except the
+         element itself. Common in widget embeds. -->
+    <iframe
+      id="srcdoc-frame"
+      title="Srcdoc"
+      width="460"
+      height="90"
+      srcdoc="&lt;body style=&quot;font:14px system-ui&quot;&gt;&lt;label&gt;Coupon &lt;input name=&quot;coupon&quot; data-spike=&quot;srcdoc-coupon&quot;&gt;&lt;/label&gt; &lt;button data-spike=&quot;srcdoc-submit&quot;&gt;Submit&lt;/button&gt;&lt;/body&gt;"
+    ></iframe>
+
+    <h2>Sandboxed iframe</h2>
+    <!-- An opaque origin, which is what an ad or a third-party widget usually
+         is. Scripts allowed, so a content script still runs inside. -->
+    <iframe
+      id="sandboxed-frame"
+      title="Sandboxed"
+      sandbox="allow-scripts"
+      width="460"
+      height="90"
+      srcdoc="&lt;body style=&quot;font:14px system-ui&quot;&gt;&lt;button data-spike=&quot;sandbox-submit&quot;&gt;Submit&lt;/button&gt;&lt;/body&gt;"
+    ></iframe>
+
+    <h2>Two frames that look alike</h2>
+    <!-- Identical src and no id: the frame itself needs a positional or
+         structural locator, which is the case a frame path can get wrong. -->
+    <iframe class="twin" title="Twin one" src="frames-grandchild.html" width="220" height="120"></iframe>
+    <iframe class="twin" title="Twin two" src="frames-grandchild.html" width="220" height="120"></iframe>
+  </main>
+</body>
+</html>

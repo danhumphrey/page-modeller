@@ -1,4 +1,4 @@
-import type { ElementResult, LocatorCandidate } from './engine/types';
+import type { ElementResult, FrameStep, LocatorCandidate } from './engine/types';
 import type { TabModel } from './model';
 
 // Messages panel → content (sent via browser.tabs.sendMessage to the active tab).
@@ -11,8 +11,21 @@ export type PanelToContent =
   // `includeHidden` is the modelHiddenElements setting (SPEC §14), passed in
   // rather than read in the page: the panel already has it, and a content
   // script reading storage would need its own access level.
-  | { type: 'START_PICKING'; mode: PickMode; includeHidden: boolean }
+  // `nonce` is shared by every frame in the tab for this picking session, and
+  // is how a frame recognises a scan request from its parent as ours. A page
+  // cannot read it — content scripts run in an isolated world — and it does not
+  // depend on the receiving frame still being armed, which a cascading scan
+  // cannot guarantee (SPEC §16).
+  | { type: 'START_PICKING'; mode: PickMode; includeHidden: boolean; nonce: string }
   | { type: 'STOP_PICKING' }
+  // Overlay ownership. The content script runs in every frame and each draws
+  // its own overlay; without a single owner, hovering down through nested
+  // frames leaves a highlight and a breadcrumb in every frame on the way.
+  // Pointer events cannot decide it — a parent frame gets no mouseout when the
+  // pointer crosses into a child — so a frame announces that it has drawn and
+  // the background tells the others to clear.
+  | { type: 'OVERLAY_SHOWN'; token: string }
+  | { type: 'OVERLAY_OWNER'; token: string }
   // Walk the pick target up or down the DOM (SPEC §4). Sent by the panel
   // because focus is there after clicking Add Element, so the page never sees
   // the keydown — the same reason the panel also handles Escape.
@@ -21,7 +34,9 @@ export type PanelToContent =
   | { type: 'PICK_TARGET' }
   // View Matched Elements (SPEC §8). Answered by HIGHLIGHT_RESULT, not by a
   // reply — see the note on ContentToPanel below.
-  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate }
+  // framePath says WHICH document to resolve in: every frame hears this, and
+  // the one whose own path matches is the one that answers (SPEC §16).
+  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate; framePath?: FrameStep[] }
   // Clear the highlight early — the user dismissed the match count.
   | { type: 'CLEAR_HIGHLIGHT' };
 

@@ -6,7 +6,7 @@ import { generateSeleniumPython, generateSeleniumPythonLocators, generateSeleniu
 import { playwrightExpr, playwrightPyExpr } from '../../src/locators/display';
 import { frameworkById } from '../../src/frameworks';
 import type { LocatorCandidate } from '../../src/engine/types';
-import { modelOf, everyTypeFor, ALL_BUCKETS } from './fixtures/model';
+import { modelOf, everyTypeFor, ALL_BUCKETS, FRAMED_BUCKETS } from './fixtures/model';
 
 const hasPython = (() => {
   try {
@@ -54,7 +54,7 @@ const nastyPlaywright = [
 ];
 
 /** Every method bucket and every locator type the framework offers. */
-const full = (id: string) => modelOf(id, ...ALL_BUCKETS, ...everyTypeFor(id));
+const full = (id: string) => modelOf(id, ...ALL_BUCKETS, ...FRAMED_BUCKETS, ...everyTypeFor(id));
 
 describe.skipIf(!hasPython)('the generated Python is Python', () => {
   const cases: Array<[string, string]> = [

@@ -58,7 +58,11 @@ async function collectMessages(sw: { evaluate: (fn: never, arg?: unknown) => Pro
     g.__picks = [];
     if (g.__collecting) return;
     g.__collecting = true;
-    chrome.runtime.onMessage.addListener((m) => g.__picks.push(m));
+    // OVERLAY_SHOWN is plumbing — a frame telling the background it drew, so
+    // the other frames can clear. The panel ignores it and so does this.
+    chrome.runtime.onMessage.addListener((m) => {
+      if ((m as { type?: string })?.type !== 'OVERLAY_SHOWN') g.__picks.push(m);
+    });
   });
 }
 
@@ -92,6 +96,155 @@ test('picking is one-shot and reports a named element', async () => {
   await page.waitForTimeout(500);
   const after = await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks.length);
   expect(after, 'picking stopped itself after one element').toBe(1);
+});
+
+test('one-shot means one pick per TAB, not one per frame', async () => {
+  // The content script runs in every frame, so START_PICKING arms every frame.
+  // Only the clicked frame used to stop itself, leaving the rest live: one pick
+  // in a framed page recorded three elements as the user carried on clicking.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frames-oneshot', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  expect(page.frames().length, 'the fixture really is framed').toBeGreaterThan(3);
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+
+  // Hover the top frame first, so it draws an overlay of its own, then pick
+  // inside a child frame.
+  await page.getByRole('heading', { name: 'Frames', exact: true }).hover();
+  const child = page.frameLocator('#same-frame');
+  await child.getByRole('button', { name: 'Submit', exact: true }).hover();
+  await child.getByRole('button', { name: 'Submit', exact: true }).click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+
+  // Clicking on in other frames must add nothing: they were disarmed too.
+  await page.getByRole('button', { name: 'Submit', exact: true }).click();
+  await page.frameLocator('#same-frame').frameLocator('#deep-frame').getByRole('button', { name: 'Submit', exact: true }).click();
+  await page.waitForTimeout(500);
+  const after = await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks.length);
+  expect(after, 'every frame disarmed after the first pick').toBe(1);
+
+  // And no frame is left wearing an overlay.
+  for (const frame of page.frames()) {
+    const left = await frame.locator('[data-page-modeller="label"]').count().catch(() => 0);
+    expect(left, `overlay left behind in ${frame.url()}`).toBe(0);
+  }
+});
+
+test('only the frame under the pointer wears an overlay', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frames-overlay', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+
+  const labels = async () => {
+    let n = 0;
+    for (const frame of page.frames()) n += await frame.locator('[data-page-modeller="label"]').count().catch(() => 0);
+    return n;
+  };
+
+  await page.getByRole('heading', { name: 'Frames', exact: true }).hover();
+  await expect.poll(labels).toBe(1);
+
+  // Moving into a child frame must hand the overlay over, not add a second.
+  await page.frameLocator('#same-frame').getByRole('heading', { name: 'Payment' }).hover();
+  await expect.poll(labels, { message: 'the parent kept its overlay' }).toBe(1);
+
+  // And two deep.
+  await page.frameLocator('#same-frame').frameLocator('#deep-frame').getByRole('button', { name: 'Submit', exact: true }).hover();
+  await expect.poll(labels, { message: 'an ancestor frame kept its overlay' }).toBe(1);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'STOP_PICKING' }), tabId);
+  await expect.poll(labels).toBe(0);
+});
+
+test('a pick inside a frame carries the chain, and the chain resolves (SPEC §16)', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-path', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  // Two frames deep, and its accessible name is shared with eight other
+  // buttons across the tree — so the path is the only thing that can separate
+  // them, which is what makes this worth asserting.
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+  const deep = page.frameLocator('#same-frame').frameLocator('#deep-frame');
+  await deep.getByRole('button', { name: 'Submit', exact: true }).hover();
+  await deep.getByRole('button', { name: 'Submit', exact: true }).click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = picks[0].result as { framePath: { frame: { value: string }; opaque?: boolean }[] };
+
+  expect(result.framePath.map((s) => s.frame.value), 'outermost first').toEqual(['#same-frame', '#deep-frame']);
+  expect(result.framePath.some((s) => s.opaque), 'same-origin, so the chain is complete').toBe(false);
+
+  // The whole point: rebuild the locator the generator would emit and check
+  // Playwright lands on the element that was clicked, not one of the eight
+  // others with the same name.
+  let chain = page.frameLocator(result.framePath[0].frame.value);
+  for (const step of result.framePath.slice(1)) chain = chain.frameLocator(step.frame.value);
+  const resolved = chain.getByRole('button', { name: 'Submit', exact: true });
+  await expect(resolved).toHaveCount(1);
+  await expect(resolved).toHaveAttribute('data-spike', 'deep-submit');
+});
+
+test('a pick in the main frame still has no chain', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-path-main', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+  await page.getByRole('button', { name: 'Submit', exact: true }).hover();
+  await page.getByRole('button', { name: 'Submit', exact: true }).click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  expect((picks[0].result as { framePath: unknown[] }).framePath).toEqual([]);
+});
+
+test('a pick in a cross-origin frame declares the break rather than lying', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-path-cross', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+  const cross = page.frameLocator('#cross-frame');
+  await cross.getByRole('button', { name: 'Submit', exact: true }).hover();
+  await cross.getByRole('button', { name: 'Submit', exact: true }).click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = picks[0].result as { framePath: { opaque?: boolean }[] };
+
+  // window.frameElement is unreadable across an origin, so the chain cannot be
+  // completed from inside. Saying so beats a path that starts halfway down and
+  // looks complete.
+  expect(result.framePath.length).toBeGreaterThan(0);
+  expect(result.framePath.some((s) => s.opaque), 'the break is declared').toBe(true);
 });
 
 test('highlighting reports its count as a message, and Close clears it', async () => {
@@ -130,6 +283,148 @@ test('highlighting reports its count as a message, and Close clears it', async (
   // Close dismisses the highlight, not just the message.
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'CLEAR_HIGHLIGHT' }), tabId);
   await expect(marks).toHaveCount(0);
+});
+
+test('the eye finds a framed element, and only its own frame answers (SPEC §16)', async () => {
+  // Before this, only the top frame answered a HIGHLIGHT, so anything inside a
+  // frame reported "0 elements match that locator" while its locator was fine.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-eye', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  const results = async () =>
+    (await sw.evaluate(
+      () => (globalThis as unknown as { __picks: { type: string; count?: number }[] }).__picks
+    )).filter((m) => m.type === 'HIGHLIGHT_RESULT');
+
+  // Two frames deep. `#deep-cvv` exists only there.
+  await sw.evaluate(
+    (id) =>
+      chrome.tabs.sendMessage(id, {
+        type: 'HIGHLIGHT',
+        candidate: { kind: 'css', value: '#deep-cvv' },
+        framePath: [{ frame: { kind: 'css', value: '#same-frame' } }, { frame: { kind: 'css', value: '#deep-frame' } }],
+      }),
+    tabId
+  );
+  await expect.poll(async () => (await results()).length, { message: 'exactly one frame answers' }).toBe(1);
+  expect((await results())[0].count).toBe(1);
+
+  // The same locator with no path is a main-frame question, and the main frame
+  // has no #deep-cvv — 0 is the right answer, from one frame only.
+  await sw.evaluate(() => ((globalThis as unknown as { __picks: unknown[] }).__picks = []));
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: '#deep-cvv' } }),
+    tabId
+  );
+  await expect.poll(async () => (await results()).length).toBe(1);
+  expect((await results())[0].count).toBe(0);
+
+  // And a main-frame element still works, which is the regression to fear.
+  await sw.evaluate(() => ((globalThis as unknown as { __picks: unknown[] }).__picks = []));
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: '[data-spike=\"top-heading\"]' }, framePath: [] }),
+    tabId
+  );
+  await expect.poll(async () => (await results()).length).toBe(1);
+  expect((await results())[0].count).toBe(1);
+});
+
+test('scanning a frame scans inside it, with the chain on every element (SPEC §16)', async () => {
+  // An <iframe> has no descendants in its parent's document, so scanning one
+  // used to return nothing at all.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-scan', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'scan', nonce: 'test-nonce' }),
+    tabId
+  );
+
+  // The frame element itself has to be the target, which means hitting its
+  // BORDER: a click inside the box is routed to the child document, where the
+  // child's own picker handles it. Playwright's `position` is relative to the
+  // PADDING box, so it can never land there — raw coordinates can.
+  const box = (await page.locator('#same-frame').boundingBox())!;
+  await page.mouse.move(box.x + 1, box.y + 1);
+  await page.mouse.down();
+  await page.mouse.up();
+
+  // Each frame reports its own haul, so two land: the frame and its child.
+  const hauls = async () => {
+    const all = await sw.evaluate(
+      () => (globalThis as unknown as { __picks: { type: string; results?: unknown[] }[] }).__picks
+    );
+    return all.filter((m) => m.type === 'ELEMENTS_PICKED');
+  };
+  await expect.poll(async () => (await hauls()).length, { message: 'the nested frame reports too' }).toBe(2);
+
+  const results = (await hauls()).flatMap(
+    (m) => (m as { results: { suggestedName: string; framePath: { frame: { value: string } }[] }[] }).results
+  );
+  const paths = results.map((r) => r.framePath.map((s) => s.frame.value).join(' › '));
+
+  // Choosing a frame means choosing its page, and a page includes what it
+  // embeds — so the grandchild's controls come too, two steps deep.
+  expect(paths, results.map((r) => r.suggestedName).join(', ')).toContain('#same-frame');
+  expect(paths).toContain('#same-frame › #deep-frame');
+
+  // The CVV field lives only in the deepest frame.
+  const cvv = results.find((r) => r.suggestedName === 'CVV');
+  expect(cvv, results.map((r) => r.suggestedName).join(', ')).toBeDefined();
+  expect(cvv!.framePath.map((s) => s.frame.value)).toEqual(['#same-frame', '#deep-frame']);
+
+  // And nothing from the main frame or a sibling: the scan started at a frame,
+  // it did not sweep the tab.
+  expect(paths.every((p) => p.startsWith('#same-frame'))).toBe(true);
+});
+
+test('a new highlight clears the last one, in whichever frame it was', async () => {
+  // Highlights last ~3s. Clicking a second eye inside that window left both
+  // elements marked — and across frames, the stale one was in a document the
+  // answering frame could not reach.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'highlight-clears', 'frames.html');
+  await page.waitForLoadState('networkidle');
+
+  const marked = async () => {
+    let n = 0;
+    for (const f of page.frames()) n += await f.locator('[data-page-modeller="highlight"]').count().catch(() => 0);
+    return n;
+  };
+
+  // First: something in the main frame.
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: '[data-spike="top-submit"]' }, framePath: [] }),
+    tabId
+  );
+  await expect.poll(marked).toBe(1);
+
+  // Then, well within the 3s window, something two frames deep.
+  await sw.evaluate(
+    (id) =>
+      chrome.tabs.sendMessage(id, {
+        type: 'HIGHLIGHT',
+        candidate: { kind: 'css', value: '#deep-cvv' },
+        framePath: [{ frame: { kind: 'css', value: '#same-frame' } }, { frame: { kind: 'css', value: '#deep-frame' } }],
+      }),
+    tabId
+  );
+  // Wait for the NEW mark to appear, then count once, immediately. Polling for
+  // the total to fall to 1 would pass without the fix by simply outlasting the
+  // stale mark's own 3s timer — which is exactly what it did.
+  const deep = page.frameLocator('#same-frame').frameLocator('#deep-frame');
+  await expect(deep.locator('[data-page-modeller="highlight"]')).toHaveCount(1, { timeout: 2000 });
+  expect(await marked(), 'a frame that did not answer kept its mark').toBe(1);
 });
 
 test('the background relays panel messages, and reports an unreachable tab', async () => {
@@ -560,7 +855,11 @@ test('arrow keys walk the target up and down the DOM', async () => {
     g.__picks = [];
     if (g.__collecting) return;
     g.__collecting = true;
-    chrome.runtime.onMessage.addListener((m) => g.__picks.push(m));
+    // OVERLAY_SHOWN is plumbing — a frame telling the background it drew, so
+    // the other frames can clear. The panel ignores it and so does this.
+    chrome.runtime.onMessage.addListener((m) => {
+      if ((m as { type?: string })?.type !== 'OVERLAY_SHOWN') g.__picks.push(m);
+    });
   });
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
 

@@ -677,7 +677,154 @@ extension is reloaded — which is every rebuild in dev — and the menu is then
 
 ## 16. Frames
 
-New in v3 — v2.5.1 has no frame support. An element records the **frame path**: the ordered list of
+New in v3 — v2.5.1 has no frame support. An element records its **frame path**: the frames containing
+it, outermost first, each identified by its own generated locator. **[settled]**
+
+A frame is located by the ordinary candidate machinery — the document holding an `<iframe>` is just a
+document — with one restriction: **css or xpath only**. `frameLocator` takes a *selector*, not a
+locator, and so does every other frame API in reach, so `getByTitle('Payment')` cannot address a frame
+however well it identifies one. `cssFor` already prefers a test id, then a name, then an id (§7), so
+little is lost.
+
+`window.frameElement` builds the chain, and its limit is the hard case: it is readable only when the
+parent is same-origin. Across an origin it throws, and a document cannot see what embeds it — so the
+chain stops there and is **marked opaque**. A path that starts halfway down and looks complete is worse
+than one that admits it is partial. **[settled]**
+
+### Carrying it, or admitting you cannot **[settled]**
+
+| Target | How |
+|---|---|
+| Playwright | `frameLocator(…)` chains, so the locator is self-contained — nothing to explain, nothing to switch |
+| Selenium | methods switch in and out for themselves; the locators shape gets the `switchTo` chain as a comment |
+| Puppeteer | `page.locator` is page-scoped and there is no `frameLocator`: a comment walks down to the frame |
+
+The comment carries the **code**, not an instruction to go and write it: **[settled]**
+
+```java
+// In frame: #same-frame › #deep-frame
+// driver.switchTo().defaultContent();
+// driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));
+// driver.switchTo().frame(driver.findElement(By.cssSelector("#deep-frame")));
+private final By emailInput = By.name("email");
+```
+
+```js
+// In frame: #same-frame › #deep-frame
+// const frame1 = await (await page.$('#same-frame')).contentFrame();
+// const frame2 = await (await frame1.$('#deep-frame')).contentFrame();
+// Then use frame2.locator(...) in place of page.locator(...).
+```
+
+An **opaque** chain gets the warning and *no* switch to paste: half a chain would switch into the wrong
+document and look like it worked.
+
+### Selenium methods switch for themselves **[settled]**
+
+`switchTo()` mutates driver state for everything after it, so a method that leaves the driver inside a
+frame breaks the next one. Every framed method switches to default content, into the chain, acts, and
+switches back **in a `finally`** — which is what makes generated methods safe to call in any order.
+
+```java
+public void clickSubmit() {
+    driver.switchTo().defaultContent();
+    driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));
+    driver.switchTo().frame(driver.findElement(By.cssSelector("#deep-frame")));
+    try {
+        driver.findElement(By.id("go")).click();
+    } finally {
+        driver.switchTo().defaultContent();
+    }
+}
+```
+
+**A framed element gets no `get{Name}Element()`** — nor a `Select` helper, which holds one. A
+`WebElement` goes stale the moment the driver switches away, so handing one back is handing back a
+guaranteed failure. The element is found inline instead, inside the switch.
+
+The banner carries the frame as **context only**: repeating the switch there is noise the reader has to
+check against the code below it.
+
+Two things are deliberately not wrapped: a method that never touches the driver (the convenience
+overload just calls its sibling, which switches for itself), and an element behind an **opaque** chain,
+which keeps its getter and leaves the switch to the caller — there is no correct switch to emit.
+
+Without that comment a framed Selenium or Puppeteer locator is indistinguishable from a main-frame one
+and silently resolves against the wrong document.
+
+The **model table** shows the chain for the same reason — two rows differing only by frame otherwise
+read identically. The **Edit dialog** shows it too, read-only: the chain is where the element *is*, not
+part of how it is found within that frame, so editing it would be editing the page.
+
+### Scanning a frame **[settled]**
+
+Scanning an `<iframe>` scans **inside** it. An iframe has no descendants in its parent's document — its
+content is a separate document — so the obvious reading returns nothing at all, which is what it did.
+
+The frame scans itself rather than the parent reaching in: `contentDocument` throws across an origin,
+and the frame knows its own path, so every element comes out with the right chain for free. The parent
+asks via `postMessage`, the one message this script accepts from another frame.
+
+**It cascades.** Choosing a frame means choosing its page, and a page includes what it embeds — so the
+scan carries on into frames below, however deep. Each frame reports its own haul, so the model simply
+gains rows as they arrive and nothing is collected back up the tree.
+
+Authenticated by a **nonce** carried in `START_PICKING`, shared by every frame in the tab for that
+picking session. Isolated worlds do not isolate `postMessage`, so a page could otherwise forge a scan;
+a page cannot read the nonce. Not by "is this frame still armed", which was the first attempt: a
+cascading scan reaches frames after the background has disarmed everyone, and a frame that refused then
+would be a hole in the middle of the tree.
+
+**A scan never crosses a frame boundary on its own.** Scanning a container that happens to hold frames
+gets that document's controls and stops. A frame's contents come only when the scan is rooted at that
+frame — the frame element, or its document — and then everything below it is in scope. **[settled]**
+
+Descending automatically would mean scanning `<main>` on an ordinary page could sweep in an embedded
+third-party app, an ad, or a sandboxed widget nobody asked to model — and those are exactly the frames
+whose locators are least likely to survive. Entering a frame is a decision, so it takes a click.
+
+### The eye **[settled]**
+
+**A new highlight clears the last one first, in every frame** — including the frames that will not
+answer, because the previous highlight may have been in one of them. Clicking a second eye inside the
+3-second window otherwise left both elements marked.
+
+Every frame hears a `HIGHLIGHT`, and exactly one must answer or a sub-frame's 0 lands on top of the real
+count. The one that answers is the frame the element was picked in: each recomputes its own path and
+compares. Before this, only the top frame answered, so anything inside a frame reported *0 elements
+match that locator* while its locator was perfectly good.
+
+### One picker, many frames **[settled]**
+
+The content script runs in every frame, so `START_PICKING` arms every frame. Two rules follow, and
+neither can be inferred from pointer events:
+
+- **One-shot is per tab, not per frame.** Only the clicked frame stops itself; the background disarms
+  the rest. Without that, one pick on a framed page recorded three elements as the user carried on
+  clicking.
+- **One overlay at a time.** A frame announces that it has drawn and the background tells the others to
+  clear. A parent frame gets *no* `mouseout` when the pointer crosses into a child, so hovering down
+  through nested frames otherwise left a highlight and a breadcrumb in every frame on the way.
+
+### Fixtures **[settled]**
+
+`tests/fixtures/frames.html` and `frameset.html`, exercising every shape a real page uses:
+
+| Frame | Why it is there |
+|---|---|
+| same-origin `iframe` | the ordinary case, and it nests one deeper |
+| cross-origin `iframe` | `127.0.0.1` against `localhost` — one server, two origins, no second process |
+| `srcdoc` | same-origin with no URL at all; nothing to identify it by but the element |
+| `sandbox="allow-scripts"` | an opaque origin, which is what a third-party widget usually is |
+| two identical `iframe`s | the frame itself needs a positional locator — the case a path can get wrong |
+| `frameset` / `frame` | `frame` is a different element from `iframe`; a selector for one misses the other |
+
+**Nine buttons across the tree share the accessible name *Submit*.** Without a frame path a locator
+cannot tell them apart, which is the property every frame test leans on.
+
+The fixtures are served over http, never `file://`: Chrome gives every `file://` document an opaque
+origin, so `localhost` against `127.0.0.1` would prove nothing. `scripts/serve-fixtures.mjs` substitutes
+the cross-origin base at request time, so it follows `FIXTURES_PORT`. An element records the **frame path**: the ordered list of
 iframes containing it, each identified by its own generated locator.
 
 ### Playwright

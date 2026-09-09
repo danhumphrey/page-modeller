@@ -1,0 +1,17 @@
+<!doctype html>
+<!-- The legacy shape: <frameset> replaces <body> entirely, and its children are
+     <frame>, not <iframe>. Still rendered by every current browser, and still
+     present in enterprise apps of the era this tool was first written for.
+     Worth a fixture because `frame` and `iframe` are different elements, so a
+     selector written for one does not find the other. -->
+<html lang="en">
+<head><meta charset="utf-8"><title>Frameset</title></head>
+<frameset cols="40%,60%">
+  <frame name="nav" title="Nav" src="frames-child.html" />
+  <frameset rows="50%,50%">
+    <frame name="upper" title="Upper" src="frames-grandchild.html" />
+    <frame name="lower" title="Lower" src="frames-grandchild.html" />
+  </frameset>
+  <noframes><body>This page needs frames.</body></noframes>
+</frameset>
+</html>

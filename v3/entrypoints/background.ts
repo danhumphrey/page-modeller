@@ -28,6 +28,15 @@ export default defineBackground(() => {
 
   const store = new ModelStore(defaultFrameworkId);
 
+  /**
+   * Disarm the picker in every frame of a tab. `tabs.sendMessage` with no
+   * `frameId` reaches all of them, and a frame that is already stopped ignores
+   * it.
+   */
+  function stopEveryFrame(tabId: number) {
+    browser.tabs.sendMessage(tabId, { type: 'STOP_PICKING' }).catch(() => {});
+  }
+
   /** Every panel gets the model; each ignores tabs that are not its own. */
   function publish(tabId: number, model: TabModel) {
     browser.runtime.sendMessage({ type: 'MODEL', tabId, model }).catch(() => {});
@@ -133,11 +142,30 @@ export default defineBackground(() => {
             }
           })
         );
-        // Picking is one-shot (SPEC §4); tell the panels so they can un-arm.
+        // Picking is one-shot (SPEC §4) per TAB, not per frame. START_PICKING
+        // is broadcast to every frame and each arms itself, but only the frame
+        // that was clicked stops itself — the rest stayed live and recorded the
+        // next click too, so one pick in a framed page added three elements.
+        stopEveryFrame(tabId);
+        // And tell the panels, so they can un-arm the toolbar.
         browser.runtime.sendMessage({ type: 'FROM_TAB', tabId, message: { type: 'PICKING_STOPPED' } }).catch(() => {});
         return;
       }
-      case 'PICKING_STOPPED':
+      case 'OVERLAY_SHOWN': {
+        const tabId = sender.tab?.id;
+        if (tabId == null) return;
+        // Every frame hears it; each clears unless the token is its own.
+        browser.tabs.sendMessage(tabId, { type: 'OVERLAY_OWNER', token: m.token }).catch(() => {});
+        return;
+      }
+      case 'PICKING_STOPPED': {
+        const tabId = sender.tab?.id;
+        if (tabId == null) return;
+        // Escape reaches only the frame with focus; the others are still armed.
+        stopEveryFrame(tabId);
+        browser.runtime.sendMessage({ type: 'FROM_TAB', tabId, message: m }).catch(() => {});
+        return;
+      }
       case 'HIGHLIGHT_RESULT': {
         const tabId = sender.tab?.id;
         if (tabId == null) return;

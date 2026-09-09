@@ -16,6 +16,7 @@ export function modelOf(frameworkId: string, ...elements: TestElement[]): TabMod
     selectedIndex: 0,
     preferredIndex: 0,
     candidates: [{ candidate, predictedCount: 1 }],
+    framePath: [],
     ...el,
   })) as ModelElement[];
   return m;
@@ -144,3 +145,13 @@ export const ALL_BUCKETS: TestElement[] = [
   { name: 'ImageEl', role: 'img', tag: 'img', candidate: { kind: 'css', value: 'img.logo' } },
   { name: 'PasswordEl', role: null, tag: 'input', inputType: 'password', candidate: { kind: 'css', value: 'input.pass' } },
 ];
+
+/** The same buckets, but two frames deep — so the switching code is compiled. */
+export const FRAMED_BUCKETS: TestElement[] = ALL_BUCKETS.map((el) => ({
+  ...el,
+  name: `Framed${el.name}`,
+  framePath: [
+    { frame: { kind: 'css', value: '#same-frame' } },
+    { frame: { kind: 'css', value: '#deep-frame' } },
+  ],
+}));
