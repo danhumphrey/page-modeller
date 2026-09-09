@@ -1,4 +1,4 @@
-import { framePathOf, generate, resolveCandidate } from '@/src/engine/candidates';
+import { frameStepFor, generate, resolveCandidate } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
 import { collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
@@ -10,6 +10,16 @@ import type { FrameStep } from '@/src/engine/types';
 export default defineContentScript({
   matches: ['<all_urls>'],
   allFrames: true,
+  // A srcdoc iframe's URL is `about:srcdoc`, which `<all_urls>` does not match
+  // — so nothing ran inside one and its contents could not be picked at all.
+  // Two flags because the browsers spell it differently: Firefox has only
+  // match_about_blank, Chrome supersedes it with match_origin_as_fallback,
+  // which also covers data: and blob: frames. Both match on the frame's
+  // *initiator* origin, so a sandboxed frame is reached too.
+  matchAboutBlank: true,
+  // Chrome only: Firefox does not know the key, and an unrecognised manifest
+  // key is a warning on an AMO submission.
+  matchOriginAsFallback: { chrome: true, firefox: undefined },
   main() {
     let active = false;
     /** 'add' takes the element itself; 'scan' takes its interactive children. */
@@ -17,6 +27,22 @@ export default defineContentScript({
     let includeHidden = false;
     /** Shared by every frame in the tab for this picking session. */
     let nonce = '';
+    /**
+     * Where this frame sits, told to it from above (SPEC §16).
+     *
+     * `window.frameElement` cannot work here: it is readable only when the
+     * parent is same-origin, so a cross-origin or sandboxed frame could never
+     * see what embeds it and every such element came out marked opaque — which
+     * then leaked `frameLocator(':root')` into generated code and made two
+     * different frames indistinguishable to the eye.
+     *
+     * Pushed DOWN instead. Only the parent can identify its own child, and it
+     * can always do so: the `<iframe>` is an ordinary element in its document
+     * whatever origin it loads. The top frame knows its path is empty and tells
+     * each child; each child appends nothing, records what it was told, and
+     * tells its own children. No request, no reply, no origin restriction.
+     */
+    let myPath: FrameStep[] = [];
     let box: HTMLDivElement | null = null;
     let label: HTMLDivElement | null = null;
     let current: Element | null = null;
@@ -109,11 +135,38 @@ export default defineContentScript({
       return span;
     }
 
+    /**
+     * A frame with no content script inside it, drawn in the same red as a
+     * hidden element (SPEC §8) rather than the ordinary blue.
+     *
+     * The pointer being inside such a frame is exactly when nothing works and
+     * nothing can say so: the click belongs to that document and there is
+     * nobody there to hear it, so no message is ever sent. But this frame keeps
+     * drawing the overlay the whole time — an unreadable child never takes
+     * ownership — so the warning stays on screen for as long as the pointer is
+     * over it, which is the only moment it is any use.
+     */
+    function setTone(warn: boolean) {
+      Object.assign(box!.style, {
+        background: warn ? 'rgba(211, 47, 47, 0.18)' : 'rgba(56,139,253,0.25)',
+        // Dashed, as for a hidden element: a box around something you cannot
+        // reach should not look like one you can.
+        border: warn ? '2px dashed #d32f2f' : '1px solid rgba(56,139,253,0.9)',
+      } as CSSStyleDeclaration);
+      label!.style.background = warn ? '#d32f2f' : '#1f6feb';
+    }
+
     function highlight(el: Element) {
       ensureOverlay();
       const r = el.getBoundingClientRect();
       Object.assign(box!.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+      const unreadable = isFrame(el) && !isReadableFrame(el);
+      setTone(unreadable);
       renderBreadcrumb(el);
+      if (unreadable) {
+        const warn = crumb('cannot be read \u2014 sandboxed', true);
+        label!.appendChild(warn);
+      }
       label!.style.left = `${r.left}px`;
       label!.style.top = `${Math.max(0, r.top - 18)}px`;
     }
@@ -243,6 +296,17 @@ export default defineContentScript({
       highlight(el);
     };
 
+    /**
+     * `mousemove` alone misses a frame you enter quickly.
+     *
+     * Once the pointer is inside a frame, this document gets no further
+     * mousemove — the events belong to the child. So the only mousemove that
+     * can target the frame element is one that lands on its 2px border, which
+     * happens when the pointer crosses slowly and not when it crosses fast.
+     * `mouseover` fires on the frame as the pointer enters it at any speed.
+     */
+    const onOver = (e: MouseEvent) => onMove(e);
+
     const isFrame = (el: Element) => el.localName === 'iframe' || el.localName === 'frame';
 
     /**
@@ -253,21 +317,150 @@ export default defineContentScript({
      * doing.
      */
     const SCAN_FRAME = '__pageModellerScanFrame';
+    /** Carries a frame its own path, from the document that embeds it. */
+    const FRAME_PATH = '__pageModellerFramePath';
+    /** A frame that loaded after its parent pushed, asking to be told. */
+    const NEED_PATH = '__pageModellerNeedPath';
+    /** A frame confirming it heard a scan request, so silence means something. */
+    const SCAN_ACK = '__pageModellerScanAck';
+    /** A frame confirming it has a script at all, in answer to its path. */
+    const FRAME_ALIVE = '__pageModellerFrameAlive';
+
+    /**
+     * Child frames known to have a content script inside them.
+     *
+     * On Firefox a sandboxed frame has a null principal and never gets one, so
+     * clicking inside it does nothing — the click belongs to that document and
+     * there is nobody there to hear it. Only its 2px border reaches this frame,
+     * which is not an affordance anyone can be asked to find. So the overlay
+     * says so on hover instead of leaving the user clicking at nothing.
+     *
+     * Liveness costs no extra round trip: a frame that answers its path push
+     * has a script by definition.
+     */
+    const readableFrames = new WeakSet<Window>();
+
+    function isReadableFrame(el: Element): boolean {
+      const win = (el as HTMLIFrameElement).contentWindow;
+      return !win || readableFrames.has(win);
+    }
+
+    /** Tell one child frame, or every child frame, where it sits. */
+    function pushPaths(only?: Window) {
+      for (const frame of document.querySelectorAll('iframe, frame')) {
+        const win = (frame as HTMLIFrameElement).contentWindow;
+        if (!win || (only && win !== only)) continue;
+        win.postMessage({ [FRAME_PATH]: true, path: [...myPath, frameStepFor(frame)] }, '*');
+      }
+    }
+
+    /**
+     * Frames load in no fixed order, so neither direction alone converges: a
+     * parent that pushes before a child's script exists reaches nobody, and a
+     * child that asks before its parent knows its own path gets a wrong answer.
+     * Doing both settles it — the top frame pushes, every frame that learns its
+     * path pushes onward, and a late child asks and is answered.
+     */
+    if (window.top === window) {
+      myPath = [];
+      pushPaths();
+    } else {
+      window.parent.postMessage({ [NEED_PATH]: true }, '*');
+    }
 
     window.addEventListener('message', (e: MessageEvent) => {
       const data = e.data as Record<string, unknown> | null;
       if (typeof data !== 'object' || data === null) return;
-      // Authenticated by the nonce, not by `active`: a cascading scan reaches
-      // frames after the background has already disarmed everyone, and a frame
-      // that refused then would be a hole in the middle of the tree.
-      if (!nonce || data[SCAN_FRAME] !== nonce) return;
+      // ---- from a child ----
+      //
+      // These three must be handled before the parent-only guard below, or
+      // they are unreachable: a child is by definition not this frame's parent.
+
+      // Asking where it sits. Answered from this frame's own path, and
+      // answered again later if that path changes.
+      if (data[NEED_PATH] && e.source && e.source !== window.parent) {
+        pushPaths(e.source as Window);
+        return;
+      }
+
+      // Confirming it has a script inside it, so the overlay knows this frame
+      // can be reached.
+      if (data[FRAME_ALIVE] && e.source && e.source !== window.parent) {
+        readableFrames.add(e.source as Window);
+        return;
+      }
+
+      // Confirming it heard a scan request, so silence means something.
+      if (data[SCAN_ACK] && e.source !== window.parent) {
+        const pending = awaitingAck.get(e.source as Window);
+        if (pending && data[SCAN_ACK] === nonce) {
+          clearTimeout(pending);
+          awaitingAck.delete(e.source as Window);
+        }
+        return;
+      }
+
+      // ---- from the parent ----
       if (e.source !== window.parent) return;
+
+      if (data[FRAME_PATH]) {
+        // Not authenticated by the picking nonce: this runs at load, before
+        // any nonce exists. `e.source === window.parent` is the guard. A page
+        // could lie about its own frame structure and get a wrong locator into
+        // its own model — visible in the table, and no worse than that.
+        myPath = (data.path as FrameStep[]) ?? [];
+        // Tell the parent something is alive in here.
+        window.parent.postMessage({ [FRAME_ALIVE]: true }, '*');
+        // Pass it on: the chain is built one level at a time.
+        pushPaths();
+        return;
+      }
+
+      if (!nonce) return;
+
+      if (data[SCAN_ACK] === nonce) {
+        const pending = awaitingAck.get(e.source as Window);
+        if (pending) {
+          clearTimeout(pending);
+          awaitingAck.delete(e.source as Window);
+        }
+        return;
+      }
+
+      if (data[SCAN_FRAME] !== nonce) return;
+      // Answer before scanning: the parent is timing this.
+      (e.source as Window).postMessage({ [SCAN_ACK]: nonce }, '*');
       scanDocument();
     });
 
-    /** Ask a nested frame to scan itself, and everything below it. */
+    /** Frames asked to scan that have not yet answered. */
+    const awaitingAck = new Map<Window, ReturnType<typeof setTimeout>>();
+
+    /**
+     * Ask a nested frame to scan itself, and everything below it.
+     *
+     * A frame with no content script inside it cannot answer, and the user sees
+     * nothing happen at all — which is indistinguishable from a bug. So the
+     * frame acknowledges the request, and silence is reported.
+     */
     function delegateScan(frame: Element) {
-      (frame as HTMLIFrameElement).contentWindow?.postMessage({ [SCAN_FRAME]: nonce }, '*');
+      const win = (frame as HTMLIFrameElement).contentWindow;
+      if (!win) return;
+      win.postMessage({ [SCAN_FRAME]: nonce }, '*');
+      awaitingAck.set(
+        win,
+        setTimeout(() => {
+          awaitingAck.delete(win);
+          // `allow-same-origin` hands the frame its parent's origin back; a
+          // sandbox without it has a null principal, and Firefox will not
+          // inject into one. `allow-scripts` is a red herring — a bare sandbox
+          // stops the page's own scripts, not a content script's isolated
+          // world, so it makes no difference to whether we can read the frame.
+          const sandbox = frame.getAttribute('sandbox');
+          const sandboxed = sandbox !== null && !sandbox.split(/\s+/).includes('allow-same-origin');
+          browser.runtime.sendMessage({ type: 'FRAME_UNREADABLE', sandboxed }).catch(() => {});
+        }, 500)
+      );
     }
 
     /**
@@ -280,7 +473,7 @@ export default defineContentScript({
      */
     function scanDocument() {
       const root = document.body ?? document.documentElement;
-      const results = collectInteractive(root, includeHidden).map(generate);
+      const results = collectInteractive(root, includeHidden).map((el) => generate(el, myPath));
       const nested = Array.from(document.querySelectorAll('iframe, frame'));
       stop({ notify: false });
       if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
@@ -320,8 +513,8 @@ export default defineContentScript({
       // itself: you are modelling what is inside the section you chose.
       const message =
         mode === 'scan'
-          ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map(generate) }
-          : { type: 'ELEMENT_PICKED', result: generate(target) };
+          ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map((el) => generate(el, myPath)) }
+          : { type: 'ELEMENT_PICKED', result: generate(target, myPath) };
 
       // Rejects when no panel is open; that's fine, drop it.
       browser.runtime.sendMessage(message).catch(() => {});
@@ -403,6 +596,7 @@ export default defineContentScript({
       if (active) return;
       active = true;
       document.addEventListener('mousemove', onMove, true);
+      document.addEventListener('mouseover', onOver, true);
       document.addEventListener('mouseout', onOut, true);
       document.addEventListener('click', onClick, true);
       document.addEventListener('keydown', onKey, true);
@@ -416,6 +610,7 @@ export default defineContentScript({
       if (!active) return;
       active = false;
       document.removeEventListener('mousemove', onMove, true);
+      document.removeEventListener('mouseover', onOver, true);
       document.removeEventListener('mouseout', onOut, true);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKey, true);
@@ -442,6 +637,8 @@ export default defineContentScript({
         mode = m.mode;
         includeHidden = m.includeHidden;
         nonce = m.nonce;
+        // Re-seed: frames may have been added since load.
+        if (window.top === window) pushPaths();
         start();
       }
       // notify: false — STOP_PICKING only ever comes from the panel or from the
@@ -469,7 +666,7 @@ export default defineContentScript({
         // both elements marked. Cleared before the path check, or only the
         // answering frame would forget.
         clearMarks();
-        if (!samePath(framePathOf(window), m.framePath)) return;
+        if (!samePath(myPath, m.framePath)) return;
         const targets = resolveCandidate(document, m.candidate);
         const { hidden } = highlightAll(targets);
         // Answered as a message, not a reply — sendResponse is not portable.

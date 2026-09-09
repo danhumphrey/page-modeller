@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
-import { Quasar, QBtn, QBtnToggle, QDialog, QCard, QCardSection, QCardActions, QToolbar, QToolbarTitle } from 'quasar';
+import { Quasar, QBtn, QBtnToggle, QDialog, QCard, QCardSection, QCardActions, QToolbar, QToolbarTitle, ClosePopup } from 'quasar';
 import CodeDialog from '../../ui/CodeDialog.vue';
 import { emptyModel, type ModelElement, type TabModel } from '../../src/model';
 import { frameworks } from '../../src/frameworks';
@@ -39,6 +39,9 @@ async function render(model: TabModel) {
     props: { model },
     global: {
       plugins: [Quasar],
+      // `v-close-popup` is a Quasar directive, and registering the components
+      // does not register it. Without this every mount logs a resolve warning.
+      directives: { ClosePopup },
       components: { QBtn, QBtnToggle, QDialog, QCard, QCardSection, QCardActions, QToolbar, QToolbarTitle },
     },
     attachTo: document.body,

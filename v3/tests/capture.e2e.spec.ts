@@ -221,7 +221,42 @@ test('a pick in the main frame still has no chain', async () => {
   expect((picks[0].result as { framePath: unknown[] }).framePath).toEqual([]);
 });
 
-test('a pick in a cross-origin frame declares the break rather than lying', async () => {
+test('a srcdoc frame can be picked at all, and gets a complete chain', async () => {
+  // `about:srcdoc` is not matched by `<all_urls>`, so the content script never
+  // ran in one and clicking inside it did nothing whatsoever.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'srcdoc', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add', nonce: 'n' }), tabId);
+  const btn = page.frameLocator('#srcdoc-frame').getByRole('button', { name: 'Submit', exact: true });
+  await btn.hover();
+  await btn.click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string }[] }).__picks))
+      .filter((m) => m.type === 'ELEMENT_PICKED').length)
+    .toBe(1);
+
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = (picks.find((m) => m.type === 'ELEMENT_PICKED') as {
+    result: { framePath: { frame: { value: string }; opaque?: boolean }[] };
+  }).result;
+
+  // srcdoc is same-origin with its parent, so the chain is complete — unlike a
+  // sandboxed frame, whose origin is opaque by construction.
+  expect(result.framePath.some((s) => s.opaque)).toBe(false);
+  expect(result.framePath).toHaveLength(1);
+  expect(result.framePath[0].frame.value).toContain('Srcdoc');
+});
+
+test('a cross-origin frame gets a real chain, not an opaque one (SPEC §16)', async () => {
+  // `window.frameElement` is unreadable across an origin, so a frame cannot see
+  // what embeds it — every cross-origin and sandboxed element used to come out
+  // marked opaque. The parent CAN see it, so the path is pushed down instead.
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
 
@@ -229,7 +264,7 @@ test('a pick in a cross-origin frame declares the break rather than lying', asyn
   await page.waitForLoadState('networkidle');
   await collectMessages(sw as never);
 
-  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add', nonce: 'n' }), tabId);
   const cross = page.frameLocator('#cross-frame');
   await cross.getByRole('button', { name: 'Submit', exact: true }).hover();
   await cross.getByRole('button', { name: 'Submit', exact: true }).click();
@@ -238,13 +273,42 @@ test('a pick in a cross-origin frame declares the break rather than lying', asyn
     .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
     .toBe(1);
   const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
-  const result = picks[0].result as { framePath: { opaque?: boolean }[] };
+  const result = picks[0].result as { framePath: { frame: { value: string }; opaque?: boolean }[] };
 
-  // window.frameElement is unreadable across an origin, so the chain cannot be
-  // completed from inside. Saying so beats a path that starts halfway down and
-  // looks complete.
-  expect(result.framePath.length).toBeGreaterThan(0);
-  expect(result.framePath.some((s) => s.opaque), 'the break is declared').toBe(true);
+  expect(result.framePath.some((s) => s.opaque), 'the chain is complete').toBe(false);
+  expect(result.framePath.map((s) => s.frame.value)).toEqual(['#cross-frame']);
+
+  // And it resolves: Playwright does not care about origins.
+  const resolved = page.frameLocator('#cross-frame').getByRole('button', { name: 'Submit', exact: true });
+  await expect(resolved).toHaveCount(1);
+  await expect(resolved).toHaveAttribute('data-spike', 'child-submit');
+});
+
+test('a sandboxed frame gets a real chain too', async () => {
+  // An opaque origin by construction, and the case that produced
+  // `frameLocator(':root')` — the opaque marker leaking out as a selector.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-path-sandbox', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add', nonce: 'n' }), tabId);
+  const box = page.frameLocator('#sandboxed-frame').getByRole('button', { name: 'Submit', exact: true });
+  await box.hover();
+  await box.click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = picks[0].result as { framePath: { frame: { value: string }; opaque?: boolean }[] };
+
+  expect(result.framePath.some((s) => s.opaque)).toBe(false);
+  expect(result.framePath.map((s) => s.frame.value)).toEqual(['#sandboxed-frame']);
+  // The marker must never reach output as if it were a selector.
+  expect(JSON.stringify(result.framePath)).not.toContain(':root');
 });
 
 test('highlighting reports its count as a message, and Close clears it', async () => {
@@ -425,6 +489,60 @@ test('a new highlight clears the last one, in whichever frame it was', async () 
   const deep = page.frameLocator('#same-frame').frameLocator('#deep-frame');
   await expect(deep.locator('[data-page-modeller="highlight"]')).toHaveCount(1, { timeout: 2000 });
   expect(await marked(), 'a frame that did not answer kept its mark').toBe(1);
+});
+
+test('a readable frame is never drawn as unreadable', async () => {
+  // The warning is Firefox-only by construction — Chrome reads every frame in
+  // the fixture — so what Chrome CAN check is that it never appears here. It
+  // appeared on every frame once, because the message that records liveness
+  // sat below a guard that rejects anything not sent by the parent, and a
+  // child is by definition not the parent.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'readable-overlay', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add', nonce: 'n' }), tabId);
+
+  const labelText = () =>
+    page.evaluate(() => document.querySelector('[data-page-modeller="label"]')?.textContent ?? '');
+
+  let labelled = 0;
+  for (const sel of ['#same-frame', '#cross-frame', '#srcdoc-frame', '#sandboxed-frame']) {
+    const box = (await page.locator(sel).boundingBox())!;
+    // The border, where this frame owns the pointer. Whether a label appears
+    // at all depends on which side wins the pointer, and that is not what is
+    // being tested — only that when one does appear, it does not lie.
+    await page.mouse.move(box.x + 1, box.y + 1);
+    await page.waitForTimeout(120);
+    const text = await labelText();
+    if (text.includes('iframe')) labelled++;
+    expect(text, `${sel} is readable on Chrome`).not.toContain('cannot be read');
+  }
+  // ...and that the check was not vacuous: some frame did get labelled.
+  expect(labelled, 'no frame was labelled, so nothing was actually checked').toBeGreaterThan(0);
+});
+
+test('a frame that can be read reports nothing', async () => {
+  // The timeout must not fire for frames that simply took a moment.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'readable-frame', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'scan', nonce: 'n' }), tabId);
+  const box = (await page.locator('#same-frame').boundingBox())!;
+  await page.mouse.move(box.x + 1, box.y + 1);
+  await page.mouse.down();
+  await page.mouse.up();
+  await page.waitForTimeout(1200);
+
+  const reports = (await sw.evaluate(
+    () => (globalThis as unknown as { __picks: { type: string }[] }).__picks
+  )).filter((m) => m.type === 'FRAME_UNREADABLE');
+  expect(reports, 'a readable frame must not be reported').toEqual([]);
 });
 
 test('the background relays panel messages, and reports an unreachable tab', async () => {

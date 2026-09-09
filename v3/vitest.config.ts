@@ -19,5 +19,7 @@ export default defineConfig({
     // Pure-core tests declare nothing and run in node; component tests opt in
     // with `// @vitest-environment jsdom`.
     environment: 'node',
+    // See the file: one jsdom notice, filtered by exact message.
+    setupFiles: ['tests/setup/quiet-jsdom.ts'],
   },
 });

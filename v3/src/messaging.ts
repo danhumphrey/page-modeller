@@ -24,6 +24,9 @@ export type PanelToContent =
   // Pointer events cannot decide it — a parent frame gets no mouseout when the
   // pointer crosses into a child — so a frame announces that it has drawn and
   // the background tells the others to clear.
+  // A frame was asked to scan itself and never answered — there is no content
+  // script inside it. Silence is indistinguishable from a bug, so it is said.
+  | { type: 'FRAME_UNREADABLE'; sandboxed: boolean }
   | { type: 'OVERLAY_SHOWN'; token: string }
   | { type: 'OVERLAY_OWNER'; token: string }
   // Walk the pick target up or down the DOM (SPEC §4). Sent by the panel

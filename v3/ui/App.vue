@@ -207,7 +207,16 @@ function onRuntimeMessage(msg: unknown) {
     });
   } else if (incoming.type === 'FROM_TAB') {
     const m = incoming.message;
-    if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
+    if (m.type === 'FRAME_UNREADABLE') {
+      notice('frame-unreadable', {
+        message: m.sandboxed
+          ? 'This frame is sandboxed and cannot be read in Firefox.'
+          : 'This frame could not be read.',
+        icon: 'block',
+        color: 'negative',
+      });
+    }
+    else if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
     else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count, m.hidden);
   }
 }

@@ -686,10 +686,64 @@ locator, and so does every other frame API in reach, so `getByTitle('Payment')` 
 however well it identifies one. `cssFor` already prefers a test id, then a name, then an id (§7), so
 little is lost.
 
-`window.frameElement` builds the chain, and its limit is the hard case: it is readable only when the
-parent is same-origin. Across an origin it throws, and a document cannot see what embeds it — so the
-chain stops there and is **marked opaque**. A path that starts halfway down and looks complete is worse
-than one that admits it is partial. **[settled]**
+**An unreadable frame is drawn as one.** Hovering it during Add or Scan shows the overlay in the red
+dashed treatment a hidden element gets (§8), labelled *cannot be read — sandboxed*. That moment is the
+only one where saying anything is any use: a click inside such a frame belongs to that document, and
+there is nobody in there to hear it, so no message is ever sent and nothing can report it afterwards.
+The frame keeps drawing the overlay throughout, because an unreadable child never takes ownership.
+**[settled]**
+
+Entry is detected on `mouseover`, not `mousemove`. Once the pointer is inside a frame this document
+gets no further mousemove — the events belong to the child — so the only mousemove that can target the
+frame element is one landing on its 2px border, which happens when the pointer crosses slowly and not
+when it crosses fast.
+
+Liveness costs no extra round trip — a frame that answers the frame-path push has a script by
+definition.
+
+**An unreachable frame says so.** A frame asked to scan itself acknowledges the request before it
+starts, so the parent can tell the difference between "scanning" and "nothing there". No answer within
+half a second and the panel says *This frame is sandboxed and cannot be read in Firefox*, or *This frame
+could not be read* when there is no sandbox to blame. Silence is indistinguishable from a bug, which is
+how the case below presented. **[settled]**
+
+**A sandboxed frame cannot be reached on Firefox.** `sandbox="allow-scripts"` without
+`allow-same-origin` gives the document a **null** principal. Firefox's `match_about_blank` injects only
+where the document *inherits* its parent's principal, so there is nothing to inherit and no content
+script runs; Chrome's `match_origin_as_fallback` exists for exactly this case and Firefox has no
+equivalent. `allow-scripts` is not the deciding token — a bare `sandbox` stops the page's own scripts,
+not a content script's isolated world, and Chrome reads such a frame perfectly well. The parent cannot reach in either — the frame's origin is opaque to it too. Verified by
+hand: on Firefox every other frame kind works and the sandboxed one does not. **[settled]**
+
+**Reaching a frame at all** comes first. A `srcdoc` iframe's URL is `about:srcdoc`, which `<all_urls>`
+does not match, so no content script ran inside one and its contents could not be picked. The manifest
+needs `match_about_blank`, and on Chrome `match_origin_as_fallback`, which supersedes it and also covers
+`data:` and `blob:` frames — Firefox does not know that key, and an unrecognised manifest key is a
+warning on an AMO submission, so it is Chrome-only. Both match on the frame's **initiator** origin, so a
+sandboxed frame is reached too. `scripts/check-manifests.mjs` guards all of this: nothing else notices a
+content script that simply never runs. **[settled]**
+
+**The path is pushed down, not looked up.** `window.frameElement` is readable only when the parent is
+same-origin, so a cross-origin or sandboxed frame can never see what embeds it — every such element came
+out marked opaque, which leaked the marker into generated code as `frameLocator(':root')` and made two
+different frames indistinguishable to the eye.
+
+Only the parent can identify its own child, and it always can: the `<iframe>` is an ordinary element in
+its document whatever origin it loads. The top frame knows its path is empty and tells each child; each
+child records what it was told and tells its own children. No request, no reply, no origin restriction.
+**[settled]**
+
+Frames load in no fixed order, so neither direction alone converges — a parent that pushes before a
+child's script exists reaches nobody, and a child that asks before its parent knows its own path gets a
+wrong answer. Both are done: push from the top at load and again when picking arms, and a late child
+asks its parent and is answered.
+
+The push is guarded by `event.source === window.parent`, not by the picking nonce, because it happens at
+load before any nonce exists. A hostile page could therefore lie about its own frame structure and get a
+wrong locator into its own model — visible in the table, and no worse than that. **[settled]**
+
+`opaque` survives as the marker for a chain that could not be completed, but the push means nothing
+should produce one.
 
 ### Carrying it, or admitting you cannot **[settled]**
 
