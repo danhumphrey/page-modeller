@@ -17,6 +17,15 @@
 
     <q-page-container>
       <q-page>
+        <!-- Shown only while Add is armed, and only there: Scan already takes
+             many elements, so the modifier means nothing to it. A strip rather
+             than a toast — it is advice for the whole time you are picking,
+             not an event. -->
+        <div v-if="isAdding" class="hint-strip" data-testid="add-hint">
+          <q-icon name="ads_click" size="16px" />
+          <span>Click an element to add it. Hold <kbd>{{ multiKey }}</kbd> to add several.</span>
+        </div>
+
         <!-- SPEC §5: a model is kept across a navigation, so it can end up
              describing a page that is no longer loaded. Say so, rather than
              leaving the user to wonder why the eye reports 0 for every row. -->
@@ -103,6 +112,19 @@ const rows = computed<ModelRow[]>(() =>
  * Quasar groups identical notifications and badges a count. Each kind of notice
  * keeps one slot and replaces it.
  */
+/**
+ * The modifier that holds Add open. Either works (see the content script); this
+ * is only what to call it, and calling it Ctrl on a Mac would be wrong.
+ *
+ * `userAgentData.platform` where it exists, `platform` where it does not —
+ * deprecated, but Firefox has no replacement for it.
+ */
+const multiKey = (() => {
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const platform = nav.userAgentData?.platform ?? navigator.platform ?? '';
+  return /mac/i.test(platform) ? '\u2318' : 'Ctrl';
+})();
+
 const openNotices: Record<string, (() => void) | undefined> = {};
 let noticeSeq = 0;
 
@@ -421,6 +443,24 @@ function notYet(what: string) {
 </script>
 
 <style scoped>
+.hint-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--pm-muted);
+  border-bottom: 1px solid var(--pm-rule);
+}
+
+.hint-strip kbd {
+  font: 11px/1.4 ui-monospace, SFMono-Regular, monospace;
+  border: 1px solid var(--pm-rule);
+  border-radius: 3px;
+  padding: 0 4px;
+  color: var(--pm-text);
+}
+
 .stale-banner {
   display: flex;
   align-items: center;

@@ -52,7 +52,9 @@ export type PanelToContent =
 // Firefox — which surfaced as "can't reach this page" for a tab that was
 // plainly reachable.
 export type ContentToPanel =
-  | { type: 'ELEMENT_PICKED'; result: ElementResult }
+  // `keepPicking` when the modifier was held: Add stays armed for the next
+  // click instead of stopping after one (SPEC §4).
+  | { type: 'ELEMENT_PICKED'; result: ElementResult; keepPicking?: boolean }
   // A scan's haul, in one message rather than N: the background adds them in a
   // single model update, so the table does not animate in row by row.
   | { type: 'ELEMENTS_PICKED'; results: ElementResult[] }

@@ -115,6 +115,22 @@ included).
 
 Over-inclusion is cheap to correct: rows can be deleted after a scan.
 
+### Adding several without re-arming **[settled]**
+
+Add is one-shot, which is right for the common case and tiresome for a run of ten. Holding **⌘** (or
+**Ctrl**) while clicking keeps it armed for the next click; releasing it makes the last click behave as
+it always did.
+
+Read from the click event rather than remembered, so it is decided per click — hold it through a run,
+let go on the final element. Either modifier is accepted whatever the platform, because that costs
+nothing; only the *name* shown to the user is platform-specific.
+
+Scan is unaffected: it already takes many elements at once.
+
+The panel says so while Add is armed — a strip under the toolbar, not a toast, because it is advice for
+the whole time you are picking rather than an event: *Click an element to add it. Hold ⌘ to add
+several.*
+
 ## 5. Model lifetime
 
 v2.5.1 never had to decide this — a DevTools panel is inherently per-tab, its model lived in panel
