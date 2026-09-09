@@ -696,8 +696,28 @@ than one that admits it is partial. **[settled]**
 | Target | How |
 |---|---|
 | Playwright | `frameLocator(…)` chains, so the locator is self-contained — nothing to explain, nothing to switch |
-| Selenium | a `By` is frame-agnostic: a comment names the chain and says a switch is required first |
-| Puppeteer | `page.locator` is page-scoped and there is no `frameLocator`: the same comment |
+| Selenium | a `By` is frame-agnostic: a comment carries the `switchTo` chain, ready to uncomment |
+| Puppeteer | `page.locator` is page-scoped and there is no `frameLocator`: a comment walks down to the frame |
+
+The comment carries the **code**, not an instruction to go and write it: **[settled]**
+
+```java
+// In frame: #same-frame › #deep-frame
+// driver.switchTo().defaultContent();
+// driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));
+// driver.switchTo().frame(driver.findElement(By.cssSelector("#deep-frame")));
+private final By emailInput = By.name("email");
+```
+
+```js
+// In frame: #same-frame › #deep-frame
+// const frame1 = await (await page.$('#same-frame')).contentFrame();
+// const frame2 = await (await frame1.$('#deep-frame')).contentFrame();
+// Then use frame2.locator(...) in place of page.locator(...).
+```
+
+An **opaque** chain gets the warning and *no* switch to paste: half a chain would switch into the wrong
+document and look like it worked.
 
 Without that comment a framed Selenium or Puppeteer locator is indistinguishable from a main-frame one
 and silently resolves against the wrong document.

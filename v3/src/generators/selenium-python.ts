@@ -11,6 +11,7 @@ import { snake, upperSnake } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameFor } from './class-name';
 import { frameNote } from '../locators/frames';
+import type { FrameStep } from '../engine/types';
 
 /** Double-quoted, Black's default. */
 const q = doubleQuoted;
@@ -37,9 +38,18 @@ function find(c: LocatorCandidate, recv: string): string {
   return parts ? `${recv}driver.find_element(By.${BY[parts.kind]}, ${q(parts.value)})` : byTuple(c);
 }
 
+/** The switch a reader can paste, one line per level, outermost first. */
+const frameSwitch = (path: FrameStep[]) => [
+  'driver.switch_to.default_content()',
+  ...path.map((s) => {
+    const parts = byParts(s.frame);
+    return `driver.switch_to.frame(driver.find_element(By.${BY[parts!.kind]}, ${q(parts!.value)}))`;
+  }),
+];
+
 function banner(el: ModelElement): string {
   const rule = '#'.repeat(63);
-  return [rule, `# ${el.name}`, ...frameNote(el.framePath, 'hash'), rule].join('\n');
+  return [rule, `# ${el.name}`, ...frameNote(el.framePath, '#', frameSwitch), rule].join('\n');
 }
 
 /**
@@ -128,7 +138,7 @@ function methods(el: ModelElement, recv: string): string[] {
  */
 export function generateSeleniumPythonLocators(model: TabModel): string {
   return model.elements
-    .flatMap((el) => [...frameNote(el.framePath, 'hash'), `${upperSnake(el.name)} = ${byTuple(activeCandidate(el))}`])
+    .flatMap((el) => [...frameNote(el.framePath, '#', frameSwitch), `${upperSnake(el.name)} = ${byTuple(activeCandidate(el))}`])
     .join('\n');
 }
 

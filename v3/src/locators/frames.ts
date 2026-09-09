@@ -33,18 +33,30 @@ export function playwrightPyFramePrefix(path: Path): string {
   return (path ?? []).map((s) => `frame_locator(${doubleQuoted(frameSelector(s))}).`).join('');
 }
 
+/** How a step reads to a person: no Playwright `xpath=` prefix in prose. */
+export function describeStep(step: FrameStep): string {
+  if (step.opaque) return 'a cross-origin frame';
+  return step.frame.kind === 'xpath' ? `xpath ${step.frame.value}` : (step.frame as { value: string }).value;
+}
+
 /**
- * The note that has to accompany a frame-bound locator in a target that cannot
- * express the chain. Without it the locator looks like every other one and
- * quietly resolves against the wrong document.
+ * The comment that has to accompany a frame-bound locator in a target that
+ * cannot express the chain. Without it the locator looks like every other one
+ * and quietly resolves against the wrong document.
+ *
+ * It carries the switch itself, commented out, rather than an instruction to
+ * go and write one: the reader can paste it. `switchTo` is supplied by the
+ * generator, so each language spells its own API and its own `By`.
  */
-export function frameNote(path: Path, style: 'line' | 'hash'): string[] {
+export function frameNote(path: Path, comment: string, switchTo: (path: FrameStep[]) => string[]): string[] {
   if (!path || path.length === 0) return [];
-  const mark = style === 'hash' ? '#' : '//';
-  const chain = path.map((s) => frameSelector(s)).join(' › ');
-  const lines = [`${mark} In frame: ${chain}`, `${mark} Switch to it before using this locator.`];
+  const lines = [`In frame: ${path.map(describeStep).join(' \u203a ')}`];
   if (isOpaque(path)) {
-    lines.push(`${mark} The chain is incomplete: a frame above this one is cross-origin.`);
+    // Half a chain is worse than none: pasting it would switch into the wrong
+    // document and look like it worked.
+    lines.push('A frame above this one is cross-origin, so the chain is incomplete.');
+  } else {
+    lines.push(...switchTo(path));
   }
-  return lines;
+  return lines.map((line) => `${comment} ${line}`);
 }

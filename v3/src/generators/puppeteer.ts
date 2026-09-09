@@ -10,8 +10,27 @@
 // generated code cannot disagree about what a locator is.
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { puppeteerExpr } from '../locators/display';
-import { frameNote } from '../locators/frames';
+import { frameNote, frameSelector } from '../locators/frames';
+import type { FrameStep } from '../engine/types';
+import { singleQuoted as q } from '../quote';
 import { tsPageObject, tsLocators, type TsTarget } from './ts-page-object';
+
+/**
+ * Puppeteer reaches a frame through the element that embeds it, so the snippet
+ * walks down handle by handle and ends with the scope to use in place of
+ * `page`.
+ */
+const frameSwitch = (path: FrameStep[]) => {
+  const lines: string[] = [];
+  let scope = 'page';
+  path.forEach((step, i) => {
+    const next = `frame${i + 1}`;
+    lines.push(`const ${next} = await (await ${scope}.$(${q(frameSelector(step))})).contentFrame();`);
+    scope = next;
+  });
+  lines.push(`Then use ${scope}.locator(...) in place of page.locator(...).`);
+  return lines;
+};
 
 const PUPPETEER: TsTarget = {
   module: 'puppeteer',
@@ -19,7 +38,7 @@ const PUPPETEER: TsTarget = {
   // `page.locator` is page-scoped and Puppeteer has no frameLocator, so a
   // framed element needs `page.frames()` first. Said out loud, because the
   // locator is otherwise indistinguishable from a main-frame one (SPEC §16).
-  note: (el: ModelElement) => frameNote(el.framePath, 'line'),
+  note: (el: ModelElement) => frameNote(el.framePath, '//', frameSwitch),
   // `Locator<T>` is generic over the node it yields — `page.locator('button')`
   // is a `Locator<HTMLButtonElement>`. Element is the common supertype, and
   // widening to it is what lets one field hold any of them.

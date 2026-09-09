@@ -11,6 +11,7 @@ import { underscoreCamel } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameFor } from './class-name';
 import { frameNote } from '../locators/frames';
+import type { FrameStep } from '../engine/types';
 
 const q = doubleQuoted;
 
@@ -30,10 +31,16 @@ function by(c: LocatorCandidate): string {
   return parts ? `By.${BY[parts.kind]}(${q(parts.value)})` : `null /* ${c.kind} is not expressible in Selenium */`;
 }
 
+/** The switch a reader can paste, one line per level, outermost first. */
+const frameSwitch = (path: FrameStep[]) => [
+  'driver.SwitchTo().DefaultContent();',
+  ...path.map((s) => `driver.SwitchTo().Frame(driver.FindElement(${by(s.frame)}));`),
+];
+
 function banner(el: ModelElement): string {
   // The frame chain goes in the banner, where a reader is already looking to
   // see what this block is about (SPEC §16).
-  const frames = frameNote(el.framePath, 'line').map((line) => ` * ${line.replace(/^\/\/ /, '')}`);
+  const frames = frameNote(el.framePath, '//', frameSwitch).map((line) => ` * ${line.replace(/^\/\/ /, '')}`);
   return [`/*`, ` * ${el.name}`, ...frames, ` * ***************************************************************`, ` */`].join('\n');
 }
 
@@ -110,7 +117,7 @@ function methods(el: ModelElement): string[] {
 /** `By` fields to paste into your own page object. */
 export function generateSeleniumCSharpLocators(model: TabModel): string {
   return model.elements
-    .flatMap((el) => [...frameNote(el.framePath, 'line'), `private readonly By ${underscoreCamel(el.name)} = ${by(activeCandidate(el))};`])
+    .flatMap((el) => [...frameNote(el.framePath, '//', frameSwitch), `private readonly By ${underscoreCamel(el.name)} = ${by(activeCandidate(el))};`])
     .join('\n');
 }
 

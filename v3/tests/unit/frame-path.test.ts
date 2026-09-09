@@ -3,6 +3,7 @@ import { generatePlaywrightPageObject, generatePlaywrightLocators } from '../../
 import { generatePlaywrightPythonLocators } from '../../src/generators/playwright-python';
 import { generatePuppeteerLocators } from '../../src/generators/puppeteer';
 import { generateSeleniumJavaLocators, generateSeleniumJava } from '../../src/generators/selenium-java';
+import { generateSeleniumCSharpLocators } from '../../src/generators/selenium-csharp';
 import { generateSeleniumPythonLocators } from '../../src/generators/selenium-python';
 import { displayElementLocator } from '../../src/locators/display';
 import type { FrameStep } from '../../src/engine/types';
@@ -55,27 +56,42 @@ describe('Playwright carries the chain inside the locator', () => {
 });
 
 describe('the targets that cannot carry it say so', () => {
-  it('warns in Selenium, where a By is frame-agnostic', () => {
+  it('gives Selenium the switch itself, ready to paste', () => {
+    // Not an instruction to go and write one — the reader can uncomment this.
     const out = generateSeleniumJavaLocators(modelOf('selenium-java', framed(PATH, idSubmit)));
     expect(out).toBe(
       [
         '// In frame: #same-frame › #deep-frame',
-        '// Switch to it before using this locator.',
+        '// driver.switchTo().defaultContent();',
+        '// driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));',
+        '// driver.switchTo().frame(driver.findElement(By.cssSelector("#deep-frame")));',
         'private final By submit = By.id("go");',
       ].join('\n')
     );
   });
 
+  it('spells the switch each language’s own way', () => {
+    expect(generateSeleniumCSharpLocators(modelOf('selenium-csharp', framed(PATH, idSubmit)))).toContain(
+      '// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));'
+    );
+    expect(generateSeleniumPythonLocators(modelOf('selenium-python', framed(PATH, idSubmit)))).toContain(
+      '# driver.switch_to.frame(driver.find_element(By.CSS_SELECTOR, "#same-frame"))'
+    );
+    // Puppeteer has no switch: it walks down to the frame and hands you a new
+    // scope to use in place of `page`.
+    const pup = generatePuppeteerLocators(modelOf('puppeteer', framed(PATH, cssSubmit)));
+    expect(pup).toContain("// const frame1 = await (await page.$('#same-frame')).contentFrame();");
+    expect(pup).toContain("// const frame2 = await (await frame1.$('#deep-frame')).contentFrame();");
+    expect(pup).toContain('// Then use frame2.locator(...) in place of page.locator(...).');
+  });
+
   it('puts it in the banner for the methods shape', () => {
     const out = generateSeleniumJava(modelOf('selenium-java', framed(PATH, idSubmit)));
     expect(out).toContain(' * Submit\n * In frame: #same-frame › #deep-frame');
+    expect(out).toContain(' * driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));');
   });
 
-  it('uses a hash comment in Python', () => {
-    expect(generateSeleniumPythonLocators(modelOf('selenium-python', framed(PATH, idSubmit)))).toContain(
-      '# In frame: #same-frame › #deep-frame'
-    );
-  });
+
 
   it('warns in Puppeteer, which is page-scoped', () => {
     const out = generatePuppeteerLocators(modelOf('puppeteer', framed(PATH, cssSubmit)));
@@ -91,9 +107,11 @@ describe('the targets that cannot carry it say so', () => {
 });
 
 describe('an incomplete chain is declared, not hidden', () => {
-  it('names the cross-origin break', () => {
+  it('names the break, and offers no switch to paste', () => {
     const out = generateSeleniumJavaLocators(modelOf('selenium-java', framed(OPAQUE, idSubmit)));
-    expect(out).toContain('a frame above this one is cross-origin');
+    expect(out).toContain('// A frame above this one is cross-origin, so the chain is incomplete.');
+    // Half a chain would switch into the wrong document and look like it worked.
+    expect(out).not.toContain('switchTo().frame');
   });
 });
 
