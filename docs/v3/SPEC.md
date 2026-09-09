@@ -686,6 +686,13 @@ locator, and so does every other frame API in reach, so `getByTitle('Payment')` 
 however well it identifies one. `cssFor` already prefers a test id, then a name, then an id (§7), so
 little is lost.
 
+**A sandboxed frame cannot be reached on Firefox.** `sandbox="allow-scripts"` without
+`allow-same-origin` gives the document a **null** principal. Firefox's `match_about_blank` injects only
+where the document *inherits* its parent's principal, so there is nothing to inherit and no content
+script runs; Chrome's `match_origin_as_fallback` exists for exactly this case and Firefox has no
+equivalent. The parent cannot reach in either — the frame's origin is opaque to it too. Verified by
+hand: on Firefox every other frame kind works and the sandboxed one does not. **[settled]**
+
 **Reaching a frame at all** comes first. A `srcdoc` iframe's URL is `about:srcdoc`, which `<all_urls>`
 does not match, so no content script ran inside one and its contents could not be picked. The manifest
 needs `match_about_blank`, and on Chrome `match_origin_as_fallback`, which supersedes it and also covers

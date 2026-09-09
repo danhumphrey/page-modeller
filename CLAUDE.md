@@ -87,6 +87,10 @@ exploited.
 - Build output is gitignored (`/v3/.output`, `/v3/.wxt`, `/v3/.test-dist`, `/v3/test-results`).
 - `v3/` output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
 
+- **A sandboxed iframe is unreachable on Firefox.** `sandbox="allow-scripts"` gives a null principal;
+  Firefox's `match_about_blank` only injects where the principal is *inherited*, and it has no
+  equivalent of Chrome's `match_origin_as_fallback`. Nothing to fix — but it works on Chrome, so a
+  Chrome-only hand-test will not show it. `tests/fixtures/frames.html` has one to check against.
 - **`browser.tabs` is undefined in a Firefox DevTools panel.** A devtools page is granted only
   `devtools.*`, `runtime.*` and a few others. Chrome tolerates the direct call, so a regression is
   invisible on Chrome and in every test we can run. The panel goes through the background relay
