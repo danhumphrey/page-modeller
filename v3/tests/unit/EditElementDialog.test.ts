@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { Quasar, QBtn, QTooltip, QDialog, QCard, QCardSection, QCardActions, QInput, QSelect, QToolbar, QToolbarTitle } from 'quasar';
+import { Quasar, QBtn, QTooltip, QDialog, QCard, QCardSection, QCardActions, QInput, QSelect, QToolbar, QToolbarTitle, ClosePopup } from 'quasar';
 import EditElementDialog from '../../ui/EditElementDialog.vue';
 import type { ModelElement } from '../../src/model';
 
@@ -25,6 +25,9 @@ function render(props: Partial<Parameters<typeof EditElementDialog>[0]> = {}) {
     props: { element, frameworkId: 'playwright-ts', takenNames: [], ...props } as never,
     global: {
       plugins: [Quasar],
+      // `v-close-popup` is a Quasar directive, and registering the components
+      // does not register it. Without this every mount logs a resolve warning.
+      directives: { ClosePopup },
       components: { QBtn, QTooltip, QDialog, QCard, QCardSection, QCardActions, QInput, QSelect, QToolbar, QToolbarTitle },
       stubs: { QTooltip: true },
     },
