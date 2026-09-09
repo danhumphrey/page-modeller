@@ -388,7 +388,11 @@ before starting the next.
     fallback emitted an unparseable bare comment, a newline in any value broke the string literal in
     all five languages, and the Puppeteer P-selectors could not be generated at all.
 
-16. **Frames** (SPEC §16) and the **page-object wrapper** (SPEC §17).
+16. **Selenium page-object wrapper** (SPEC §17) ✅ **Done** — a third shape for all three Selenium
+    languages, imports computed from the buckets present, covered by the compile checks. Python needed
+    a receiver-aware generator rather than a wrapper. Awaiting hand-test.
+
+17. **Frames** (SPEC §16) — the last of the specced behaviour.
 
 **Considered, not scheduled — capture from the Elements tree.** `devtools.panels.elements
 .onSelectionChanged` plus `inspectedWindow.eval` with `$0` would let a button add whatever is selected

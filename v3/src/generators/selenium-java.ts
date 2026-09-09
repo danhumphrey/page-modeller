@@ -7,6 +7,7 @@ import type { LocatorCandidate } from '../engine/types';
 import { classify, isImage } from './classify';
 import { lowerCamel } from './names';
 import { doubleQuoted } from '../quote';
+import { classNameFor } from './class-name';
 
 const q = doubleQuoted;
 
@@ -133,4 +134,49 @@ export function generateSeleniumJavaLocators(model: TabModel): string {
 
 export function generateSeleniumJava(model: TabModel): string {
   return model.elements.map((el) => [banner(el.name), ...methods(el)].join('\n\n')).join('\n\n');
+}
+
+/**
+ * The methods with a class around them (SPEC §17): imports, a declaration, and
+ * a constructor taking the `driver` they otherwise reference bare.
+ *
+ * Imports are computed from what the model actually contains. An unused import
+ * is legal and harmless, but it is also the first thing a reviewer notices.
+ */
+export function generateSeleniumJavaPageObject(model: TabModel): string {
+  const buckets = new Set(model.elements.map(classify));
+  const imports = [
+    ...(buckets.has('multiSelect') ? ['java.util.List', 'java.util.stream.Collectors'] : []),
+    'org.openqa.selenium.By',
+    'org.openqa.selenium.WebDriver',
+    'org.openqa.selenium.WebElement',
+    ...(buckets.has('select') || buckets.has('multiSelect') ? ['org.openqa.selenium.support.ui.Select'] : []),
+  ];
+  const className = classNameFor(model.url);
+
+  return [
+    ...imports.map((i) => `import ${i};`),
+    '',
+    `public class ${className} {`,
+    '    private final WebDriver driver;',
+    '',
+    `    public ${className}(WebDriver driver) {`,
+    '        this.driver = driver;',
+    '    }',
+    ...model.elements.flatMap((el) => [
+      '',
+      indent(banner(el.name)),
+      ...methods(el).map(indent).join('\n\n').split('\n'),
+    ]),
+    '}',
+    '',
+  ].join('\n');
+}
+
+/** Four spaces onto every non-blank line, so the fragment sits inside a class. */
+function indent(block: string): string {
+  return block
+    .split('\n')
+    .map((line) => (line ? `    ${line}` : line))
+    .join('\n');
 }

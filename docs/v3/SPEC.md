@@ -706,10 +706,16 @@ Nested frames extend the chain — one `switchTo().frame()` per level, outermost
 
 ## 17. Selenium page-object wrapper
 
-The shape selector is built (§11), and Playwright's default shape is already a full page object. What is
-left is a **third Selenium shape** — Methods · Page object · Locators only — wrapping the methods in a
-class declaration, imports, and a constructor taking the `driver` they currently reference bare.
-**[inferred]**
+A third Selenium shape — **Methods** (default) · Page object · Locators only. Imports, a class
+declaration, and a constructor taking the `driver` the methods otherwise reference bare. **[settled]**
+
+Imports are computed from the buckets present: `Select` only when there is a select, `List` and
+`Collectors` only when there is a multi-select. Unused imports are legal and are also the first thing a
+reviewer notices.
+
+**Python is not a wrapper.** Java and C# have an implicit receiver, so the fragment drops into a class
+unchanged. Python does not: every definition gains `self` and every call site a `self.` prefix, so the
+generator is receiver-aware rather than wrapped. **[settled]**
 
 Class name is derived as it is for Playwright (§12). Making it an **editable field** in the dialog is
 the obvious next step and is not built. **[open]**
