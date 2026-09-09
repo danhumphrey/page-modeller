@@ -142,7 +142,12 @@ The dialog opens *with* picking rather than before it. It lives in the panel and
 clickable behind it, so what it describes can be tried while reading it.
 
 `Don't show this again` is offered only when the dialog opened by itself: having asked to see it, you
-are not asking to be rid of it. The two flags live in settings but are not shown on the options page —
+are not asking to be rid of it.
+
+**An unreachable page withdraws it**, and does not count it as seen — teaching someone to scan a page
+that cannot be scanned is noise stacked on an error, and the lesson is still owed the first time picking
+actually starts. Only guidance that opened by itself: one opened from the **?** was asked for, and an
+unrelated failure is no reason to take it away. **[settled]** The two flags live in settings but are not shown on the options page —
 they are dismissal state, not a preference, and the **?** already brings the guidance back.
 
 The strip is **always in the layout** and only made invisible when idle. A row that appears and

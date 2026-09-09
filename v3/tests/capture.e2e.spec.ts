@@ -311,6 +311,34 @@ test('a sandboxed frame gets a real chain too', async () => {
   expect(JSON.stringify(result.framePath)).not.toContain(':root');
 });
 
+test('an unreachable tab does not close guidance the user asked for', async () => {
+  // First-use guidance is withdrawn when the page turns out to be unreachable —
+  // teaching someone to scan a page that cannot be scanned is noise stacked on
+  // an error. Guidance opened from the toolbar is a different thing: it was
+  // asked for, and an unrelated failure is no reason to take it away.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/sidepanel.html`);
+  await panel.getByTestId('btn-help').click();
+  await expect(panel.getByTestId('help-ok')).toBeVisible();
+
+  // The message the panel would get if its page could not be reached. Sent
+  // from the service worker, not the panel: runtime.sendMessage never delivers
+  // to its own sender. Addressed to the tab the panel is watching, since panels
+  // ignore anything naming a different one.
+  const watched = await panel.evaluate(
+    async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id
+  );
+  await sw.evaluate((id) => chrome.runtime.sendMessage({ type: 'TAB_UNREACHABLE', tabId: id }), watched);
+  await expect(panel.getByText("can’t reach this page")).toBeVisible();
+  await expect(panel.getByTestId('help-ok'), 'still open — it was asked for').toBeVisible();
+
+  await panel.close();
+});
+
 test('holding the modifier keeps Add armed for the next click (SPEC §4)', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });

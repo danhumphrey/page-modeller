@@ -133,8 +133,15 @@ const multiKey = (() => {
  */
 const helpMode = ref<'add' | 'scan' | 'all' | null>(null);
 
-/** Show the guidance for a mode the first time that mode is used (SPEC §4). */
+/**
+ * Show the guidance for a mode the first time that mode is used (SPEC §4).
+ *
+ * Opened optimistically, because whether the page can be picked at all is only
+ * known once the relay to it fails — there is no reply to wait for, so the
+ * panel finds out from TAB_UNREACHABLE, which withdraws this again.
+ */
 function helpOnFirstUse(mode: 'add' | 'scan') {
+  if (tabId.value == null) return;
   const seen = mode === 'add' ? settings.value.seenAddHelp : settings.value.seenScanHelp;
   if (!seen) helpMode.value = mode;
 }
@@ -243,6 +250,13 @@ function onRuntimeMessage(msg: unknown) {
     model.value = incoming.model;
   } else if (incoming.type === 'TAB_UNREACHABLE') {
     isAdding.value = isScanning.value = false;
+    // Teaching someone to scan a page that cannot be scanned is noise on top
+    // of an error. Withdrawn rather than left standing — and not counted as
+    // seen, so it still appears the first time picking actually starts.
+    //
+    // Only the guidance that opened itself. One opened from the toolbar was
+    // asked for, and an unrelated failure is no reason to take it away.
+    if (helpMode.value !== 'all') helpMode.value = null;
     notice('unreachable', {
       message: 'Page Modeller can\u2019t reach this page. Reload the tab, or try a normal http(s) page.',
       icon: 'block',
