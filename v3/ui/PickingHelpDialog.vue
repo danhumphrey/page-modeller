@@ -54,7 +54,7 @@ const ADD = (multiKey: string) => ({
   lead: 'Click any element on the page to add it to the model.',
   keys: [
     { key: '↑↓', what: 'walk the DOM while hovering, for a precise pick' },
-    { key: `${multiKey}+Click`, what: 'keep adding without arming Add again' },
+    { key: `${multiKey}+Click`, what: 'keep adding multiple elements' },
     { key: 'Esc', what: 'stop' },
   ],
 });
