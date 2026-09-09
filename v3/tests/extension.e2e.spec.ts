@@ -84,6 +84,18 @@ test('built extension loads and every panel surface renders', async () => {
         await expect(page.getByTestId('framework-selector')).toContainText('Playwright');
         await expect(page.getByTestId('empty-state')).toBeVisible();
 
+        // The Add hint holds its space when idle. A row that appears and
+        // disappears shifts the whole table under the pointer, while you are
+        // aiming at it — so it is hidden, never removed. (Arming it needs a
+        // real tab, which a bare panel page does not have.)
+        const hint = page.getByTestId('add-hint');
+        await expect(hint).toHaveAttribute('data-idle', '');
+        expect(
+          await hint.evaluate((el) => getComputedStyle(el).visibility),
+          'hidden, not display:none, or the row would collapse'
+        ).toBe('hidden');
+        expect((await hint.boundingBox())?.height, 'and it still occupies its row').toBeGreaterThan(0);
+
         // Enablement with no model: scan and add live, the rest disabled.
         await expect(page.getByTestId('btn-delete-model')).toBeDisabled();
         await expect(page.getByTestId('btn-generate')).toBeDisabled();

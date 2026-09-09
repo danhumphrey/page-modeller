@@ -17,11 +17,12 @@
 
     <q-page-container>
       <q-page>
-        <!-- Shown only while Add is armed, and only there: Scan already takes
-             many elements, so the modifier means nothing to it. A strip rather
-             than a toast — it is advice for the whole time you are picking,
-             not an event. -->
-        <div v-if="isAdding" class="hint-strip" data-testid="add-hint">
+        <!-- Advice for the whole time Add is armed, so a strip rather than a
+             toast. Always in the layout and only made invisible, because a row
+             that appears and disappears shifts the whole table under the
+             pointer — while you are aiming at it. Scan does not need it: it
+             already takes many elements at once. -->
+        <div class="hint-strip" :aria-hidden="!isAdding" :data-idle="isAdding ? undefined : ''" data-testid="add-hint">
           <q-icon name="ads_click" size="16px" />
           <span>Click an element to add it. Hold <kbd>{{ multiKey }}</kbd> to add several.</span>
         </div>
@@ -451,6 +452,11 @@ function notYet(what: string) {
   font-size: 12px;
   color: var(--pm-muted);
   border-bottom: 1px solid var(--pm-rule);
+}
+
+/* Invisible, not absent: the space stays reserved so nothing below it moves. */
+.hint-strip[data-idle] {
+  visibility: hidden;
 }
 
 .hint-strip kbd {
