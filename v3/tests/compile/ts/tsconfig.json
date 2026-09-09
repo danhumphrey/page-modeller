@@ -1,0 +1,14 @@
+{
+  "//": "Typechecks generated TypeScript against the real libraries. `puppeteer` is mapped to puppeteer-core, which is where its types actually live and what this repo installs — the generated import stays honest for the user.",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "baseUrl": "../../..",
+    "paths": { "puppeteer": ["node_modules/puppeteer-core"] }
+  },
+  "include": ["*.ts"]
+}

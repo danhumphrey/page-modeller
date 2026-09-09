@@ -14,6 +14,11 @@ export interface TsTarget {
   module: string;
   /** The call, without the leading `page.` */
   expr: (el: ModelElement) => string;
+  /**
+   * How to write the field's type. Playwright's `Locator` is plain; Puppeteer's
+   * is generic over the node it yields, so a bare `Locator` does not compile.
+   */
+  locatorType?: string;
 }
 
 export function tsPageObject(model: TabModel, target: TsTarget): string {
@@ -34,7 +39,7 @@ export function tsPageObject(model: TabModel, target: TsTarget): string {
     `import { type Locator, type Page } from '${target.module}';`,
     '',
     `export class ${className} {`,
-    ...model.elements.map((el) => `  readonly ${lowerCamel(el.name)}: Locator;`),
+    ...model.elements.map((el) => `  readonly ${lowerCamel(el.name)}: ${target.locatorType ?? 'Locator'};`),
     '',
     // Assignment reads the constructor PARAMETER, not `this.page`: a parameter
     // property is not assigned until the constructor body completes.

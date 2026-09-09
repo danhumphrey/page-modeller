@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Phase 1 — pick a DOM element and generate a verified Playwright Page Object Model.",
+  "description": "Phase 1 \u2014 pick a DOM element and generate a verified Playwright Page Object Model.",
   "scripts": {
     "postinstall": "wxt prepare",
     "dev": "wxt",
@@ -17,7 +17,8 @@
     "test": "npm run test:unit && npm run bundle:engine && npm run build && npm run build:firefox && npm run check:manifests && playwright test",
     "dev:firefox": "wxt -b firefox",
     "fixtures": "node scripts/serve-fixtures.mjs",
-    "check:manifests": "node scripts/check-manifests.mjs"
+    "check:manifests": "node scripts/check-manifests.mjs",
+    "fetch:test-deps": "node scripts/fetch-test-deps.mjs"
   },
   "dependencies": {
     "@quasar/extras": "^1.16.0",

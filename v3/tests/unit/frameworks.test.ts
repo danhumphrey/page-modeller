@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { frameworks, defaultFrameworkId, frameworkById } from '../../src/frameworks';
+import { everyTypeFor } from './fixtures/model';
 
 describe('frameworks', () => {
   it('defaults to Playwright TypeScript', () => {
@@ -30,5 +31,17 @@ describe('frameworks', () => {
 
   it('falls back to the first framework for an unknown id', () => {
     expect(frameworkById('nope')).toBe(frameworks[0]);
+  });
+});
+
+describe('the compile-check fixtures', () => {
+  it('carry one element per locator type, for every framework', () => {
+    // Otherwise a type added to a framework is silently never compiled or
+    // parsed — which is how the TypeScript check passed with getByAltText
+    // misspelled.
+    for (const f of frameworks) {
+      const covered = everyTypeFor(f.id).map((el) => el.candidate.kind);
+      expect([...new Set(covered)].sort(), f.label).toEqual([...f.locatorTypes].sort());
+    }
   });
 });

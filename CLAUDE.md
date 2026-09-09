@@ -119,18 +119,23 @@ Two separate questions: does the locator find the element, and is the emitted co
 
 | Target | Locator semantics | Generated code |
 |---|---|---|
-| Playwright TS | ✅ every expression resolved in real Playwright | ❌ nothing compiles it |
-| Puppeteer | ✅ real Puppeteer (`puppeteer.fidelity.spec.ts`) | ❌ |
+| Playwright TS | ✅ every expression resolved in real Playwright | ✅ `tsc` against `@playwright/test` |
+| Puppeteer | ✅ real Puppeteer (`puppeteer.fidelity.spec.ts`) | ✅ `tsc` against `puppeteer-core` |
 | Playwright Python | ✅ inherited — proven the mechanical transform of the TS spelling | ✅ `python3 -m ast` |
 | Selenium Python | ⚠️ strategy only | ✅ `python3 -m ast` |
-| Selenium Java | ⚠️ strategy only | ❌ needs `javac` + the selenium jar |
-| Selenium C# | ⚠️ strategy only | ❌ needs `dotnet` + Selenium.WebDriver |
+| Selenium Java | ⚠️ strategy only | ✅ `javac` against selenium-api + selenium-support |
+| Selenium C# | ⚠️ strategy only | ✅ `dotnet build` against Selenium.WebDriver |
 
 ⚠️ **strategy only**: `tests/pw-builder.ts` resolves each `By` strategy as the equivalent CSS/XPath in
 real Playwright, so *which* strategy is right is checked. The spelling (`By.Name` / `By.NAME`) is
 constant tables under unit test, and the API (`SelectElement.SelectByText`) is unchecked.
 
+The Java and C# checks need `npm run fetch:test-deps` once — a Maven jar download and a NuGet restore.
+Deliberately not part of `npm test`, so the gate still works offline and on a machine with no JDK.
 Toolchain-gated tests **skip loudly**, never silently.
+
+A compile check is not a semantic one. It proves `SelectElement.SelectByText` exists and that
+`params string[]` is legal; it cannot prove the method does what the element needs.
 
 ## v2.5.1 is not the default
 

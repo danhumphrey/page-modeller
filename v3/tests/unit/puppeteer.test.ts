@@ -19,8 +19,9 @@ describe('generatePuppeteerPageObject', () => {
         "import { type Locator, type Page } from 'puppeteer';",
         '',
         'export class LoginPage {',
-        '  readonly signIn: Locator;',
-        '  readonly firstRow: Locator;',
+        // Generic: `page.locator('button')` yields a Locator<HTMLButtonElement>.
+        '  readonly signIn: Locator<Element>;',
+        '  readonly firstRow: Locator<Element>;',
         '',
         '  constructor(private readonly page: Page) {',
         "    this.signIn = page.locator('#go');",

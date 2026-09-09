@@ -5,7 +5,7 @@ import { generateSeleniumPython, generateSeleniumPythonLocators } from '../../sr
 import { playwrightExpr, playwrightPyExpr } from '../../src/locators/display';
 import { frameworkById } from '../../src/frameworks';
 import type { LocatorCandidate } from '../../src/engine/types';
-import { modelOf, EMAIL, SIGN_IN, COUNTRY, TOPPINGS, REMEMBER, LOGO, HEADING, PW_EMAIL, PW_SIGN_IN } from './fixtures/model';
+import { modelOf, everyTypeFor, ALL_BUCKETS } from './fixtures/model';
 
 const hasPython = (() => {
   try {
@@ -52,13 +52,16 @@ const nastyPlaywright = [
   { name: 'Labelled', role: 'textbox', tag: 'input', candidate: { kind: 'label', text: NASTY, exact: true } as LocatorCandidate },
 ];
 
+/** Every method bucket and every locator type the framework offers. */
+const full = (id: string) => modelOf(id, ...ALL_BUCKETS, ...everyTypeFor(id));
+
 describe.skipIf(!hasPython)('the generated Python is Python', () => {
   const cases: Array<[string, string]> = [
-    ['playwright page object', generatePlaywrightPythonPageObject(modelOf('playwright-python', PW_EMAIL, PW_SIGN_IN, HEADING))],
+    ['playwright page object', generatePlaywrightPythonPageObject(full('playwright-python'))],
     ['playwright page object, empty', generatePlaywrightPythonPageObject(modelOf('playwright-python'))],
-    ['playwright locators', generatePlaywrightPythonLocators(modelOf('playwright-python', PW_EMAIL, PW_SIGN_IN))],
-    ['selenium methods', generateSeleniumPython(modelOf('selenium-python', EMAIL, SIGN_IN, COUNTRY, TOPPINGS, REMEMBER, LOGO, HEADING))],
-    ['selenium locators', generateSeleniumPythonLocators(modelOf('selenium-python', EMAIL, SIGN_IN))],
+    ['playwright locators', generatePlaywrightPythonLocators(full('playwright-python'))],
+    ['selenium methods', generateSeleniumPython(full('selenium-python'))],
+    ['selenium locators', generateSeleniumPythonLocators(full('selenium-python'))],
     ['playwright page object, awkward values', generatePlaywrightPythonPageObject(modelOf('playwright-python', ...nastyPlaywright))],
     ['selenium locators, awkward values', generateSeleniumPythonLocators(modelOf('selenium-python', ...nastySelenium))],
     ['selenium methods, awkward values', generateSeleniumPython(modelOf('selenium-python', ...nastySelenium))],
