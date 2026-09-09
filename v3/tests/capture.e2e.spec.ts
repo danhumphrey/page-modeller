@@ -253,7 +253,10 @@ test('a srcdoc frame can be picked at all, and gets a complete chain', async () 
   expect(result.framePath[0].frame.value).toContain('Srcdoc');
 });
 
-test('a pick in a cross-origin frame declares the break rather than lying', async () => {
+test('a cross-origin frame gets a real chain, not an opaque one (SPEC §16)', async () => {
+  // `window.frameElement` is unreadable across an origin, so a frame cannot see
+  // what embeds it — every cross-origin and sandboxed element used to come out
+  // marked opaque. The parent CAN see it, so the path is pushed down instead.
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
 
@@ -261,7 +264,7 @@ test('a pick in a cross-origin frame declares the break rather than lying', asyn
   await page.waitForLoadState('networkidle');
   await collectMessages(sw as never);
 
-  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add', nonce: 'n' }), tabId);
   const cross = page.frameLocator('#cross-frame');
   await cross.getByRole('button', { name: 'Submit', exact: true }).hover();
   await cross.getByRole('button', { name: 'Submit', exact: true }).click();
@@ -270,13 +273,42 @@ test('a pick in a cross-origin frame declares the break rather than lying', asyn
     .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
     .toBe(1);
   const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
-  const result = picks[0].result as { framePath: { opaque?: boolean }[] };
+  const result = picks[0].result as { framePath: { frame: { value: string }; opaque?: boolean }[] };
 
-  // window.frameElement is unreadable across an origin, so the chain cannot be
-  // completed from inside. Saying so beats a path that starts halfway down and
-  // looks complete.
-  expect(result.framePath.length).toBeGreaterThan(0);
-  expect(result.framePath.some((s) => s.opaque), 'the break is declared').toBe(true);
+  expect(result.framePath.some((s) => s.opaque), 'the chain is complete').toBe(false);
+  expect(result.framePath.map((s) => s.frame.value)).toEqual(['#cross-frame']);
+
+  // And it resolves: Playwright does not care about origins.
+  const resolved = page.frameLocator('#cross-frame').getByRole('button', { name: 'Submit', exact: true });
+  await expect(resolved).toHaveCount(1);
+  await expect(resolved).toHaveAttribute('data-spike', 'child-submit');
+});
+
+test('a sandboxed frame gets a real chain too', async () => {
+  // An opaque origin by construction, and the case that produced
+  // `frameLocator(':root')` — the opaque marker leaking out as a selector.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-path-sandbox', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add', nonce: 'n' }), tabId);
+  const box = page.frameLocator('#sandboxed-frame').getByRole('button', { name: 'Submit', exact: true });
+  await box.hover();
+  await box.click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = picks[0].result as { framePath: { frame: { value: string }; opaque?: boolean }[] };
+
+  expect(result.framePath.some((s) => s.opaque)).toBe(false);
+  expect(result.framePath.map((s) => s.frame.value)).toEqual(['#sandboxed-frame']);
+  // The marker must never reach output as if it were a selector.
+  expect(JSON.stringify(result.framePath)).not.toContain(':root');
 });
 
 test('highlighting reports its count as a message, and Close clears it', async () => {

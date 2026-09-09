@@ -694,10 +694,27 @@ warning on an AMO submission, so it is Chrome-only. Both match on the frame's **
 sandboxed frame is reached too. `scripts/check-manifests.mjs` guards all of this: nothing else notices a
 content script that simply never runs. **[settled]**
 
-`window.frameElement` builds the chain, and its limit is the hard case: it is readable only when the
-parent is same-origin. Across an origin it throws, and a document cannot see what embeds it — so the
-chain stops there and is **marked opaque**. A path that starts halfway down and looks complete is worse
-than one that admits it is partial. **[settled]**
+**The path is pushed down, not looked up.** `window.frameElement` is readable only when the parent is
+same-origin, so a cross-origin or sandboxed frame can never see what embeds it — every such element came
+out marked opaque, which leaked the marker into generated code as `frameLocator(':root')` and made two
+different frames indistinguishable to the eye.
+
+Only the parent can identify its own child, and it always can: the `<iframe>` is an ordinary element in
+its document whatever origin it loads. The top frame knows its path is empty and tells each child; each
+child records what it was told and tells its own children. No request, no reply, no origin restriction.
+**[settled]**
+
+Frames load in no fixed order, so neither direction alone converges — a parent that pushes before a
+child's script exists reaches nobody, and a child that asks before its parent knows its own path gets a
+wrong answer. Both are done: push from the top at load and again when picking arms, and a late child
+asks its parent and is answered.
+
+The push is guarded by `event.source === window.parent`, not by the picking nonce, because it happens at
+load before any nonce exists. A hostile page could therefore lie about its own frame structure and get a
+wrong locator into its own model — visible in the table, and no worse than that. **[settled]**
+
+`opaque` survives as the marker for a chain that could not be completed, but the push means nothing
+should produce one.
 
 ### Carrying it, or admitting you cannot **[settled]**
 

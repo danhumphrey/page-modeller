@@ -325,6 +325,19 @@ function chooseFirstUnique(ranked: RankedCandidate[]): number {
   return i === -1 ? 0 : i;
 }
 
+/**
+ * How the parent document addresses one of its frames. css or xpath only:
+ * `frameLocator` takes a selector, not a locator, and so does every other
+ * frame API in reach.
+ */
+export function frameStepFor(frame: Element): FrameStep {
+  const ranked = rankFor(frame, safeRole(frame), safeName(frame)).filter(
+    (c) => c.candidate.kind === 'css' || c.candidate.kind === 'xpath'
+  );
+  const best = ranked[chooseFirstUnique(ranked)] ?? ranked[0];
+  return { frame: best?.candidate ?? { kind: 'css', value: frame.localName } };
+}
+
 /** A selector string for a frame step, for the APIs that take one. */
 export function frameSelector(step: FrameStep): string {
   return step.frame.kind === 'xpath' ? `xpath=${step.frame.value}` : (step.frame as { value: string }).value;
@@ -418,7 +431,7 @@ function rankFor(el: Element, role: string | null, name: string): RankedCandidat
   return candidates;
 }
 
-export function generate(el: Element): ElementResult {
+export function generate(el: Element, framePath?: FrameStep[]): ElementResult {
   const role = safeRole(el);
   const name = safeName(el);
   const tag = el.tagName.toLowerCase();
@@ -433,7 +446,9 @@ export function generate(el: Element): ElementResult {
     candidates,
     preferredIndex: candidates.findIndex((c) => c.predictedCount === 1),
     // The document this element lives in may be framed; the chain to it is as
-    // much a part of the locator as the locator (SPEC §16).
-    framePath: framePathOf(el.ownerDocument.defaultView),
+    // much a part of the locator as the locator (SPEC §16). Supplied by the
+    // caller, because only the top frame can see the whole chain — see
+    // `frameStepFor` and the FRAME_PATH broadcast in the content script.
+    framePath: framePath ?? framePathOf(el.ownerDocument.defaultView),
   };
 }

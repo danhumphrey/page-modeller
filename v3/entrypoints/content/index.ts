@@ -1,4 +1,4 @@
-import { framePathOf, generate, resolveCandidate } from '@/src/engine/candidates';
+import { frameStepFor, generate, resolveCandidate } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
 import { collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
@@ -27,6 +27,22 @@ export default defineContentScript({
     let includeHidden = false;
     /** Shared by every frame in the tab for this picking session. */
     let nonce = '';
+    /**
+     * Where this frame sits, told to it from above (SPEC §16).
+     *
+     * `window.frameElement` cannot work here: it is readable only when the
+     * parent is same-origin, so a cross-origin or sandboxed frame could never
+     * see what embeds it and every such element came out marked opaque — which
+     * then leaked `frameLocator(':root')` into generated code and made two
+     * different frames indistinguishable to the eye.
+     *
+     * Pushed DOWN instead. Only the parent can identify its own child, and it
+     * can always do so: the `<iframe>` is an ordinary element in its document
+     * whatever origin it loads. The top frame knows its path is empty and tells
+     * each child; each child appends nothing, records what it was told, and
+     * tells its own children. No request, no reply, no origin restriction.
+     */
+    let myPath: FrameStep[] = [];
     let box: HTMLDivElement | null = null;
     let label: HTMLDivElement | null = null;
     let current: Element | null = null;
@@ -263,6 +279,33 @@ export default defineContentScript({
      * doing.
      */
     const SCAN_FRAME = '__pageModellerScanFrame';
+    /** Carries a frame its own path, from the document that embeds it. */
+    const FRAME_PATH = '__pageModellerFramePath';
+    /** A frame that loaded after its parent pushed, asking to be told. */
+    const NEED_PATH = '__pageModellerNeedPath';
+
+    /** Tell one child frame, or every child frame, where it sits. */
+    function pushPaths(only?: Window) {
+      for (const frame of document.querySelectorAll('iframe, frame')) {
+        const win = (frame as HTMLIFrameElement).contentWindow;
+        if (!win || (only && win !== only)) continue;
+        win.postMessage({ [FRAME_PATH]: true, path: [...myPath, frameStepFor(frame)] }, '*');
+      }
+    }
+
+    /**
+     * Frames load in no fixed order, so neither direction alone converges: a
+     * parent that pushes before a child's script exists reaches nobody, and a
+     * child that asks before its parent knows its own path gets a wrong answer.
+     * Doing both settles it — the top frame pushes, every frame that learns its
+     * path pushes onward, and a late child asks and is answered.
+     */
+    if (window.top === window) {
+      myPath = [];
+      pushPaths();
+    } else {
+      window.parent.postMessage({ [NEED_PATH]: true }, '*');
+    }
 
     window.addEventListener('message', (e: MessageEvent) => {
       const data = e.data as Record<string, unknown> | null;
@@ -270,8 +313,27 @@ export default defineContentScript({
       // Authenticated by the nonce, not by `active`: a cascading scan reaches
       // frames after the background has already disarmed everyone, and a frame
       // that refused then would be a hole in the middle of the tree.
-      if (!nonce || data[SCAN_FRAME] !== nonce) return;
+      // A child asking where it sits. Answered from this frame's own path, and
+      // answered again later if that path changes.
+      if (data[NEED_PATH] && e.source && e.source !== window.parent) {
+        pushPaths(e.source as Window);
+        return;
+      }
+
       if (e.source !== window.parent) return;
+
+      if (data[FRAME_PATH]) {
+        // Not authenticated by the picking nonce: this runs at load, before
+        // any nonce exists. `e.source === window.parent` is the guard. A page
+        // could lie about its own frame structure and get a wrong locator into
+        // its own model — visible in the table, and no worse than that.
+        myPath = (data.path as FrameStep[]) ?? [];
+        // Pass it on: the chain is built one level at a time.
+        pushPaths();
+        return;
+      }
+
+      if (!nonce || data[SCAN_FRAME] !== nonce) return;
       scanDocument();
     });
 
@@ -290,7 +352,7 @@ export default defineContentScript({
      */
     function scanDocument() {
       const root = document.body ?? document.documentElement;
-      const results = collectInteractive(root, includeHidden).map(generate);
+      const results = collectInteractive(root, includeHidden).map((el) => generate(el, myPath));
       const nested = Array.from(document.querySelectorAll('iframe, frame'));
       stop({ notify: false });
       if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
@@ -330,8 +392,8 @@ export default defineContentScript({
       // itself: you are modelling what is inside the section you chose.
       const message =
         mode === 'scan'
-          ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map(generate) }
-          : { type: 'ELEMENT_PICKED', result: generate(target) };
+          ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map((el) => generate(el, myPath)) }
+          : { type: 'ELEMENT_PICKED', result: generate(target, myPath) };
 
       // Rejects when no panel is open; that's fine, drop it.
       browser.runtime.sendMessage(message).catch(() => {});
@@ -452,6 +514,8 @@ export default defineContentScript({
         mode = m.mode;
         includeHidden = m.includeHidden;
         nonce = m.nonce;
+        // Re-seed: frames may have been added since load.
+        if (window.top === window) pushPaths();
         start();
       }
       // notify: false — STOP_PICKING only ever comes from the panel or from the
@@ -479,7 +543,7 @@ export default defineContentScript({
         // both elements marked. Cleared before the path check, or only the
         // answering frame would forget.
         clearMarks();
-        if (!samePath(framePathOf(window), m.framePath)) return;
+        if (!samePath(myPath, m.framePath)) return;
         const targets = resolveCandidate(document, m.candidate);
         const { hidden } = highlightAll(targets);
         // Answered as a message, not a reply — sendResponse is not portable.
