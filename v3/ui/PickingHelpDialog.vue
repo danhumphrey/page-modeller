@@ -49,11 +49,14 @@ const open = ref(true);
 const dontShowAgain = ref(false);
 const dismissable = computed(() => props.mode !== 'all');
 
+/** The arrows do the same thing in both modes, so they say the same thing. */
+const WALK = 'walk the DOM while hovering, to select the exact element';
+
 const ADD = (multiKey: string) => ({
   title: 'Adding elements',
   lead: 'Click any element on the page to add it to the model.',
   keys: [
-    { key: '↑↓', what: 'walk the DOM while hovering, to select the exact element' },
+    { key: '↑↓', what: WALK },
     { key: `${multiKey}+CLICK`, what: 'keep adding multiple elements' },
     { key: 'ESC', what: 'stop' },
   ],
@@ -61,9 +64,9 @@ const ADD = (multiKey: string) => ({
 
 const SCAN = {
   title: 'Scanning a page',
-  lead: 'Click a container and everything interactive inside it is modelled at once — a form, a panel, or the page itself.',
+  lead: 'Click any element on the page to use as the model container. All interactive child elements will be included.',
   keys: [
-    { key: '↑↓', what: 'walk the DOM to widen or narrow what you are about to scan' },
+    { key: '↑↓', what: WALK },
     { key: 'ESC', what: 'stop' },
   ],
 };
