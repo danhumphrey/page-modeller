@@ -54,8 +54,8 @@ const ADD = (multiKey: string) => ({
   lead: 'Click any element on the page to add it to the model.',
   keys: [
     { key: '↑↓', what: 'walk the DOM while hovering, to select the exact element' },
-    { key: `${multiKey}+Click`, what: 'keep adding multiple elements' },
-    { key: 'Esc', what: 'stop' },
+    { key: `${multiKey}+CLICK`, what: 'keep adding multiple elements' },
+    { key: 'ESC', what: 'stop' },
   ],
 });
 
@@ -64,7 +64,7 @@ const SCAN = {
   lead: 'Click a container and everything interactive inside it is modelled at once — a form, a panel, or the page itself.',
   keys: [
     { key: '↑↓', what: 'walk the DOM to widen or narrow what you are about to scan' },
-    { key: 'Esc', what: 'stop' },
+    { key: 'ESC', what: 'stop' },
   ],
 };
 
@@ -135,8 +135,11 @@ function onHide() {
   line-height: 1.5;
 }
 
+/* The UI font, not a monospace one: ⌘ and the arrows are drawn small and thin
+   in most monospace faces, and these are labels rather than code. */
 kbd {
-  font: 11px/1.4 ui-monospace, SFMono-Regular, monospace;
+  font: 600 11px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  letter-spacing: 0.04em;
   border: 1px solid var(--pm-rule);
   border-radius: 3px;
   padding: 1px 5px;
