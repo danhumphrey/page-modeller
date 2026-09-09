@@ -12,29 +12,12 @@
         @add="toggleAdd"
         @delete-model="deleteModel"
         @generate="showCode = true"
+        @help="helpMode = 'all'"
       />
     </q-header>
 
     <q-page-container>
       <q-page>
-        <!-- Advice for the whole time picking is armed, so a strip rather than
-             a toast. Always in the layout and only made invisible, because a
-             row that appears and disappears shifts the whole table under the
-             pointer — while you are aiming at it.
-             Key/action pairs rather than a sentence: walking the DOM and
-             adding several are the two things nothing else in the UI reveals,
-             and prose long enough to explain both does not fit a sidebar. -->
-        <div
-          class="hint-strip"
-          :aria-hidden="!isPickingNow"
-          :data-idle="isPickingNow ? undefined : ''"
-          data-testid="picking-hint"
-        >
-          <span v-for="hint in hints" :key="hint.label" class="hint">
-            <kbd>{{ hint.key }}</kbd> {{ hint.label }}
-          </span>
-        </div>
-
         <!-- SPEC §5: a model is kept across a navigation, so it can end up
              describing a page that is no longer loaded. Say so, rather than
              leaving the user to wonder why the eye reports 0 for every row. -->
@@ -57,6 +40,15 @@
         />
 
         <CodeDialog v-if="showCode" :model="model" @close="showCode = false" />
+
+        <PickingHelpDialog
+          v-if="helpMode"
+          :key="helpMode"
+          :mode="helpMode"
+          :multi-key="multiKey"
+          @dismiss="dismissHelp"
+          @close="helpMode = null"
+        />
 
         <EditElementDialog
           v-if="editing"
@@ -81,6 +73,7 @@ import AppToolbar from './AppToolbar.vue';
 import ModelTable, { type ModelRow } from './ModelTable.vue';
 import EditElementDialog from './EditElementDialog.vue';
 import CodeDialog from './CodeDialog.vue';
+import PickingHelpDialog from './PickingHelpDialog.vue';
 import { defaultFrameworkId } from '@/src/frameworks';
 import { displayElementLocator } from '@/src/locators/display';
 import { activeCandidate, emptyModel, type ModelElement, type TabModel } from '@/src/model';
@@ -88,7 +81,7 @@ import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, 
 import { hostKey } from '@/host/types';
 import { applyTheme } from './theme';
 import type { FrameStep, LocatorCandidate } from '@/src/engine/types';
-import { defaultSettings, loadSettings, watchSettings } from '@/src/settings';
+import { defaultSettings, loadSettings, saveSettings, watchSettings } from '@/src/settings';
 
 // The panel is a VIEW. The background owns the model, one per tab (SPEC §5), so
 // a sidebar and a DevTools panel on the same tab show the same rows and a pick
@@ -134,29 +127,24 @@ const multiKey = (() => {
   return /mac/i.test(platform) ? '\u2318' : 'Ctrl';
 })();
 
-const isPickingNow = computed(() => isAdding.value || isScanning.value);
-
 /**
- * What each mode can do, as key/action pairs. Terse on purpose: the panel is
- * as narrow as a sidebar, and the arrows and the modifier are undiscoverable
- * anywhere else, so leaving either out would mean nobody finds it.
+ * Which guidance is on screen: a single mode when it opened itself on first
+ * use, `all` when the toolbar asked for it, null when nothing is showing.
  */
-const hints = computed(() =>
-  isScanning.value
-    ? [
-        // Scan models everything inside what you pick, so the noun matters
-        // more than the verb here.
-        { key: 'Click', label: 'a container' },
-        { key: '\u2191\u2193', label: 'walk' },
-        { key: 'Esc', label: 'stop' },
-      ]
-    : [
-        { key: 'Click', label: 'add' },
-        { key: '\u2191\u2193', label: 'walk' },
-        { key: `${multiKey}+Click`, label: 'many' },
-        { key: 'Esc', label: 'stop' },
-      ]
-);
+const helpMode = ref<'add' | 'scan' | 'all' | null>(null);
+
+/** Show the guidance for a mode the first time that mode is used (SPEC §4). */
+function helpOnFirstUse(mode: 'add' | 'scan') {
+  const seen = mode === 'add' ? settings.value.seenAddHelp : settings.value.seenScanHelp;
+  if (!seen) helpMode.value = mode;
+}
+
+/** Ticking "don't show this again" is the only thing that stops it coming back. */
+function dismissHelp(modes: ('add' | 'scan')[]) {
+  const patch = Object.fromEntries(modes.map((m) => [m === 'add' ? 'seenAddHelp' : 'seenScanHelp', true]));
+  settings.value = { ...settings.value, ...patch };
+  void saveSettings(settings.value);
+}
 
 const openNotices: Record<string, (() => void) | undefined> = {};
 let noticeSeq = 0;
@@ -360,6 +348,10 @@ async function startPicking(mode: PickMode) {
 
 async function toggleAdd() {
   if (isAdding.value) return stopPicking();
+  // Guidance and picking together, not one then the other: the dialog lives in
+  // the panel and the page stays clickable behind it, so you can try what it
+  // describes while reading it.
+  helpOnFirstUse('add');
   await startPicking('add');
 }
 
@@ -369,6 +361,7 @@ async function toggleAdd() {
  */
 async function toggleScan() {
   if (isScanning.value) return stopPicking();
+  helpOnFirstUse('scan');
   await startPicking('scan');
 }
 

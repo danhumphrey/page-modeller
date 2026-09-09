@@ -127,15 +127,23 @@ nothing; only the *name* shown to the user is platform-specific.
 
 Scan is unaffected: it already takes many elements at once.
 
-The panel shows what the mode can do while picking is armed — a strip under the toolbar, not a toast,
-because it is advice for the whole time you are picking rather than an event. Key/action pairs rather
-than a sentence: the panel is as narrow as a sidebar, and walking the DOM and adding several are the two
-things nothing else in the UI reveals, so prose long enough to explain both does not fit. **[settled]**
+### Saying how picking works **[settled]**
 
-```
-Add    Click add · ↑↓ walk · ⌘+Click many · Esc stop
-Scan   Click a container · ↑↓ walk · Esc stop
-```
+Walking the DOM with the arrows, holding the modifier to add several, and Escape are all
+undiscoverable: nothing else in the UI reveals any of them. But this is something you learn once, and a
+permanent strip in the panel is furniture for a lesson — it also shifted the table every time picking
+armed.
+
+So: a **dialog on first use of each mode**, with *Don't show this again*, and a **?** in the toolbar
+that opens the same guidance whenever it is wanted. Per mode, because Add and Scan teach different
+things and meeting the second one is a separate first time.
+
+The dialog opens *with* picking rather than before it. It lives in the panel and the page stays
+clickable behind it, so what it describes can be tried while reading it.
+
+`Don't show this again` is offered only when the dialog opened by itself: having asked to see it, you
+are not asking to be rid of it. The two flags live in settings but are not shown on the options page —
+they are dismissal state, not a preference, and the **?** already brings the guidance back.
 
 The strip is **always in the layout** and only made invisible when idle. A row that appears and
 disappears shifts the whole table under the pointer at the moment you are aiming at it. **[settled]**
