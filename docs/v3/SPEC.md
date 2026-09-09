@@ -449,7 +449,27 @@ framework-generated; ids are generated constantly — React's `useId` gave Faceb
 `id="_r_6_"` alongside `name="pass"`. It is not only form controls that carry one — `<a>`, `<iframe>`,
 `<map>` and `<object>` do too — but wherever it exists it was written by hand, which is the point. A
 shared name (a radio group) is never chosen, because a candidate must resolve uniquely (§7).
-Puppeteer: `css, xpath`. Robot Framework and Protractor are dropped.
+Puppeteer: `role, text, css, xpath` — Playwright's order, minus what has no P-selector. Robot Framework
+and Protractor are dropped.
+
+**Puppeteer is not css-only.** `::-p-aria` queries the accessibility tree and `::-p-text` matches
+rendered text, so role and text are expressible after all: **[settled]**
+
+```js
+page.locator('::-p-aria([name="Log in"][role="button"])')
+page.locator('::-p-text("Create new account")')
+page.locator('xpath//html[1]/body[1]/div[2]')   // `xpath/` prefix, so an absolute path doubles the slash
+```
+
+Both P-selector arguments are quoted, which is the only safe form — a link named `Forgotten password?`
+would otherwise end the selector early. Without this every link and button fell back to a seven-level
+`>` path, because CSS cannot say "the one that says Log in".
+
+`label`, `placeholder`, `testId`, `altText` and `title` have no P-selector. A test id still reaches
+Puppeteer, because the css candidate is built from `[data-testid]` first (§7).
+
+**None of the Puppeteer output is verified against a real Puppeteer** — it is not a dependency of this
+repo, so nothing resolves the generated string the way the fidelity spec does for Playwright. **[open]**
 
 Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
 engine's existing ranking, testId first as the most change-resistant.

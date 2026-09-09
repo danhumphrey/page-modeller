@@ -31,14 +31,19 @@ const PLAYWRIGHT_TYPES = ['testId', 'role', 'label', 'placeholder', 'text', 'alt
 // chosen when it resolves uniquely (SPEC §7).
 const SELENIUM_TYPES = ['name', 'id', 'linkText', 'partialLinkText', 'css', 'xpath', 'className', 'tagName'] as const;
 
+// Puppeteer's own selector extensions, in Playwright's order. `::-p-aria` reads
+// the accessibility tree, so role+name works here too; without it every link
+// and button fell back to a seven-level `>` path, because CSS has no way to
+// say "the one that says Log in".
+const PUPPETEER_TYPES = ['role', 'text', 'css', 'xpath'] as const;
+
 export const frameworks: readonly Framework[] = [
   { id: 'playwright-ts', label: 'Playwright (TypeScript)', locatorTypes: PLAYWRIGHT_TYPES },
   { id: 'playwright-python', label: 'Playwright (Python)', locatorTypes: PLAYWRIGHT_TYPES },
   { id: 'selenium-java', label: 'Selenium WebDriver Java', locatorTypes: SELENIUM_TYPES },
   { id: 'selenium-csharp', label: 'Selenium WebDriver C#', locatorTypes: SELENIUM_TYPES },
   { id: 'selenium-python', label: 'Selenium WebDriver Python', locatorTypes: SELENIUM_TYPES },
-  // Puppeteer has no user-facing locator API of its own.
-  { id: 'puppeteer', label: 'Puppeteer', locatorTypes: ['css', 'xpath'] },
+  { id: 'puppeteer', label: 'Puppeteer', locatorTypes: PUPPETEER_TYPES },
 ];
 
 /** Playwright is the primary target going forward, so it is the default. */
