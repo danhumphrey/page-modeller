@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { puppeteerSelector } from '../src/locators/display';
 import { frameworkById } from '../src/frameworks';
 import type { ElementResult } from '../src/engine/types';
+import { REQUIRE_FULL_SUITE } from './required';
 
 // The Playwright fidelity spec's counterpart, in a real Puppeteer.
 //
@@ -20,9 +21,19 @@ const PUPPETEER_KINDS = new Set(frameworkById('puppeteer').locatorTypes);
 test('Puppeteer resolves every selector we generate for it', async () => {
   let browser: Browser | undefined;
   try {
-    browser = await puppeteer.launch({ executablePath: chromium.executablePath(), headless: true });
+    browser = await puppeteer.launch({
+      executablePath: chromium.executablePath(),
+      headless: true,
+      // Chrome's sandbox needs kernel privileges a CI container does not grant.
+      // Playwright passes this for us; puppeteer-core does not.
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
   } catch (e) {
-    test.skip(true, `no chromium for puppeteer-core: ${String(e).split('\n')[0]}`);
+    const why = `puppeteer-core could not launch chromium: ${String(e).split('\n')[0]}`;
+    // Silently skipping is how this check stops running without anyone
+    // noticing — it did exactly that on its first CI run.
+    if (REQUIRE_FULL_SUITE) throw new Error(`PM_REQUIRE_FULL_SUITE is set. ${why}`);
+    test.skip(true, why);
     return;
   }
 

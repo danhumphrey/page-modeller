@@ -92,11 +92,13 @@ jobs:
         run: npm run fetch:test-deps
 
       # unit + engine bundle + both builds + manifest checks + Playwright.
-      # PM_REQUIRE_COMPILE_CHECKS turns a missing toolchain into a failure:
-      # a check that silently skips on CI is not a check.
+      # PM_REQUIRE_FULL_SUITE turns every gated skip into a failure — the
+      # compile checks and the Puppeteer spec alike. A check that silently
+      # skips on CI is not a check, and the Puppeteer one did exactly that on
+      # this job's first green run.
       - run: npm test
         env:
-          PM_REQUIRE_COMPILE_CHECKS: '1'
+          PM_REQUIRE_FULL_SUITE: '1'
 
       - name: Upload Playwright report
         if: failure()

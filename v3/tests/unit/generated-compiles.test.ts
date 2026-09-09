@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
+import { REQUIRE_FULL_SUITE } from '../required';
 import { mkdtempSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
@@ -27,9 +28,6 @@ const has = (cmd: string, args: string[]) => {
     return false;
   }
 };
-// A gated check that skips is invisible on CI, which is the one place every
-// toolchain is guaranteed. Set there, so a missing one fails instead.
-const REQUIRED = process.env.PM_REQUIRE_COMPILE_CHECKS === '1';
 const jars = existsSync(LIB) ? readdirSync(LIB).filter((f) => f.endsWith('.jar')) : [];
 const javaReady = has('javac', ['--version']) && jars.length > 0;
 const dotnetReady = has('dotnet', ['--version']) && existsSync(join(CSPROJ, 'obj', 'project.assets.json'));
@@ -164,8 +162,8 @@ describe('the generated TypeScript typechecks against the real libraries', () =>
 // has quietly stopped running.
 it('ran every compile check, or says which it did not', () => {
   const missing = [!javaReady && 'Java', !dotnetReady && 'C#'].filter(Boolean) as string[];
-  if (REQUIRED) {
-    expect(missing, 'PM_REQUIRE_COMPILE_CHECKS is set — run `npm run fetch:test-deps`').toEqual([]);
+  if (REQUIRE_FULL_SUITE) {
+    expect(missing, 'PM_REQUIRE_FULL_SUITE is set — run `npm run fetch:test-deps`').toEqual([]);
     return;
   }
   if (missing.length) console.warn(`Skipped compile checks: ${missing.join(', ')} — run \`npm run fetch:test-deps\``);
