@@ -13,6 +13,14 @@ export type PanelToContent =
   // script reading storage would need its own access level.
   | { type: 'START_PICKING'; mode: PickMode; includeHidden: boolean }
   | { type: 'STOP_PICKING' }
+  // Overlay ownership. The content script runs in every frame and each draws
+  // its own overlay; without a single owner, hovering down through nested
+  // frames leaves a highlight and a breadcrumb in every frame on the way.
+  // Pointer events cannot decide it — a parent frame gets no mouseout when the
+  // pointer crosses into a child — so a frame announces that it has drawn and
+  // the background tells the others to clear.
+  | { type: 'OVERLAY_SHOWN'; token: string }
+  | { type: 'OVERLAY_OWNER'; token: string }
   // Walk the pick target up or down the DOM (SPEC §4). Sent by the panel
   // because focus is there after clicking Add Element, so the page never sees
   // the keydown — the same reason the panel also handles Escape.

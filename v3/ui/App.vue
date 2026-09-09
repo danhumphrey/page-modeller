@@ -142,6 +142,9 @@ function send(target: number, msg: PanelToContent) {
 const isPicking = () => isScanning.value || isAdding.value;
 
 function stopPicking() {
+  // Un-arm here rather than waiting for a PICKING_STOPPED echo: the frames no
+  // longer send one, because the panel asking to stop already knows.
+  isAdding.value = isScanning.value = false;
   if (tabId.value != null) send(tabId.value, { type: 'STOP_PICKING' });
   isAdding.value = isScanning.value = false;
 }
@@ -264,7 +267,10 @@ onBeforeUnmount(() => {
 });
 
 host.onTabChanged((next) => {
-  if (isPicking() && tabId.value != null) send(tabId.value, { type: 'STOP_PICKING' });
+  if (isPicking() && tabId.value != null) {
+    isAdding.value = isScanning.value = false;
+    send(tabId.value, { type: 'STOP_PICKING' });
+  }
   isScanning.value = isAdding.value = false;
   tabId.value = next;
   reportViewing();

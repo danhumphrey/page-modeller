@@ -21,6 +21,9 @@ export default defineContentScript({
 
     const Z = '2147483647';
 
+    /** Identifies this frame to the background; see OVERLAY_SHOWN. */
+    const frameToken = Math.random().toString(36).slice(2);
+
     function ensureOverlay() {
       if (box) return;
       box = document.createElement('div');
@@ -47,6 +50,9 @@ export default defineContentScript({
         whiteSpace: 'nowrap',
       } as CSSStyleDeclaration);
       document.documentElement.append(box, label);
+      // Only on creation, so this is one message per frame entered, not one
+      // per mousemove.
+      browser.runtime.sendMessage({ type: 'OVERLAY_SHOWN', token: frameToken }).catch(() => {});
     }
 
     function removeOverlay() {
@@ -310,10 +316,25 @@ export default defineContentScript({
       moveTarget(e.key === 'ArrowUp' ? 'up' : 'down');
     };
 
+    /**
+     * The pointer left this document — into a child frame, into the parent, or
+     * off the window. This script runs in every frame (`allFrames`), so each
+     * one draws its own overlay and, without this, leaves it behind: hovering
+     * through nested frames stacked a highlight and a breadcrumb in every frame
+     * on the way. Only the document under the pointer should show one.
+     *
+     * A null `relatedTarget` is what distinguishes leaving the document from
+     * moving between two elements inside it.
+     */
+    const onOut = (e: MouseEvent) => {
+      if (active && !e.relatedTarget) removeOverlay();
+    };
+
     function start() {
       if (active) return;
       active = true;
       document.addEventListener('mousemove', onMove, true);
+      document.addEventListener('mouseout', onOut, true);
       document.addEventListener('click', onClick, true);
       document.addEventListener('keydown', onKey, true);
     }
@@ -326,6 +347,7 @@ export default defineContentScript({
       if (!active) return;
       active = false;
       document.removeEventListener('mousemove', onMove, true);
+      document.removeEventListener('mouseout', onOut, true);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKey, true);
       removeOverlay();
@@ -340,7 +362,13 @@ export default defineContentScript({
         includeHidden = m.includeHidden;
         start();
       }
-      else if (m.type === 'STOP_PICKING') stop();
+      // notify: false — STOP_PICKING only ever comes from the panel or from the
+      // background disarming the other frames, and both already know.
+      else if (m.type === 'STOP_PICKING') stop({ notify: false });
+      else if (m.type === 'OVERLAY_OWNER') {
+        // Some other frame is under the pointer now.
+        if (m.token !== frameToken) removeOverlay();
+      }
       else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
       else if (m.type === 'MOVE_TARGET') moveTarget(m.direction);
       else if (m.type === 'PICK_TARGET') pickCurrent();

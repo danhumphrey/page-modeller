@@ -679,6 +679,18 @@ extension is reloaded — which is every rebuild in dev — and the menu is then
 
 New in v3 — v2.5.1 has no frame support.
 
+### One picker, many frames **[settled]**
+
+The content script runs in every frame, so `START_PICKING` arms every frame. Two rules follow, and
+neither can be inferred from pointer events:
+
+- **One-shot is per tab, not per frame.** Only the clicked frame stops itself; the background disarms
+  the rest. Without that, one pick on a framed page recorded three elements as the user carried on
+  clicking.
+- **One overlay at a time.** A frame announces that it has drawn and the background tells the others to
+  clear. A parent frame gets *no* `mouseout` when the pointer crosses into a child, so hovering down
+  through nested frames otherwise left a highlight and a breadcrumb in every frame on the way.
+
 ### Fixtures **[settled]**
 
 `tests/fixtures/frames.html` and `frameset.html`, exercising every shape a real page uses:

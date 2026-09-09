@@ -58,7 +58,11 @@ async function collectMessages(sw: { evaluate: (fn: never, arg?: unknown) => Pro
     g.__picks = [];
     if (g.__collecting) return;
     g.__collecting = true;
-    chrome.runtime.onMessage.addListener((m) => g.__picks.push(m));
+    // OVERLAY_SHOWN is plumbing — a frame telling the background it drew, so
+    // the other frames can clear. The panel ignores it and so does this.
+    chrome.runtime.onMessage.addListener((m) => {
+      if ((m as { type?: string })?.type !== 'OVERLAY_SHOWN') g.__picks.push(m);
+    });
   });
 }
 
@@ -92,6 +96,74 @@ test('picking is one-shot and reports a named element', async () => {
   await page.waitForTimeout(500);
   const after = await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks.length);
   expect(after, 'picking stopped itself after one element').toBe(1);
+});
+
+test('one-shot means one pick per TAB, not one per frame', async () => {
+  // The content script runs in every frame, so START_PICKING arms every frame.
+  // Only the clicked frame used to stop itself, leaving the rest live: one pick
+  // in a framed page recorded three elements as the user carried on clicking.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frames-oneshot', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  expect(page.frames().length, 'the fixture really is framed').toBeGreaterThan(3);
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+
+  // Hover the top frame first, so it draws an overlay of its own, then pick
+  // inside a child frame.
+  await page.getByRole('heading', { name: 'Frames', exact: true }).hover();
+  const child = page.frameLocator('#same-frame');
+  await child.getByRole('button', { name: 'Submit', exact: true }).hover();
+  await child.getByRole('button', { name: 'Submit', exact: true }).click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+
+  // Clicking on in other frames must add nothing: they were disarmed too.
+  await page.getByRole('button', { name: 'Submit', exact: true }).click();
+  await page.frameLocator('#same-frame').frameLocator('#deep-frame').getByRole('button', { name: 'Submit', exact: true }).click();
+  await page.waitForTimeout(500);
+  const after = await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks.length);
+  expect(after, 'every frame disarmed after the first pick').toBe(1);
+
+  // And no frame is left wearing an overlay.
+  for (const frame of page.frames()) {
+    const left = await frame.locator('[data-page-modeller="label"]').count().catch(() => 0);
+    expect(left, `overlay left behind in ${frame.url()}`).toBe(0);
+  }
+});
+
+test('only the frame under the pointer wears an overlay', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frames-overlay', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+
+  const labels = async () => {
+    let n = 0;
+    for (const frame of page.frames()) n += await frame.locator('[data-page-modeller="label"]').count().catch(() => 0);
+    return n;
+  };
+
+  await page.getByRole('heading', { name: 'Frames', exact: true }).hover();
+  await expect.poll(labels).toBe(1);
+
+  // Moving into a child frame must hand the overlay over, not add a second.
+  await page.frameLocator('#same-frame').getByRole('heading', { name: 'Payment' }).hover();
+  await expect.poll(labels, { message: 'the parent kept its overlay' }).toBe(1);
+
+  // And two deep.
+  await page.frameLocator('#same-frame').frameLocator('#deep-frame').getByRole('button', { name: 'Submit', exact: true }).hover();
+  await expect.poll(labels, { message: 'an ancestor frame kept its overlay' }).toBe(1);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'STOP_PICKING' }), tabId);
+  await expect.poll(labels).toBe(0);
 });
 
 test('highlighting reports its count as a message, and Close clears it', async () => {
@@ -560,7 +632,11 @@ test('arrow keys walk the target up and down the DOM', async () => {
     g.__picks = [];
     if (g.__collecting) return;
     g.__collecting = true;
-    chrome.runtime.onMessage.addListener((m) => g.__picks.push(m));
+    // OVERLAY_SHOWN is plumbing — a frame telling the background it drew, so
+    // the other frames can clear. The panel ignores it and so does this.
+    chrome.runtime.onMessage.addListener((m) => {
+      if ((m as { type?: string })?.type !== 'OVERLAY_SHOWN') g.__picks.push(m);
+    });
   });
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
 
