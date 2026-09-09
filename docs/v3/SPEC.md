@@ -308,6 +308,11 @@ model.
 | Playwright — TypeScript, Python | **Page object** (default) · Locators only |
 | Puppeteer | **Page object** (default) · Locators only |
 
+Puppeteer's page object is TypeScript, emitted by the same code as Playwright's — Puppeteer 20's
+`page.locator()` is a lazy handle like Playwright's, so the shape is identical and only the import and
+the selector syntax differ. Puppeteer ships its own types and its docs are TS-first; a JS user deletes
+the annotations. **[settled]**
+
 Shape ids are shared, so `Locators only` means the same thing in every framework. The choice is not
 remembered between openings of the dialog. **[inferred]**
 

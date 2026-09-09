@@ -13,12 +13,16 @@ const row: TestElement = {
 const model = (...els: TestElement[]) => modelOf('puppeteer', ...els);
 
 describe('generatePuppeteerPageObject', () => {
-  it('binds page.locator in the constructor — plain JS, no types', () => {
+  it('is the Playwright page object with Puppeteer’s types and selectors', () => {
     expect(generatePuppeteerPageObject(model(signIn, row))).toBe(
       [
+        "import { type Locator, type Page } from 'puppeteer';",
+        '',
         'export class LoginPage {',
-        '  constructor(page) {',
-        '    this.page = page;',
+        '  readonly signIn: Locator;',
+        '  readonly firstRow: Locator;',
+        '',
+        '  constructor(private readonly page: Page) {',
         "    this.signIn = page.locator('#go');",
         // The doubled slash is right: `xpath/` prefix + an absolute path.
         "    this.firstRow = page.locator('xpath//html[1]/body[1]/div[2]');",
@@ -29,10 +33,23 @@ describe('generatePuppeteerPageObject', () => {
     );
   });
 
+  it('imports from puppeteer, not @playwright/test', () => {
+    const out = generatePuppeteerPageObject(model(signIn));
+    expect(out).toContain("from 'puppeteer'");
+    expect(out).not.toContain('playwright');
+  });
+
   it('still emits a usable class for an empty model', () => {
-    const out = generatePuppeteerPageObject(emptyModel('puppeteer'));
-    expect(out).toContain('export class GeneratedPage {');
-    expect(out).toContain('this.page = page;');
+    expect(generatePuppeteerPageObject(emptyModel('puppeteer'))).toBe(
+      [
+        "import { type Page } from 'puppeteer';",
+        '',
+        'export class GeneratedPage {',
+        '  constructor(private readonly page: Page) {}',
+        '}',
+        '',
+      ].join('\n')
+    );
   });
 });
 

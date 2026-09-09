@@ -1,15 +1,13 @@
-// Puppeteer (SPEC §11). JavaScript — the framework is not language-qualified,
-// and JS is where Puppeteer users start.
+// Puppeteer (SPEC §11), in TypeScript — Puppeteer ships its own types and its
+// docs are TS-first, so the annotations are the smaller edit to undo.
 //
 // Puppeteer 20 added `page.locator()`, a lazy auto-waiting handle much like
-// Playwright's, so the page object takes the same shape: bind in the
-// constructor, wrap nothing. Before that there was only `page.$()`, which
-// returns a handle that goes stale — hence SPEC's old note that Puppeteer has
-// no locator API of its own. It does now.
+// Playwright's, so the page object is literally the same emitter. Before that
+// there was only `page.$()`, which returns a handle that goes stale — hence
+// SPEC's old note that Puppeteer has no locator API of its own. It does now.
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import type { LocatorCandidate } from '../engine/types';
-import { classNameFor } from './class-name';
-import { lowerCamel } from './names';
+import { tsPageObject, tsLocators, type TsTarget } from './ts-page-object';
 
 const q = (value: string) => `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
@@ -27,22 +25,10 @@ function selector(c: LocatorCandidate): string {
   return `/* ${c.kind} is not expressible in Puppeteer */`;
 }
 
-const expr = (el: ModelElement) => `page.locator(${selector(activeCandidate(el))})`;
+const PUPPETEER: TsTarget = {
+  module: 'puppeteer',
+  expr: (el: ModelElement) => `locator(${selector(activeCandidate(el))})`,
+};
 
-export function generatePuppeteerPageObject(model: TabModel): string {
-  const className = classNameFor(model.url);
-  return [
-    `export class ${className} {`,
-    '  constructor(page) {',
-    '    this.page = page;',
-    ...model.elements.map((el) => `    this.${lowerCamel(el.name)} = ${expr(el)};`),
-    '  }',
-    '}',
-    '',
-  ].join('\n');
-}
-
-/** Locators only — bare consts, for your own page-object conventions. */
-export function generatePuppeteerLocators(model: TabModel): string {
-  return model.elements.map((el) => `const ${lowerCamel(el.name)} = ${expr(el)};`).join('\n');
-}
+export const generatePuppeteerPageObject = (model: TabModel) => tsPageObject(model, PUPPETEER);
+export const generatePuppeteerLocators = (model: TabModel) => tsLocators(model, PUPPETEER);
