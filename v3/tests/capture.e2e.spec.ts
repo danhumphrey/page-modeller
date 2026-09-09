@@ -386,6 +386,47 @@ test('scanning a frame scans inside it, with the chain on every element (SPEC §
   expect(paths.every((p) => p.startsWith('#same-frame'))).toBe(true);
 });
 
+test('a new highlight clears the last one, in whichever frame it was', async () => {
+  // Highlights last ~3s. Clicking a second eye inside that window left both
+  // elements marked — and across frames, the stale one was in a document the
+  // answering frame could not reach.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'highlight-clears', 'frames.html');
+  await page.waitForLoadState('networkidle');
+
+  const marked = async () => {
+    let n = 0;
+    for (const f of page.frames()) n += await f.locator('[data-page-modeller="highlight"]').count().catch(() => 0);
+    return n;
+  };
+
+  // First: something in the main frame.
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: '[data-spike="top-submit"]' }, framePath: [] }),
+    tabId
+  );
+  await expect.poll(marked).toBe(1);
+
+  // Then, well within the 3s window, something two frames deep.
+  await sw.evaluate(
+    (id) =>
+      chrome.tabs.sendMessage(id, {
+        type: 'HIGHLIGHT',
+        candidate: { kind: 'css', value: '#deep-cvv' },
+        framePath: [{ frame: { kind: 'css', value: '#same-frame' } }, { frame: { kind: 'css', value: '#deep-frame' } }],
+      }),
+    tabId
+  );
+  // Wait for the NEW mark to appear, then count once, immediately. Polling for
+  // the total to fall to 1 would pass without the fix by simply outlasting the
+  // stale mark's own 3s timer — which is exactly what it did.
+  const deep = page.frameLocator('#same-frame').frameLocator('#deep-frame');
+  await expect(deep.locator('[data-page-modeller="highlight"]')).toHaveCount(1, { timeout: 2000 });
+  expect(await marked(), 'a frame that did not answer kept its mark').toBe(1);
+});
+
 test('the background relays panel messages, and reports an unreachable tab', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });

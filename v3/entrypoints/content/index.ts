@@ -463,6 +463,12 @@ export default defineContentScript({
         // Decided here rather than by the panel passing a frameId, so the send
         // is shaped exactly like the ones that work on both browsers — a
         // DevTools panel on Firefox has no `browser.tabs` to target one with.
+        // Every frame drops whatever it was showing, including the frames
+        // that will not answer: the previous highlight may have been in one of
+        // them, and clicking a second eye while the first was still up left
+        // both elements marked. Cleared before the path check, or only the
+        // answering frame would forget.
+        clearMarks();
         if (!samePath(framePathOf(window), m.framePath)) return;
         const targets = resolveCandidate(document, m.candidate);
         const { hidden } = highlightAll(targets);

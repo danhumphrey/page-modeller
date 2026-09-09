@@ -735,6 +735,10 @@ whose locators are least likely to survive. Entering a frame is a decision, so i
 
 ### The eye **[settled]**
 
+**A new highlight clears the last one first, in every frame** — including the frames that will not
+answer, because the previous highlight may have been in one of them. Clicking a second eye inside the
+3-second window otherwise left both elements marked.
+
 Every frame hears a `HIGHLIGHT`, and exactly one must answer or a sub-frame's 0 lands on top of the real
 count. The one that answers is the frame the element was picked in: each recomputes its own path and
 compares. Before this, only the top frame answered, so anything inside a frame reported *0 elements
