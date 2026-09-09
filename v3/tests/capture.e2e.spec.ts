@@ -491,6 +491,38 @@ test('a new highlight clears the last one, in whichever frame it was', async () 
   expect(await marked(), 'a frame that did not answer kept its mark').toBe(1);
 });
 
+test('a readable frame is never drawn as unreadable', async () => {
+  // The warning is Firefox-only by construction — Chrome reads every frame in
+  // the fixture — so what Chrome CAN check is that it never appears here. It
+  // appeared on every frame once, because the message that records liveness
+  // sat below a guard that rejects anything not sent by the parent, and a
+  // child is by definition not the parent.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'readable-overlay', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add', nonce: 'n' }), tabId);
+
+  const labelText = () =>
+    page.evaluate(() => document.querySelector('[data-page-modeller="label"]')?.textContent ?? '');
+
+  let labelled = 0;
+  for (const sel of ['#same-frame', '#cross-frame', '#srcdoc-frame', '#sandboxed-frame']) {
+    const box = (await page.locator(sel).boundingBox())!;
+    // The border, where this frame owns the pointer. Whether a label appears
+    // at all depends on which side wins the pointer, and that is not what is
+    // being tested — only that when one does appear, it does not lie.
+    await page.mouse.move(box.x + 1, box.y + 1);
+    await page.waitForTimeout(120);
+    const text = await labelText();
+    if (text.includes('iframe')) labelled++;
+    expect(text, `${sel} is readable on Chrome`).not.toContain('cannot be read');
+  }
+  // ...and that the check was not vacuous: some frame did get labelled.
+  expect(labelled, 'no frame was labelled, so nothing was actually checked').toBeGreaterThan(0);
+});
+
 test('a frame that can be read reports nothing', async () => {
   // The timeout must not fire for frames that simply took a moment.
   let [sw] = context.serviceWorkers();

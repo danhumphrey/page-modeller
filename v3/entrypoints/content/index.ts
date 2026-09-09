@@ -296,6 +296,17 @@ export default defineContentScript({
       highlight(el);
     };
 
+    /**
+     * `mousemove` alone misses a frame you enter quickly.
+     *
+     * Once the pointer is inside a frame, this document gets no further
+     * mousemove — the events belong to the child. So the only mousemove that
+     * can target the frame element is one that lands on its 2px border, which
+     * happens when the pointer crosses slowly and not when it crosses fast.
+     * `mouseover` fires on the frame as the pointer enters it at any speed.
+     */
+    const onOver = (e: MouseEvent) => onMove(e);
+
     const isFrame = (el: Element) => el.localName === 'iframe' || el.localName === 'frame';
 
     /**
@@ -360,17 +371,26 @@ export default defineContentScript({
     window.addEventListener('message', (e: MessageEvent) => {
       const data = e.data as Record<string, unknown> | null;
       if (typeof data !== 'object' || data === null) return;
-      // Authenticated by the nonce, not by `active`: a cascading scan reaches
-      // frames after the background has already disarmed everyone, and a frame
-      // that refused then would be a hole in the middle of the tree.
-      // A child asking where it sits. Answered from this frame's own path, and
+      // ---- from a child ----
+      //
+      // These three must be handled before the parent-only guard below, or
+      // they are unreachable: a child is by definition not this frame's parent.
+
+      // Asking where it sits. Answered from this frame's own path, and
       // answered again later if that path changes.
       if (data[NEED_PATH] && e.source && e.source !== window.parent) {
         pushPaths(e.source as Window);
         return;
       }
 
-      // An ack comes from a child, everything else from the parent.
+      // Confirming it has a script inside it, so the overlay knows this frame
+      // can be reached.
+      if (data[FRAME_ALIVE] && e.source && e.source !== window.parent) {
+        readableFrames.add(e.source as Window);
+        return;
+      }
+
+      // Confirming it heard a scan request, so silence means something.
       if (data[SCAN_ACK] && e.source !== window.parent) {
         const pending = awaitingAck.get(e.source as Window);
         if (pending && data[SCAN_ACK] === nonce) {
@@ -380,12 +400,8 @@ export default defineContentScript({
         return;
       }
 
+      // ---- from the parent ----
       if (e.source !== window.parent) return;
-
-      if (data[FRAME_ALIVE] && e.source && e.source !== window.parent) {
-        readableFrames.add(e.source as Window);
-        return;
-      }
 
       if (data[FRAME_PATH]) {
         // Not authenticated by the picking nonce: this runs at load, before
@@ -580,6 +596,7 @@ export default defineContentScript({
       if (active) return;
       active = true;
       document.addEventListener('mousemove', onMove, true);
+      document.addEventListener('mouseover', onOver, true);
       document.addEventListener('mouseout', onOut, true);
       document.addEventListener('click', onClick, true);
       document.addEventListener('keydown', onKey, true);
@@ -593,6 +610,7 @@ export default defineContentScript({
       if (!active) return;
       active = false;
       document.removeEventListener('mousemove', onMove, true);
+      document.removeEventListener('mouseover', onOver, true);
       document.removeEventListener('mouseout', onOut, true);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKey, true);

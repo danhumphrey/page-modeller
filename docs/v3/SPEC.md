@@ -693,6 +693,11 @@ there is nobody in there to hear it, so no message is ever sent and nothing can 
 The frame keeps drawing the overlay throughout, because an unreadable child never takes ownership.
 **[settled]**
 
+Entry is detected on `mouseover`, not `mousemove`. Once the pointer is inside a frame this document
+gets no further mousemove — the events belong to the child — so the only mousemove that can target the
+frame element is one landing on its 2px border, which happens when the pointer crosses slowly and not
+when it crosses fast.
+
 Liveness costs no extra round trip — a frame that answers the frame-path push has a script by
 definition.
 
