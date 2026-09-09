@@ -42,4 +42,19 @@ try {
   console.log('dotnet restore failed — is the .NET SDK installed?');
 }
 
+// A venv rather than the system python: the run check needs the selenium
+// package, and installing into whatever python3 happens to be is not ours to
+// do. Gitignored, like every other build output.
+const VENV = resolve('.test-venv');
+try {
+  if (!existsSync(resolve(VENV, 'bin', 'python'))) {
+    execFileSync('python3', ['-m', 'venv', VENV], { stdio: 'inherit' });
+  }
+  execFileSync(resolve(VENV, 'bin', 'pip'), ['install', '--quiet', '--upgrade', 'selenium'], { stdio: 'inherit' });
+  console.log('✓ selenium installed in .test-venv');
+} catch (e) {
+  ok = false;
+  console.log(`could not set up the Python venv: ${e.message}`);
+}
+
 console.log(ok ? '\nCompile checks are ready. Run npm test.' : '\nSome deps are missing; those checks will skip.');

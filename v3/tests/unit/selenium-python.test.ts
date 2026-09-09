@@ -27,7 +27,7 @@ describe('generateSeleniumPython', () => {
     const out = gen(EMAIL);
     expect(out).toContain('def get_email_address_element():\n    return driver.find_element(By.NAME, "email")');
     expect(out).toContain('def set_email_address(value, clear_first=True):');
-    expect(out).toContain('get_dom_property("value")');
+    expect(out).toContain('get_property("value")');
   });
 
   it('separates definitions by two blank lines, per PEP 8', () => {

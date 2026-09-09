@@ -138,13 +138,23 @@ Two separate questions: does the locator find the element, and is the emitted co
 | Playwright TS | ✅ every expression resolved in real Playwright | ✅ `tsc` against `@playwright/test` |
 | Puppeteer | ✅ real Puppeteer (`puppeteer.fidelity.spec.ts`) | ✅ `tsc` against `puppeteer-core` |
 | Playwright Python | ✅ inherited — proven the mechanical transform of the TS spelling | ✅ `python3 -m ast` |
-| Selenium Python | ⚠️ strategy only | ✅ `python3 -m ast` |
-| Selenium Java | ⚠️ strategy only | ✅ `javac` against selenium-api + selenium-support |
-| Selenium C# | ⚠️ strategy only | ✅ `dotnet build` against Selenium.WebDriver |
+| Selenium Python | ✅ **run** in a real Chrome via WebDriver | ✅ `python3 -m ast` |
+| Selenium Java | ⚠️ strategy only, but see below | ✅ `javac` against selenium-api + selenium-support |
+| Selenium C# | ⚠️ strategy only, but see below | ✅ `dotnet build` against Selenium.WebDriver |
 
-⚠️ **strategy only**: `tests/pw-builder.ts` resolves each `By` strategy as the equivalent CSS/XPath in
-real Playwright, so *which* strategy is right is checked. The spelling (`By.Name` / `By.NAME`) is
-constant tables under unit test, and the API (`SelectElement.SelectByText`) is unchecked.
+`tests/selenium.run.spec.ts` drives the **generated Python** in a real Chrome through WebDriver: every
+locator must find the element it was generated from, each bucket's read method must run, and the frame
+`switchTo` chain must land in the right document and come back out. It found `get_dom_property`, which
+is Java's and C#'s spelling and does not exist in Python — no compiler or parser could have.
+
+That covers Java and C# further than the table suggests: **which** strategy is chosen is decided once
+for all three in `src/generators/selenium.ts`, and the method bodies are the same decisions in three
+spellings. What Java and C# have that Python does not is spelling, and their compilers check that.
+
+⚠️ **strategy only**: `tests/pw-builder.ts` also resolves each `By` strategy as the equivalent CSS/XPath
+in real Playwright, so the choice is checked twice over. Not run: `className`, `tagName` and
+`partialLinkText`, which rank below css in Selenium's order (SPEC §11) and nothing in the fixtures
+reaches — the run spec asserts exactly which strategies it proved, so that stays honest.
 
 The Java and C# checks need `npm run fetch:test-deps` once — a Maven jar download and a NuGet restore.
 Deliberately not part of `npm test`, so the gate still works offline and on a machine with no JDK.

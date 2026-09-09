@@ -88,7 +88,7 @@ jobs:
       # drive it, and Firefox cannot be automated here at all (SPIKE6).
       - run: npx playwright install --with-deps chromium
 
-      - name: Fetch the Selenium jar and NuGet packages
+      - name: Fetch the Selenium jar, NuGet packages and Python venv
         run: npm run fetch:test-deps
 
       # unit + engine bundle + both builds + manifest checks + Playwright.
