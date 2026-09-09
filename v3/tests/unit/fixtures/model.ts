@@ -144,6 +144,14 @@ export const ALL_BUCKETS: TestElement[] = [
   { name: 'StaticEl', role: 'heading', tag: 'h1', candidate: { kind: 'css', value: 'h1' } },
   { name: 'ImageEl', role: 'img', tag: 'img', candidate: { kind: 'css', value: 'img.logo' } },
   { name: 'PasswordEl', role: null, tag: 'input', inputType: 'password', candidate: { kind: 'css', value: 'input.pass' } },
+  // Pages contain buttons called Continue, Class and Import. Every one of those
+  // is a keyword somewhere, and a keyword cannot be an identifier — `const
+  // continue` and `self.continue` are both syntax errors. Found by running the
+  // generated Python; kept here so the compile and parse checks catch it next
+  // time, which they can and the unit tests alone cannot.
+  { name: 'Continue', role: 'button', tag: 'button', candidate: { kind: 'css', value: 'button.continue' } },
+  { name: 'Class', role: 'textbox', tag: 'input', candidate: { kind: 'css', value: 'input.class' } },
+  { name: 'Import', role: 'link', tag: 'a', candidate: { kind: 'css', value: 'a.import' } },
 ];
 
 /** The same buckets, but two frames deep — so the switching code is compiled. */

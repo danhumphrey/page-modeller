@@ -137,10 +137,15 @@ Two separate questions: does the locator find the element, and is the emitted co
 |---|---|---|
 | Playwright TS | ✅ every expression resolved in real Playwright | ✅ `tsc` against `@playwright/test` |
 | Puppeteer | ✅ real Puppeteer (`puppeteer.fidelity.spec.ts`) | ✅ `tsc` against `puppeteer-core` |
-| Playwright Python | ✅ inherited — proven the mechanical transform of the TS spelling | ✅ `python3 -m ast` |
+| Playwright Python | ✅ **run** in a real browser via the Python bindings | ✅ `python3 -m ast` |
 | Selenium Python | ✅ **run** in a real Chrome via WebDriver | ✅ `python3 -m ast` |
 | Selenium Java | ⚠️ strategy only, but see below | ✅ `javac` against selenium-api + selenium-support |
 | Selenium C# | ⚠️ strategy only, but see below | ✅ `dotnet build` against Selenium.WebDriver |
+
+`tests/playwright-python.run.spec.ts` does the same for Playwright: the generated page object is
+imported into a real Playwright Python run, and every locator must resolve to exactly one element and
+to the right one. It found two syntax errors nothing else could — an element called Continue produced
+`self.continue`, and the TypeScript locators shape produced `const continue`.
 
 `tests/selenium.run.spec.ts` drives the **generated Python** in a real Chrome through WebDriver: every
 locator must find the element it was generated from, each bucket's read method must run, and the frame

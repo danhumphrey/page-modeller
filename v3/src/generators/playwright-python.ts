@@ -7,7 +7,7 @@ import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { playwrightPyExpr } from '../locators/display';
 import { playwrightPyFramePrefix } from '../locators/frames';
 import { classNameFor } from './class-name';
-import { snake } from './names';
+import { pythonName, snake } from './names';
 
 const expr = (el: ModelElement) =>
   `page.${playwrightPyFramePrefix(el.framePath)}${playwrightPyExpr(activeCandidate(el))}`;
@@ -27,12 +27,12 @@ export function generatePlaywrightPythonPageObject(model: TabModel): string {
 
   return [
     ...head(true),
-    ...model.elements.map((el) => `        self.${snake(el.name)}: Locator = ${expr(el)}`),
+    ...model.elements.map((el) => `        self.${pythonName(snake(el.name))}: Locator = ${expr(el)}`),
     '',
   ].join('\n');
 }
 
 /** Locators only — bare assignments, for your own page-object conventions. */
 export function generatePlaywrightPythonLocators(model: TabModel): string {
-  return model.elements.map((el) => `${snake(el.name)} = ${expr(el)}`).join('\n');
+  return model.elements.map((el) => `${pythonName(snake(el.name))} = ${expr(el)}`).join('\n');
 }

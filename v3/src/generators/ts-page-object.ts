@@ -7,7 +7,7 @@
 // is spelled.
 import type { ModelElement, TabModel } from '../model';
 import { classNameFor } from './class-name';
-import { lowerCamel } from './names';
+import { jsName, lowerCamel } from './names';
 
 export interface TsTarget {
   /** The package `Locator` and `Page` are imported from. */
@@ -41,14 +41,14 @@ export function tsPageObject(model: TabModel, target: TsTarget): string {
     `import { type Locator, type Page } from '${target.module}';`,
     '',
     `export class ${className} {`,
-    ...model.elements.map((el) => `  readonly ${lowerCamel(el.name)}: ${target.locatorType ?? 'Locator'};`),
+    ...model.elements.map((el) => `  readonly ${jsName(lowerCamel(el.name))}: ${target.locatorType ?? 'Locator'};`),
     '',
     // Assignment reads the constructor PARAMETER, not `this.page`: a parameter
     // property is not assigned until the constructor body completes.
     '  constructor(private readonly page: Page) {',
     ...model.elements.flatMap((el) => [
       ...(target.note?.(el) ?? []).map((line) => `    ${line}`),
-      `    this.${lowerCamel(el.name)} = page.${target.expr(el)};`,
+      `    this.${jsName(lowerCamel(el.name))} = page.${target.expr(el)};`,
     ]),
     '  }',
     '}',
@@ -59,6 +59,6 @@ export function tsPageObject(model: TabModel, target: TsTarget): string {
 /** Locators only — no class, and the types are inferred. */
 export function tsLocators(model: TabModel, target: TsTarget): string {
   return model.elements
-    .flatMap((el) => [...(target.note?.(el) ?? []), `const ${lowerCamel(el.name)} = page.${target.expr(el)};`])
+    .flatMap((el) => [...(target.note?.(el) ?? []), `const ${jsName(lowerCamel(el.name))} = page.${target.expr(el)};`])
     .join('\n');
 }

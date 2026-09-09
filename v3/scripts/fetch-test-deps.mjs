@@ -50,8 +50,13 @@ try {
   if (!existsSync(resolve(VENV, 'bin', 'python'))) {
     execFileSync('python3', ['-m', 'venv', VENV], { stdio: 'inherit' });
   }
-  execFileSync(resolve(VENV, 'bin', 'pip'), ['install', '--quiet', '--upgrade', 'selenium'], { stdio: 'inherit' });
-  console.log('✓ selenium installed in .test-venv');
+  execFileSync(resolve(VENV, 'bin', 'pip'), ['install', '--quiet', '--upgrade', 'selenium', 'playwright'], {
+    stdio: 'inherit',
+  });
+  // Into the same cache the Node Playwright uses, so a browser already there is
+  // not downloaded twice.
+  execFileSync(resolve(VENV, 'bin', 'python'), ['-m', 'playwright', 'install', 'chromium'], { stdio: 'inherit' });
+  console.log('✓ selenium and playwright installed in .test-venv');
 } catch (e) {
   ok = false;
   console.log(`could not set up the Python venv: ${e.message}`);
