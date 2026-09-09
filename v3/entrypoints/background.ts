@@ -142,6 +142,10 @@ export default defineBackground(() => {
             }
           })
         );
+        // Held the modifier: Add stays armed, so neither the frames nor the
+        // toolbar should be told it is over (SPEC §4).
+        if (m.type === 'ELEMENT_PICKED' && m.keepPicking) return;
+
         // Picking is one-shot (SPEC §4) per TAB, not per frame. START_PICKING
         // is broadcast to every frame and each arms itself, but only the frame
         // that was clicked stops itself — the rest stayed live and recorded the

@@ -480,13 +480,20 @@ export default defineContentScript({
       for (const frame of nested) delegateScan(frame);
     }
 
-    /** Commit the current target. Shared by clicking and by Enter. */
-    function pickCurrent() {
+    /**
+     * Commit the current target. Shared by clicking and by Enter.
+     *
+     * `keepPicking` holds Add open for the next click (SPEC §4). Read from the
+     * event rather than remembered, so it is decided per click: hold it for a
+     * run of elements, let go for the last one.
+     */
+    function pickCurrent(keepPicking = false) {
       if (!active || !current) return;
       const target = current;
-      // Both modes are one-shot (SPEC §4) — stop before reporting, so the
-      // overlay is gone by the time the panel re-renders.
-      stop({ notify: false });
+      // One-shot unless the modifier says otherwise — and stop BEFORE
+      // reporting, so the overlay is gone by the time the panel re-renders.
+      if (!keepPicking) stop({ notify: false });
+      else removeOverlay();
 
       // Scanning a frame has to be done BY that frame. An <iframe> has no
       // descendants in this document — its content is a separate document —
@@ -514,7 +521,7 @@ export default defineContentScript({
       const message =
         mode === 'scan'
           ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map((el) => generate(el, myPath)) }
-          : { type: 'ELEMENT_PICKED', result: generate(target, myPath) };
+          : { type: 'ELEMENT_PICKED', result: generate(target, myPath), keepPicking };
 
       // Rejects when no panel is open; that's fine, drop it.
       browser.runtime.sendMessage(message).catch(() => {});
@@ -527,7 +534,10 @@ export default defineContentScript({
       // The CURRENT target, not e.target: the arrows may have walked away from
       // the element under the cursor, and that is the whole point of them.
       if (!current) current = e.target as Element;
-      pickCurrent();
+      // Either modifier, whatever the platform: Cmd is the one people reach for
+      // on a Mac and Ctrl everywhere else, and accepting both costs nothing.
+      // Scan is already many elements, so this only means anything for Add.
+      pickCurrent(mode === 'add' && (e.metaKey || e.ctrlKey));
     };
 
     /** The child of `of` that contains `hovered`, for walking back down. */
@@ -566,7 +576,7 @@ export default defineContentScript({
         // Hands are already on the arrows; Enter is the obvious commit.
         e.preventDefault();
         e.stopPropagation();
-        return pickCurrent();
+        return pickCurrent(mode === 'add' && (e.metaKey || e.ctrlKey));
       }
 
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;

@@ -12,6 +12,7 @@
         @add="toggleAdd"
         @delete-model="deleteModel"
         @generate="showCode = true"
+        @help="helpMode = 'all'"
       />
     </q-header>
 
@@ -40,6 +41,15 @@
 
         <CodeDialog v-if="showCode" :model="model" @close="showCode = false" />
 
+        <PickingHelpDialog
+          v-if="helpMode"
+          :key="helpMode"
+          :mode="helpMode"
+          :multi-key="multiKey"
+          @dismiss="dismissHelp"
+          @close="helpMode = null"
+        />
+
         <EditElementDialog
           v-if="editing"
           :key="editing.id"
@@ -63,6 +73,7 @@ import AppToolbar from './AppToolbar.vue';
 import ModelTable, { type ModelRow } from './ModelTable.vue';
 import EditElementDialog from './EditElementDialog.vue';
 import CodeDialog from './CodeDialog.vue';
+import PickingHelpDialog from './PickingHelpDialog.vue';
 import { defaultFrameworkId } from '@/src/frameworks';
 import { displayElementLocator } from '@/src/locators/display';
 import { activeCandidate, emptyModel, type ModelElement, type TabModel } from '@/src/model';
@@ -70,7 +81,7 @@ import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, 
 import { hostKey } from '@/host/types';
 import { applyTheme } from './theme';
 import type { FrameStep, LocatorCandidate } from '@/src/engine/types';
-import { defaultSettings, loadSettings, watchSettings } from '@/src/settings';
+import { defaultSettings, loadSettings, saveSettings, watchSettings } from '@/src/settings';
 
 // The panel is a VIEW. The background owns the model, one per tab (SPEC §5), so
 // a sidebar and a DevTools panel on the same tab show the same rows and a pick
@@ -103,6 +114,45 @@ const rows = computed<ModelRow[]>(() =>
  * Quasar groups identical notifications and badges a count. Each kind of notice
  * keeps one slot and replaces it.
  */
+/**
+ * The modifier that holds Add open. Either works (see the content script); this
+ * is only what to call it, and calling it Ctrl on a Mac would be wrong.
+ *
+ * `userAgentData.platform` where it exists, `platform` where it does not —
+ * deprecated, but Firefox has no replacement for it.
+ */
+const multiKey = (() => {
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const platform = nav.userAgentData?.platform ?? navigator.platform ?? '';
+  return /mac/i.test(platform) ? '\u2318' : 'Ctrl';
+})();
+
+/**
+ * Which guidance is on screen: a single mode when it opened itself on first
+ * use, `all` when the toolbar asked for it, null when nothing is showing.
+ */
+const helpMode = ref<'add' | 'scan' | 'all' | null>(null);
+
+/**
+ * Show the guidance for a mode the first time that mode is used (SPEC §4).
+ *
+ * Opened optimistically, because whether the page can be picked at all is only
+ * known once the relay to it fails — there is no reply to wait for, so the
+ * panel finds out from TAB_UNREACHABLE, which withdraws this again.
+ */
+function helpOnFirstUse(mode: 'add' | 'scan') {
+  if (tabId.value == null) return;
+  const seen = mode === 'add' ? settings.value.seenAddHelp : settings.value.seenScanHelp;
+  if (!seen) helpMode.value = mode;
+}
+
+/** Ticking "don't show this again" is the only thing that stops it coming back. */
+function dismissHelp(modes: ('add' | 'scan')[]) {
+  const patch = Object.fromEntries(modes.map((m) => [m === 'add' ? 'seenAddHelp' : 'seenScanHelp', true]));
+  settings.value = { ...settings.value, ...patch };
+  void saveSettings(settings.value);
+}
+
 const openNotices: Record<string, (() => void) | undefined> = {};
 let noticeSeq = 0;
 
@@ -200,6 +250,13 @@ function onRuntimeMessage(msg: unknown) {
     model.value = incoming.model;
   } else if (incoming.type === 'TAB_UNREACHABLE') {
     isAdding.value = isScanning.value = false;
+    // Teaching someone to scan a page that cannot be scanned is noise on top
+    // of an error. Withdrawn rather than left standing — and not counted as
+    // seen, so it still appears the first time picking actually starts.
+    //
+    // Only the guidance that opened itself. One opened from the toolbar was
+    // asked for, and an unrelated failure is no reason to take it away.
+    if (helpMode.value !== 'all') helpMode.value = null;
     notice('unreachable', {
       message: 'Page Modeller can\u2019t reach this page. Reload the tab, or try a normal http(s) page.',
       icon: 'block',
@@ -305,6 +362,10 @@ async function startPicking(mode: PickMode) {
 
 async function toggleAdd() {
   if (isAdding.value) return stopPicking();
+  // Guidance and picking together, not one then the other: the dialog lives in
+  // the panel and the page stays clickable behind it, so you can try what it
+  // describes while reading it.
+  helpOnFirstUse('add');
   await startPicking('add');
 }
 
@@ -314,6 +375,7 @@ async function toggleAdd() {
  */
 async function toggleScan() {
   if (isScanning.value) return stopPicking();
+  helpOnFirstUse('scan');
   await startPicking('scan');
 }
 
@@ -421,6 +483,45 @@ function notYet(what: string) {
 </script>
 
 <style scoped>
+.hint-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--pm-muted);
+  border-bottom: 1px solid var(--pm-rule);
+}
+
+/* Invisible, not absent: the space stays reserved so nothing below it moves. */
+.hint-strip[data-idle] {
+  visibility: hidden;
+}
+
+.hint {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* A separator that belongs to the gap rather than to either neighbour, so the
+   row wraps cleanly when the panel is too narrow for one line. */
+.hint + .hint::before {
+  content: '\00b7';
+  margin-right: 4px;
+  opacity: 0.5;
+}
+
+.hint-strip kbd {
+  font: 11px/1.4 ui-monospace, SFMono-Regular, monospace;
+  border: 1px solid var(--pm-rule);
+  border-radius: 3px;
+  padding: 0 4px;
+  color: var(--pm-text);
+}
+
 .stale-banner {
   display: flex;
   align-items: center;

@@ -115,6 +115,44 @@ included).
 
 Over-inclusion is cheap to correct: rows can be deleted after a scan.
 
+### Adding several without re-arming **[settled]**
+
+Add is one-shot, which is right for the common case and tiresome for a run of ten. Holding **⌘** (or
+**Ctrl**) while clicking keeps it armed for the next click; releasing it makes the last click behave as
+it always did.
+
+Read from the click event rather than remembered, so it is decided per click — hold it through a run,
+let go on the final element. Either modifier is accepted whatever the platform, because that costs
+nothing; only the *name* shown to the user is platform-specific.
+
+Scan is unaffected: it already takes many elements at once.
+
+### Saying how picking works **[settled]**
+
+Walking the DOM with the arrows, holding the modifier to add several, and Escape are all
+undiscoverable: nothing else in the UI reveals any of them. But this is something you learn once, and a
+permanent strip in the panel is furniture for a lesson — it also shifted the table every time picking
+armed.
+
+So: a **dialog on first use of each mode**, with *Don't show this again*, and a **?** in the toolbar
+that opens the same guidance whenever it is wanted. Per mode, because Add and Scan teach different
+things and meeting the second one is a separate first time.
+
+The dialog opens *with* picking rather than before it. It lives in the panel and the page stays
+clickable behind it, so what it describes can be tried while reading it.
+
+`Don't show this again` is offered only when the dialog opened by itself: having asked to see it, you
+are not asking to be rid of it.
+
+**An unreachable page withdraws it**, and does not count it as seen — teaching someone to scan a page
+that cannot be scanned is noise stacked on an error, and the lesson is still owed the first time picking
+actually starts. Only guidance that opened by itself: one opened from the **?** was asked for, and an
+unrelated failure is no reason to take it away. **[settled]** The two flags live in settings but are not shown on the options page —
+they are dismissal state, not a preference, and the **?** already brings the guidance back.
+
+The strip is **always in the layout** and only made invisible when idle. A row that appears and
+disappears shifts the whole table under the pointer at the moment you are aiming at it. **[settled]**
+
 ## 5. Model lifetime
 
 v2.5.1 never had to decide this — a DevTools panel is inherently per-tab, its model lived in panel

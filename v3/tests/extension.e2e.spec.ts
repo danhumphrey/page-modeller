@@ -84,6 +84,16 @@ test('built extension loads and every panel surface renders', async () => {
         await expect(page.getByTestId('framework-selector')).toContainText('Playwright');
         await expect(page.getByTestId('empty-state')).toBeVisible();
 
+        // Guidance is a dialog now, reachable whenever it is wanted rather
+        // than a row that shifts the table under the pointer.
+        await expect(page.getByTestId('btn-help')).toBeEnabled();
+        await page.getByTestId('btn-help').click();
+        await expect(page.getByTestId('help-ok')).toBeVisible();
+        // Asked for, so not offered as something to be rid of.
+        await expect(page.getByTestId('help-dont-show')).toHaveCount(0);
+        await page.getByTestId('help-ok').click();
+        await expect(page.getByTestId('help-ok')).toHaveCount(0);
+
         // Enablement with no model: scan and add live, the rest disabled.
         await expect(page.getByTestId('btn-delete-model')).toBeDisabled();
         await expect(page.getByTestId('btn-generate')).toBeDisabled();

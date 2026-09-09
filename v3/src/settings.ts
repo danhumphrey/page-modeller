@@ -16,6 +16,13 @@ export interface Settings {
   clickTableRowsToViewMatchedElements: boolean;
   /** Append the element's type to its derived name: `About` → `AboutLink`. */
   appendTypeToName: boolean;
+  /**
+   * First-use guidance, dismissed with "Don't show this again" (SPEC §4).
+   * Per mode, because Add and Scan teach different things and meeting the
+   * second one is a separate first time.
+   */
+  seenAddHelp: boolean;
+  seenScanHelp: boolean;
 }
 
 export const defaultSettings: Settings = {
@@ -24,6 +31,8 @@ export const defaultSettings: Settings = {
   modelHiddenElements: false,
   clickTableRowsToViewMatchedElements: false,
   appendTypeToName: false,
+  seenAddHelp: false,
+  seenScanHelp: false,
 };
 
 const KEY = 'options';

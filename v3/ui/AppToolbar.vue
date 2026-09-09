@@ -37,6 +37,12 @@
       <q-tooltip v-if="showTooltips">Add Element</q-tooltip>
     </q-btn>
 
+    <!-- Never disabled: the one control whose whole job is to explain the
+         others is no use only when everything is already clear. -->
+    <q-btn flat dense round icon="help_outline" data-testid="btn-help" @click="$emit('help')">
+      <q-tooltip v-if="showTooltips">How picking works</q-tooltip>
+    </q-btn>
+
     <q-btn flat dense round icon="code" :disable="!hasModel || isPicking" data-testid="btn-generate" @click="$emit('generate')">
       <q-tooltip v-if="showTooltips">Generate Code</q-tooltip>
     </q-btn>
@@ -60,6 +66,7 @@ defineEmits<{
   add: [];
   deleteModel: [];
   generate: [];
+  help: [];
   'update:frameworkId': [id: string];
 }>();
 

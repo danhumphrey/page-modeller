@@ -15,6 +15,12 @@ change.** v3 work goes on the `v3-rewrite` branch, inside `v3/`.
 Note the branch is `v3-rewrite`, not `v3` — a branch named `v3` would be ambiguous with the `v3/`
 directory in every revision argument (`git log v3`, `git show v3:file`).
 
+**Branch from `v3-rewrite`, not from the branch you happen to be on.** PRs here are squash-merged, so a
+branch cut from another branch carries commits that land again under a different identity — and every
+file both touched then conflicts, even though the content is identical. Recovery is
+`git rebase --onto origin/v3-rewrite <last commit of the parent branch> <your branch>`, which replays
+only your own commits.
+
 **Always `gh pr create --base v3-rewrite`.** `gh` defaults the base to the repo's default branch,
 `master`. A v3 branch PR'd that way does not carry one commit — squash-merging it collapses the whole
 `v3-rewrite`..branch difference into `master` (97 files the one time it happened, #75/#76).
