@@ -392,7 +392,28 @@ before starting the next.
     languages, imports computed from the buckets present, covered by the compile checks. Python needed
     a receiver-aware generator rather than a wrapper. Awaiting hand-test.
 
-17. **Frames** (SPEC §16) — the last of the specced behaviour.
+17. **Frames** (SPEC §16) ✅ **Done** — fixtures for every frame shape, frame paths pushed down from
+    the top frame so cross-origin and sandboxed frames get real chains, Playwright chaining
+    `frameLocator`, Selenium methods switching in and out with a `finally`, Selenium and Puppeteer
+    carrying a pasteable switch as a comment, the eye answering from the owning frame, cascading scan,
+    and an unreadable frame drawn as one. Hand-tested on both browsers.
+
+    **A sandboxed frame cannot be reached on Firefox** — a null principal, and no equivalent of
+    Chrome's `match_origin_as_fallback`. Reported in the overlay rather than left silent.
+
+18. **First-use guidance** (SPEC §4) ✅ **Done** — a dialog per mode with *Don't show this again*, and a
+    **?** in the toolbar. Hold ⌘/Ctrl to add several without re-arming.
+
+**What is left**
+
+19. **A help page.** The **?** gives it a home; the dialog is the short version.
+
+20. **Real-browser verification for Selenium and the Python targets.** Today the generated code is
+    compiled or parsed but never *run*: only Playwright and Puppeteer are driven for real (CLAUDE.md,
+    "What is verified per target"). The frame fixtures now give that something worth running against.
+
+21. **Release**: the real AMO `gecko.id`, and merging `v3/.github/workflows/release.yml` to the root
+    with a tag prefix that cannot collide with a v2.5.1 tag.
 
 **Considered, not scheduled — capture from the Elements tree.** `devtools.panels.elements
 .onSelectionChanged` plus `inspectedWindow.eval` with `$0` would let a button add whatever is selected
