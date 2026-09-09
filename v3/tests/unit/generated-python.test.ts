@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
+import { REQUIRE_FULL_SUITE } from '../required';
 import { generatePlaywrightPythonPageObject, generatePlaywrightPythonLocators } from '../../src/generators/playwright-python';
 import { generateSeleniumPython, generateSeleniumPythonLocators, generateSeleniumPythonPageObject } from '../../src/generators/selenium-python';
 import { playwrightExpr, playwrightPyExpr } from '../../src/locators/display';
@@ -78,12 +79,16 @@ describe.skipIf(!hasPython)('the generated Python is Python', () => {
   }
 });
 
-if (!hasPython) {
-  // Silence is how an environment-gated test rots. Say it out loud instead.
-  it('python3 is not installed, so the Python output was not parsed', () => {
-    expect(hasPython).toBe(false);
-  });
-}
+// Silence is how an environment-gated test rots. Say it out loud instead — and
+// on CI, where python3 is guaranteed, refuse to skip at all.
+it('parsed the Python, or says why not', () => {
+  if (REQUIRE_FULL_SUITE) {
+    expect(hasPython, 'PM_REQUIRE_FULL_SUITE is set but python3 is missing').toBe(true);
+    return;
+  }
+  if (!hasPython) console.warn('Skipped the Python parse checks: python3 is not installed');
+  expect(true).toBe(true);
+});
 
 // ---- Playwright Python against the Playwright TypeScript we do verify ----
 //

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
+import { REQUIRE_FULL_SUITE } from '../required';
 import { mkdtempSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
@@ -159,10 +160,12 @@ describe('the generated TypeScript typechecks against the real libraries', () =>
 
 // An environment-gated test that says nothing is an environment-gated test that
 // has quietly stopped running.
-if (!javaReady || !dotnetReady) {
-  it('says which compile checks were skipped', () => {
-    const missing = [!javaReady && 'Java', !dotnetReady && 'C#'].filter(Boolean);
-    console.warn(`Skipped compile checks: ${missing.join(', ')} — run \`npm run fetch:test-deps\``);
-    expect(missing.length).toBeGreaterThan(0);
-  });
-}
+it('ran every compile check, or says which it did not', () => {
+  const missing = [!javaReady && 'Java', !dotnetReady && 'C#'].filter(Boolean) as string[];
+  if (REQUIRE_FULL_SUITE) {
+    expect(missing, 'PM_REQUIRE_FULL_SUITE is set — run `npm run fetch:test-deps`').toEqual([]);
+    return;
+  }
+  if (missing.length) console.warn(`Skipped compile checks: ${missing.join(', ')} — run \`npm run fetch:test-deps\``);
+  expect(true).toBe(true);
+});
