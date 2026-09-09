@@ -10,6 +10,16 @@ import type { FrameStep } from '@/src/engine/types';
 export default defineContentScript({
   matches: ['<all_urls>'],
   allFrames: true,
+  // A srcdoc iframe's URL is `about:srcdoc`, which `<all_urls>` does not match
+  // — so nothing ran inside one and its contents could not be picked at all.
+  // Two flags because the browsers spell it differently: Firefox has only
+  // match_about_blank, Chrome supersedes it with match_origin_as_fallback,
+  // which also covers data: and blob: frames. Both match on the frame's
+  // *initiator* origin, so a sandboxed frame is reached too.
+  matchAboutBlank: true,
+  // Chrome only: Firefox does not know the key, and an unrecognised manifest
+  // key is a warning on an AMO submission.
+  matchOriginAsFallback: { chrome: true, firefox: undefined },
   main() {
     let active = false;
     /** 'add' takes the element itself; 'scan' takes its interactive children. */

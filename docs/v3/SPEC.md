@@ -686,6 +686,14 @@ locator, and so does every other frame API in reach, so `getByTitle('Payment')` 
 however well it identifies one. `cssFor` already prefers a test id, then a name, then an id (§7), so
 little is lost.
 
+**Reaching a frame at all** comes first. A `srcdoc` iframe's URL is `about:srcdoc`, which `<all_urls>`
+does not match, so no content script ran inside one and its contents could not be picked. The manifest
+needs `match_about_blank`, and on Chrome `match_origin_as_fallback`, which supersedes it and also covers
+`data:` and `blob:` frames — Firefox does not know that key, and an unrecognised manifest key is a
+warning on an AMO submission, so it is Chrome-only. Both match on the frame's **initiator** origin, so a
+sandboxed frame is reached too. `scripts/check-manifests.mjs` guards all of this: nothing else notices a
+content script that simply never runs. **[settled]**
+
 `window.frameElement` builds the chain, and its limit is the hard case: it is readable only when the
 parent is same-origin. Across an origin it throws, and a document cannot see what embeds it — so the
 chain stops there and is **marked opaque**. A path that starts halfway down and looks complete is worse

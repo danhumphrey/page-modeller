@@ -44,6 +44,20 @@ for (const [dir, checks] of Object.entries(EXPECT)) {
   const manifest = JSON.parse(await readFile(`.output/${dir}/manifest.json`, 'utf8'));
   for (const [name, ok] of Object.entries(checks)) if (!ok(manifest)) fail(dir, name);
 
+  // Frames the content script has to reach (SPEC §16). A srcdoc iframe's URL is
+  // `about:srcdoc`, which `<all_urls>` does not match, so without these its
+  // contents cannot be picked at all — and nothing else in the suite notices,
+  // because the script simply never runs there.
+  const [script] = manifest.content_scripts ?? [];
+  if (!script?.all_frames) fail(dir, 'content script runs in all frames');
+  if (!script?.match_about_blank) fail(dir, 'content script matches about:srcdoc');
+  // Chrome supersedes match_about_blank with this and also covers data: and
+  // blob:. Firefox does not know the key, and an unrecognised manifest key is
+  // a warning on an AMO submission.
+  const fallback = script?.match_origin_as_fallback;
+  if (dir.startsWith('chrome') && !fallback) fail(dir, 'match_origin_as_fallback set for Chrome');
+  if (dir.startsWith('firefox') && fallback !== undefined) fail(dir, 'match_origin_as_fallback must not reach Firefox');
+
   // The DevTools panel must be registered by a parser-blocking classic script.
   // As a `type="module"` entrypoint the call is deferred and, in dev, fetched
   // from the Vite dev server — which made the panel appear only sometimes.

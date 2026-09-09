@@ -221,6 +221,38 @@ test('a pick in the main frame still has no chain', async () => {
   expect((picks[0].result as { framePath: unknown[] }).framePath).toEqual([]);
 });
 
+test('a srcdoc frame can be picked at all, and gets a complete chain', async () => {
+  // `about:srcdoc` is not matched by `<all_urls>`, so the content script never
+  // ran in one and clicking inside it did nothing whatsoever.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'srcdoc', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add', nonce: 'n' }), tabId);
+  const btn = page.frameLocator('#srcdoc-frame').getByRole('button', { name: 'Submit', exact: true });
+  await btn.hover();
+  await btn.click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string }[] }).__picks))
+      .filter((m) => m.type === 'ELEMENT_PICKED').length)
+    .toBe(1);
+
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = (picks.find((m) => m.type === 'ELEMENT_PICKED') as {
+    result: { framePath: { frame: { value: string }; opaque?: boolean }[] };
+  }).result;
+
+  // srcdoc is same-origin with its parent, so the chain is complete — unlike a
+  // sandboxed frame, whose origin is opaque by construction.
+  expect(result.framePath.some((s) => s.opaque)).toBe(false);
+  expect(result.framePath).toHaveLength(1);
+  expect(result.framePath[0].frame.value).toContain('Srcdoc');
+});
+
 test('a pick in a cross-origin frame declares the break rather than lying', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
