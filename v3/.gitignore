@@ -4,3 +4,4 @@
 /tests/compile/ts/*.ts
 /tests/compile/csharp/Generated.cs
 /tests/compile/csharp/GeneratedPageObject.cs
+/.test-venv

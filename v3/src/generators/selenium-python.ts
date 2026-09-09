@@ -106,9 +106,12 @@ function methods(el: ModelElement, recv: string): string[] {
 
     case 'text':
       out.push(
-        // get_dom_property, not get_attribute: the attribute is the INITIAL
-        // value and does not change as the user types (Selenium 4.5+).
-        `${def(`get_${n}()`)}:\n    return ${elExpr}.get_dom_property("value")`,
+        // get_property, not get_attribute: the attribute is the INITIAL value
+        // and does not change as the user types. And `get_property`, not
+        // `get_dom_property` — that is Java's and C#'s spelling, and Python has
+        // no such method. Caught by running it (tests/selenium.run.spec.ts); no
+        // compiler or parser could have.
+        `${def(`get_${n}()`)}:\n    return ${elExpr}.get_property("value")`,
         // One function: Python has default arguments.
         `${def(`set_${n}(value, clear_first=True)`)}:\n    el = ${elExpr}\n    if clear_first:\n        el.clear()\n    el.send_keys(value)`
       );
@@ -132,7 +135,7 @@ function methods(el: ModelElement, recv: string): string[] {
       out.push(
         ...(framed ? [] : [`${def(`get_${n}_select()`)}:\n    return Select(${elExpr})`]),
         `${def(`get_${n}_text()`)}:\n    return ${selectExpr}.first_selected_option.text`,
-        `${def(`get_${n}_value()`)}:\n    return ${selectExpr}.first_selected_option.get_dom_property("value")`,
+        `${def(`get_${n}_value()`)}:\n    return ${selectExpr}.first_selected_option.get_property("value")`,
         `${def(`set_${n}_by_value(value)`)}:\n    ${selectExpr}.select_by_value(value)`,
         `${def(`set_${n}_by_text(text)`)}:\n    ${selectExpr}.select_by_visible_text(text)`
       );
@@ -142,7 +145,7 @@ function methods(el: ModelElement, recv: string): string[] {
       out.push(
         ...(framed ? [] : [`${def(`get_${n}_select()`)}:\n    return Select(${elExpr})`]),
         `${def(`get_${n}_texts()`)}:\n    return [o.text for o in ${selectExpr}.all_selected_options]`,
-        `${def(`get_${n}_values()`)}:\n    return [o.get_dom_property("value") for o in ${selectExpr}.all_selected_options]`,
+        `${def(`get_${n}_values()`)}:\n    return [o.get_property("value") for o in ${selectExpr}.all_selected_options]`,
         // deselect_all first, or select_by_value ADDS to the selection.
         `${def(`set_${n}_by_values(*values)`)}:\n    el = ${selectExpr}\n    el.deselect_all()\n    for value in values:\n        el.select_by_value(value)`,
         `${def(`set_${n}_by_texts(*texts)`)}:\n    el = ${selectExpr}\n    el.deselect_all()\n    for text in texts:\n        el.select_by_visible_text(text)`,
