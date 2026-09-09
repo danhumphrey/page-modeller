@@ -333,6 +333,47 @@ test('the eye finds a framed element, and only its own frame answers (SPEC §16)
   expect((await results())[0].count).toBe(1);
 });
 
+test('scanning a frame scans inside it, with the chain on every element (SPEC §16)', async () => {
+  // An <iframe> has no descendants in its parent's document, so scanning one
+  // used to return nothing at all.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-scan', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'scan' }), tabId);
+
+  // The frame element itself has to be the target, which means hitting its
+  // BORDER: a click inside the box is routed to the child document, where the
+  // child's own picker handles it. Playwright's `position` is relative to the
+  // PADDING box, so it can never land there — raw coordinates can.
+  const box = (await page.locator('#same-frame').boundingBox())!;
+  await page.mouse.move(box.x + 1, box.y + 1);
+  await page.mouse.down();
+  await page.mouse.up();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string }[] }).__picks))
+      .filter((m) => m.type === 'ELEMENTS_PICKED').length)
+    .toBe(1);
+
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const haul = (picks.find((m) => m.type === 'ELEMENTS_PICKED') as {
+    results: { suggestedName: string; framePath: { frame: { value: string } }[] }[];
+  }).results;
+
+  // The frame's own controls: an email field and a Submit.
+  expect(haul.length, haul.map((r) => r.suggestedName).join(', ')).toBeGreaterThanOrEqual(2);
+  // Every one of them carries the chain to the frame it was found in — the
+  // scan ran inside the frame, so the paths come out right for free.
+  for (const r of haul) {
+    expect(r.framePath.map((s) => s.frame.value)[0], r.suggestedName).toBe('#same-frame');
+  }
+  expect(haul.map((r) => r.suggestedName)).toContain('Submit');
+});
+
 test('the background relays panel messages, and reports an unreachable tab', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });

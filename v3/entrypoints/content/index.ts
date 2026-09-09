@@ -241,6 +241,33 @@ export default defineContentScript({
       highlight(el);
     };
 
+    const isFrame = (el: Element) => el.localName === 'iframe' || el.localName === 'frame';
+
+    /**
+     * Marks the one message this script accepts from another frame. Isolated
+     * worlds do not isolate postMessage, so a page could forge this — which is
+     * why the handler also requires that a scan is genuinely in progress in
+     * this frame. The worst a forgery can then do is what the user was already
+     * doing.
+     */
+    const SCAN_FRAME = '__pageModellerScanFrame';
+
+    window.addEventListener('message', (e: MessageEvent) => {
+      if (!active || mode !== 'scan') return;
+      if (typeof e.data !== 'object' || e.data === null || !(e.data as Record<string, unknown>)[SCAN_FRAME]) return;
+      // Only from the document that embeds this one.
+      if (e.source !== window.parent) return;
+      scanDocument();
+    });
+
+    /** Everything interactive in THIS document, as one haul. */
+    function scanDocument() {
+      const root = document.body ?? document.documentElement;
+      const results = collectInteractive(root, includeHidden).map(generate);
+      stop({ notify: false });
+      browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+    }
+
     /** Commit the current target. Shared by clicking and by Enter. */
     function pickCurrent() {
       if (!active || !current) return;
@@ -248,6 +275,19 @@ export default defineContentScript({
       // Both modes are one-shot (SPEC §4) — stop before reporting, so the
       // overlay is gone by the time the panel re-renders.
       stop({ notify: false });
+
+      // Scanning a frame has to be done BY that frame. An <iframe> has no
+      // descendants in this document — its content is a separate document —
+      // so collectInteractive finds nothing and the scan silently returns
+      // empty. Cross-origin it is worse than awkward: contentDocument throws.
+      //
+      // So the frame scans itself. It is already armed (START_PICKING reaches
+      // every frame) and it knows its own frame path, which is exactly what
+      // the elements need.
+      if (mode === 'scan' && isFrame(target)) {
+        (target as HTMLIFrameElement).contentWindow?.postMessage({ [SCAN_FRAME]: true }, '*');
+        return;
+      }
 
       // Scan takes the container's interactive descendants, never the container
       // itself: you are modelling what is inside the section you chose.

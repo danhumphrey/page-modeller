@@ -706,6 +706,20 @@ The **model table** shows the chain for the same reason — two rows differing o
 read identically. The **Edit dialog** shows it too, read-only: the chain is where the element *is*, not
 part of how it is found within that frame, so editing it would be editing the page.
 
+### Scanning a frame **[settled]**
+
+Scanning an `<iframe>` scans **inside** it. An iframe has no descendants in its parent's document — its
+content is a separate document — so the obvious reading returns nothing at all, which is what it did.
+
+The frame scans itself rather than the parent reaching in: `contentDocument` throws across an origin,
+and the frame is armed already (`START_PICKING` reaches every frame) and knows its own path, so every
+element comes out with the right chain for free. The parent asks via `postMessage`, the one message this
+script accepts from another frame — isolated worlds do not isolate `postMessage`, so the handler also
+requires that a scan is genuinely in progress and that the sender is the parent. The worst a forged
+message can then do is what the user was already doing.
+
+Scanning a *container* that happens to hold frames does not descend into them. **[open]**
+
 ### The eye **[settled]**
 
 Every frame hears a `HIGHLIGHT`, and exactly one must answer or a sub-frame's 0 lands on top of the real
