@@ -1,4 +1,4 @@
-import { test, expect, chromium } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -233,8 +233,13 @@ function runInSelenium(
     'options = Options()',
     'options.add_argument("--headless=new")',
     'options.add_argument("--no-sandbox")',
-    // Playwright's chromium, so nothing depends on a browser being installed.
-    `options.binary_location = ${JSON.stringify(chromium.executablePath())}`,
+    // Whatever Chrome the environment provides, driver and browser together.
+    //
+    // Pinning Playwright's chromium here looked tidier and broke CI: the runner
+    // has a chromedriver on PATH, Selenium Manager prefers it over downloading
+    // one, and it refused to drive a browser two majors older. Left alone,
+    // Selenium Manager matches the pair — and downloads Chrome for Testing when
+    // there is none, so this still needs nothing installed.
     'driver = webdriver.Chrome(options=options)',
     'failures = []',
     'try:',
