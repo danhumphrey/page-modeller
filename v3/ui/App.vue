@@ -17,14 +17,23 @@
 
     <q-page-container>
       <q-page>
-        <!-- Advice for the whole time Add is armed, so a strip rather than a
-             toast. Always in the layout and only made invisible, because a row
-             that appears and disappears shifts the whole table under the
-             pointer — while you are aiming at it. Scan does not need it: it
-             already takes many elements at once. -->
-        <div class="hint-strip" :aria-hidden="!isAdding" :data-idle="isAdding ? undefined : ''" data-testid="add-hint">
+        <!-- Advice for the whole time picking is armed, so a strip rather than
+             a toast. Always in the layout and only made invisible, because a
+             row that appears and disappears shifts the whole table under the
+             pointer — while you are aiming at it.
+             Key/action pairs rather than a sentence: walking the DOM and
+             adding several are the two things nothing else in the UI reveals,
+             and prose long enough to explain both does not fit a sidebar. -->
+        <div
+          class="hint-strip"
+          :aria-hidden="!isPickingNow"
+          :data-idle="isPickingNow ? undefined : ''"
+          data-testid="picking-hint"
+        >
           <q-icon name="ads_click" size="16px" />
-          <span>Click an element to add it. Hold <kbd>{{ multiKey }}</kbd> to add several.</span>
+          <span v-for="hint in hints" :key="hint.label" class="hint">
+            <kbd>{{ hint.key }}</kbd> {{ hint.label }}
+          </span>
         </div>
 
         <!-- SPEC §5: a model is kept across a navigation, so it can end up
@@ -125,6 +134,30 @@ const multiKey = (() => {
   const platform = nav.userAgentData?.platform ?? navigator.platform ?? '';
   return /mac/i.test(platform) ? '\u2318' : 'Ctrl';
 })();
+
+const isPickingNow = computed(() => isAdding.value || isScanning.value);
+
+/**
+ * What each mode can do, as key/action pairs. Terse on purpose: the panel is
+ * as narrow as a sidebar, and the arrows and the modifier are undiscoverable
+ * anywhere else, so leaving either out would mean nobody finds it.
+ */
+const hints = computed(() =>
+  isScanning.value
+    ? [
+        // Scan models everything inside what you pick, so the noun matters
+        // more than the verb here.
+        { key: 'Click', label: 'a container' },
+        { key: '\u2191\u2193', label: 'walk' },
+        { key: 'Esc', label: 'stop' },
+      ]
+    : [
+        { key: 'Click', label: 'add' },
+        { key: '\u2191\u2193', label: 'walk' },
+        { key: `${multiKey}+Click`, label: 'many' },
+        { key: 'Esc', label: 'stop' },
+      ]
+);
 
 const openNotices: Record<string, (() => void) | undefined> = {};
 let noticeSeq = 0;
@@ -448,6 +481,7 @@ function notYet(what: string) {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   padding: 6px 12px;
   font-size: 12px;
   color: var(--pm-muted);
@@ -457,6 +491,21 @@ function notYet(what: string) {
 /* Invisible, not absent: the space stays reserved so nothing below it moves. */
 .hint-strip[data-idle] {
   visibility: hidden;
+}
+
+.hint {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* A separator that belongs to the gap rather than to either neighbour, so the
+   row wraps cleanly when the panel is too narrow for one line. */
+.hint + .hint::before {
+  content: '\00b7';
+  margin-right: 4px;
+  opacity: 0.5;
 }
 
 .hint-strip kbd {

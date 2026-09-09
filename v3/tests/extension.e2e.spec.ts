@@ -88,7 +88,7 @@ test('built extension loads and every panel surface renders', async () => {
         // disappears shifts the whole table under the pointer, while you are
         // aiming at it — so it is hidden, never removed. (Arming it needs a
         // real tab, which a bare panel page does not have.)
-        const hint = page.getByTestId('add-hint');
+        const hint = page.getByTestId('picking-hint');
         await expect(hint).toHaveAttribute('data-idle', '');
         expect(
           await hint.evaluate((el) => getComputedStyle(el).visibility),

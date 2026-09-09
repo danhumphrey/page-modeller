@@ -127,9 +127,15 @@ nothing; only the *name* shown to the user is platform-specific.
 
 Scan is unaffected: it already takes many elements at once.
 
-The panel says so while Add is armed — a strip under the toolbar, not a toast, because it is advice for
-the whole time you are picking rather than an event: *Click an element to add it. Hold ⌘ to add
-several.*
+The panel shows what the mode can do while picking is armed — a strip under the toolbar, not a toast,
+because it is advice for the whole time you are picking rather than an event. Key/action pairs rather
+than a sentence: the panel is as narrow as a sidebar, and walking the DOM and adding several are the two
+things nothing else in the UI reveals, so prose long enough to explain both does not fit. **[settled]**
+
+```
+Add    ⌖  Click add · ↑↓ walk · ⌘+Click many · Esc stop
+Scan   ⌖  Click a container · ↑↓ walk · Esc stop
+```
 
 The strip is **always in the layout** and only made invisible when idle. A row that appears and
 disappears shifts the whole table under the pointer at the moment you are aiming at it. **[settled]**
