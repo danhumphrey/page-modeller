@@ -51,9 +51,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 24, not the 20 the v2.5.1 job uses. jsdom's bundled undici calls
+      # `webidl.util.markAsUncloneable`, which is not there on the runner's
+      # Node 20, and every jsdom component test fails to start. 24 is also what
+      # v3 is developed against, so CI and the desk agree.
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: v3/package-lock.json
 

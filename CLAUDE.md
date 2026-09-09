@@ -71,6 +71,8 @@ exploited.
 
 ## Gotchas
 
+- **v3 needs Node 22+.** jsdom's bundled undici calls `webidl.util.markAsUncloneable`, absent on Node
+  20, and every jsdom component test fails to start with `Failed to start forks worker`. CI pins 24.
 - **Root CI runs both trees.** `.github/workflows/ci.yml` has a `test` job for v2.5.1's `src/` and a
   `v3` job for the rewrite. GitHub reads workflows from the repo root only, so anything under
   `v3/.github/` is inert — the v3 CI workflow lived there and never ran once.
