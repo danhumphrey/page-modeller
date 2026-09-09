@@ -8,7 +8,7 @@ import { generateSeleniumJava, generateSeleniumJavaLocators, generateSeleniumJav
 import { generateSeleniumCSharp, generateSeleniumCSharpLocators, generateSeleniumCSharpPageObject } from '../../src/generators/selenium-csharp';
 import { generatePlaywrightPageObject, generatePlaywrightLocators } from '../../src/generators/playwright-ts';
 import { generatePuppeteerPageObject, generatePuppeteerLocators } from '../../src/generators/puppeteer';
-import { modelOf, everyTypeFor, ALL_BUCKETS } from './fixtures/model';
+import { modelOf, everyTypeFor, ALL_BUCKETS, FRAMED_BUCKETS } from './fixtures/model';
 
 // Compiling the generated Selenium against the real Selenium API — the only
 // check that can tell us GetDomProperty exists, that C# spells it SelectByText
@@ -37,7 +37,7 @@ const dotnetReady = has('dotnet', ['--version']) && existsSync(join(CSPROJ, 'obj
 // Every bucket AND every locator type: the buckets decide which methods are
 // emitted, the types decide which API calls appear inside them. Miss either and
 // the check passes on a subset of the surface.
-const model = (id: string) => modelOf(id, ...ALL_BUCKETS, ...everyTypeFor(id));
+const model = (id: string) => modelOf(id, ...ALL_BUCKETS, ...FRAMED_BUCKETS, ...everyTypeFor(id));
 
 function fail(what: string, output: string): never {
   throw new Error(`${what} did not compile:\n${output}`);

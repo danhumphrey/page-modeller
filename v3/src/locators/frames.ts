@@ -48,6 +48,18 @@ export function describeStep(step: FrameStep): string {
  * go and write one: the reader can paste it. `switchTo` is supplied by the
  * generator, so each language spells its own API and its own `By`.
  */
+/**
+ * Just where the element is. For shapes whose methods switch for themselves —
+ * repeating the switch in the banner is noise the reader has to check against
+ * the code below it.
+ */
+export function frameContext(path: Path, comment: string): string[] {
+  if (!path || path.length === 0) return [];
+  const lines = [`In frame: ${path.map(describeStep).join(' \u203a ')}`];
+  if (isOpaque(path)) lines.push('A frame above this one is cross-origin: switch into it yourself first.');
+  return lines.map((line) => `${comment} ${line}`);
+}
+
 export function frameNote(path: Path, comment: string, switchTo: (path: FrameStep[]) => string[]): string[] {
   if (!path || path.length === 0) return [];
   const lines = [`In frame: ${path.map(describeStep).join(' \u203a ')}`];

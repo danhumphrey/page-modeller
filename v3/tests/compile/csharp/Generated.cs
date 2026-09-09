@@ -235,6 +235,388 @@ public void SetPasswordEl(string value, bool clearFirst = true)
 }
 
 /*
+ * FramedActionableEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public void ClickFramedActionableEl()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        driver.FindElement(By.CssSelector("button.pay")).Click();
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedTextEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public string GetFramedTextEl()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return driver.FindElement(By.CssSelector("input.email")).GetDomProperty("value");
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedTextEl(string value, bool clearFirst = true)
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        IWebElement el = driver.FindElement(By.CssSelector("input.email"));
+        if (clearFirst)
+        {
+            el.Clear();
+        }
+        el.SendKeys(value);
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedToggleEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public bool IsFramedToggleElChecked()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return driver.FindElement(By.CssSelector("input.remember")).Selected;
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedToggleEl(bool isChecked)
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        IWebElement el = driver.FindElement(By.CssSelector("input.remember"));
+        if (el.Selected != isChecked)
+        {
+            el.Click();
+        }
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedRadioEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public bool IsFramedRadioElSelected()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return driver.FindElement(By.CssSelector("input.plan")).Selected;
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SelectFramedRadioEl()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        IWebElement el = driver.FindElement(By.CssSelector("input.plan"));
+        if (!el.Selected)
+        {
+            el.Click();
+        }
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedSelectEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public string GetFramedSelectElText()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return new SelectElement(driver.FindElement(By.CssSelector("select.country"))).SelectedOption.Text;
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public string GetFramedSelectElValue()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return new SelectElement(driver.FindElement(By.CssSelector("select.country"))).SelectedOption.GetDomProperty("value");
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedSelectElByValue(string value)
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        new SelectElement(driver.FindElement(By.CssSelector("select.country"))).SelectByValue(value);
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedSelectElByText(string text)
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        new SelectElement(driver.FindElement(By.CssSelector("select.country"))).SelectByText(text);
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedMultiSelectEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public IList<string> GetFramedMultiSelectElTexts()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return new SelectElement(driver.FindElement(By.CssSelector("select.toppings"))).AllSelectedOptions.Select(o => o.Text).ToList();
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public IList<string> GetFramedMultiSelectElValues()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return new SelectElement(driver.FindElement(By.CssSelector("select.toppings"))).AllSelectedOptions.Select(o => o.GetDomProperty("value")).ToList();
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedMultiSelectElByValues(params string[] values)
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        SelectElement el = new SelectElement(driver.FindElement(By.CssSelector("select.toppings")));
+        el.DeselectAll();
+        foreach (string value in values)
+        {
+            el.SelectByValue(value);
+        }
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedMultiSelectElByTexts(params string[] texts)
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        SelectElement el = new SelectElement(driver.FindElement(By.CssSelector("select.toppings")));
+        el.DeselectAll();
+        foreach (string text in texts)
+        {
+            el.SelectByText(text);
+        }
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void DeselectAllFramedMultiSelectEl()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        new SelectElement(driver.FindElement(By.CssSelector("select.toppings"))).DeselectAll();
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedStaticEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public string GetFramedStaticEl()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return driver.FindElement(By.CssSelector("h1")).Text;
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedImageEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public string GetFramedImageElAltText()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return driver.FindElement(By.CssSelector("img.logo")).GetDomAttribute("alt");
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedPasswordEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public string GetFramedPasswordEl()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return driver.FindElement(By.CssSelector("input.pass")).GetDomProperty("value");
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedPasswordEl(string value, bool clearFirst = true)
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        IWebElement el = driver.FindElement(By.CssSelector("input.pass"));
+        if (clearFirst)
+        {
+            el.Clear();
+        }
+        el.SendKeys(value);
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
  * ById
  * ***************************************************************
  */
@@ -376,6 +758,51 @@ private readonly By _multiSelectEl = By.CssSelector("select.toppings");
 private readonly By _staticEl = By.CssSelector("h1");
 private readonly By _imageEl = By.CssSelector("img.logo");
 private readonly By _passwordEl = By.CssSelector("input.pass");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedActionableEl = By.CssSelector("button.pay");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedTextEl = By.CssSelector("input.email");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedToggleEl = By.CssSelector("input.remember");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedRadioEl = By.CssSelector("input.plan");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedSelectEl = By.CssSelector("select.country");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedMultiSelectEl = By.CssSelector("select.toppings");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedStaticEl = By.CssSelector("h1");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedImageEl = By.CssSelector("img.logo");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedPasswordEl = By.CssSelector("input.pass");
 private readonly By _byId = By.Id("go");
 private readonly By _byName = By.Name("email");
 private readonly By _byClassName = By.ClassName("row");

@@ -10,7 +10,7 @@ import { classify, isImage } from './classify';
 import { underscoreCamel } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameFor } from './class-name';
-import { frameNote } from '../locators/frames';
+import { frameContext, frameNote, isOpaque } from '../locators/frames';
 import type { FrameStep } from '../engine/types';
 
 const q = doubleQuoted;
@@ -40,78 +40,107 @@ const frameSwitch = (path: FrameStep[]) => [
 function banner(el: ModelElement): string {
   // The frame chain goes in the banner, where a reader is already looking to
   // see what this block is about (SPEC §16).
-  const frames = frameNote(el.framePath, '//', frameSwitch).map((line) => ` * ${line.replace(/^\/\/ /, '')}`);
+  // Context only: every method below switches for itself.
+  const frames = frameContext(el.framePath, '//').map((line) => ` * ${line.replace(/^\/\/ /, '')}`);
   return [`/*`, ` * ${el.name}`, ...frames, ` * ***************************************************************`, ` */`].join('\n');
+}
+
+/** See selenium-java.ts: switchTo mutates driver state, so the finally matters. */
+function inFrame(method: string, path: FrameStep[]): string {
+  const open = method.indexOf('{');
+  const header = method.slice(0, open + 1);
+  const body = method.slice(open + 1, method.lastIndexOf('}')).replace(/^\n+|\n+$/g, '');
+  return [
+    header,
+    ...frameSwitch(path).map((line) => `    ${line}`),
+    '    try',
+    '    {',
+    ...body.split('\n').map((line) => (line ? `    ${line}` : line)),
+    '    }',
+    '    finally',
+    '    {',
+    '        driver.SwitchTo().DefaultContent();',
+    '    }',
+    '}',
+  ].join('\n');
 }
 
 function methods(el: ModelElement): string[] {
   const n = el.name;
-  const out: string[] = [
-    `public IWebElement Get${n}Element()\n{\n    return driver.FindElement(${by(activeCandidate(el))});\n}`,
-  ];
+  const path = el.framePath ?? [];
+  const framed = path.length > 0 && !isOpaque(path);
+
+  // No element getter for a framed element: an IWebElement goes stale the
+  // moment the driver switches away (SPEC §16).
+  const elExpr = framed ? `driver.FindElement(${by(activeCandidate(el))})` : `Get${n}Element()`;
+  const selectExpr = framed ? `new SelectElement(${elExpr})` : `Get${n}Select()`;
+
+  const out: string[] = framed
+    ? []
+    : [`public IWebElement Get${n}Element()\n{\n    return driver.FindElement(${by(activeCandidate(el))});\n}`];
 
   switch (classify(el)) {
     case 'actionable':
-      out.push(`public void Click${n}()\n{\n    Get${n}Element().Click();\n}`);
+      out.push(`public void Click${n}()\n{\n    ${elExpr}.Click();\n}`);
       break;
 
     case 'text':
       out.push(
         // GetDomProperty, not GetAttribute: the attribute is the INITIAL value
         // and does not change as the user types (Selenium 4.5+).
-        `public string Get${n}()\n{\n    return Get${n}Element().GetDomProperty("value");\n}`,
+        `public string Get${n}()\n{\n    return ${elExpr}.GetDomProperty("value");\n}`,
         // One method, not Java's overload: C# has default arguments.
-        `public void Set${n}(string value, bool clearFirst = true)\n{\n    IWebElement el = Get${n}Element();\n    if (clearFirst)\n    {\n        el.Clear();\n    }\n    el.SendKeys(value);\n}`
+        `public void Set${n}(string value, bool clearFirst = true)\n{\n    IWebElement el = ${elExpr};\n    if (clearFirst)\n    {\n        el.Clear();\n    }\n    el.SendKeys(value);\n}`
       );
       break;
 
     case 'toggle':
       // `isChecked`, not `checked` — `checked` is a C# keyword.
       out.push(
-        `public bool Is${n}Checked()\n{\n    return Get${n}Element().Selected;\n}`,
-        `public void Set${n}(bool isChecked)\n{\n    IWebElement el = Get${n}Element();\n    if (el.Selected != isChecked)\n    {\n        el.Click();\n    }\n}`
+        `public bool Is${n}Checked()\n{\n    return ${elExpr}.Selected;\n}`,
+        `public void Set${n}(bool isChecked)\n{\n    IWebElement el = ${elExpr};\n    if (el.Selected != isChecked)\n    {\n        el.Click();\n    }\n}`
       );
       break;
 
     case 'radio':
       out.push(
-        `public bool Is${n}Selected()\n{\n    return Get${n}Element().Selected;\n}`,
-        `public void Select${n}()\n{\n    IWebElement el = Get${n}Element();\n    if (!el.Selected)\n    {\n        el.Click();\n    }\n}`
+        `public bool Is${n}Selected()\n{\n    return ${elExpr}.Selected;\n}`,
+        `public void Select${n}()\n{\n    IWebElement el = ${elExpr};\n    if (!el.Selected)\n    {\n        el.Click();\n    }\n}`
       );
       break;
 
     case 'select':
       out.push(
-        `public SelectElement Get${n}Select()\n{\n    return new SelectElement(Get${n}Element());\n}`,
-        `public string Get${n}Text()\n{\n    return Get${n}Select().SelectedOption.Text;\n}`,
-        `public string Get${n}Value()\n{\n    return Get${n}Select().SelectedOption.GetDomProperty("value");\n}`,
-        `public void Set${n}ByValue(string value)\n{\n    Get${n}Select().SelectByValue(value);\n}`,
-        `public void Set${n}ByText(string text)\n{\n    Get${n}Select().SelectByText(text);\n}`
+        ...(framed ? [] : [`public SelectElement ${selectExpr}\n{\n    return new SelectElement(${elExpr});\n}`]),
+        `public string Get${n}Text()\n{\n    return ${selectExpr}.SelectedOption.Text;\n}`,
+        `public string Get${n}Value()\n{\n    return ${selectExpr}.SelectedOption.GetDomProperty("value");\n}`,
+        `public void Set${n}ByValue(string value)\n{\n    ${selectExpr}.SelectByValue(value);\n}`,
+        `public void Set${n}ByText(string text)\n{\n    ${selectExpr}.SelectByText(text);\n}`
       );
       break;
 
     case 'multiSelect':
       out.push(
-        `public SelectElement Get${n}Select()\n{\n    return new SelectElement(Get${n}Element());\n}`,
-        `public IList<string> Get${n}Texts()\n{\n    return Get${n}Select().AllSelectedOptions.Select(o => o.Text).ToList();\n}`,
-        `public IList<string> Get${n}Values()\n{\n    return Get${n}Select().AllSelectedOptions.Select(o => o.GetDomProperty("value")).ToList();\n}`,
+        ...(framed ? [] : [`public SelectElement ${selectExpr}\n{\n    return new SelectElement(${elExpr});\n}`]),
+        `public IList<string> Get${n}Texts()\n{\n    return ${selectExpr}.AllSelectedOptions.Select(o => o.Text).ToList();\n}`,
+        `public IList<string> Get${n}Values()\n{\n    return ${selectExpr}.AllSelectedOptions.Select(o => o.GetDomProperty("value")).ToList();\n}`,
         // DeselectAll first, or SelectByValue ADDS to the selection.
-        `public void Set${n}ByValues(params string[] values)\n{\n    SelectElement el = Get${n}Select();\n    el.DeselectAll();\n    foreach (string value in values)\n    {\n        el.SelectByValue(value);\n    }\n}`,
-        `public void Set${n}ByTexts(params string[] texts)\n{\n    SelectElement el = Get${n}Select();\n    el.DeselectAll();\n    foreach (string text in texts)\n    {\n        el.SelectByText(text);\n    }\n}`,
-        `public void DeselectAll${n}()\n{\n    Get${n}Select().DeselectAll();\n}`
+        `public void Set${n}ByValues(params string[] values)\n{\n    SelectElement el = ${selectExpr};\n    el.DeselectAll();\n    foreach (string value in values)\n    {\n        el.SelectByValue(value);\n    }\n}`,
+        `public void Set${n}ByTexts(params string[] texts)\n{\n    SelectElement el = ${selectExpr};\n    el.DeselectAll();\n    foreach (string text in texts)\n    {\n        el.SelectByText(text);\n    }\n}`,
+        `public void DeselectAll${n}()\n{\n    ${selectExpr}.DeselectAll();\n}`
       );
       break;
 
     case 'static':
       out.push(
         isImage(el)
-          ? `public string Get${n}AltText()\n{\n    return Get${n}Element().GetDomAttribute("alt");\n}`
-          : `public string Get${n}()\n{\n    return Get${n}Element().Text;\n}`
+          ? `public string Get${n}AltText()\n{\n    return ${elExpr}.GetDomAttribute("alt");\n}`
+          : `public string Get${n}()\n{\n    return ${elExpr}.Text;\n}`
       );
       break;
   }
 
-  return out;
+  return framed ? out.map((m) => (m.includes('driver.') ? inFrame(m, path) : m)) : out;
 }
 
 /** `By` fields to paste into your own page object. */

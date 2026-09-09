@@ -85,10 +85,57 @@ describe('the targets that cannot carry it say so', () => {
     expect(pup).toContain('// Then use frame2.locator(...) in place of page.locator(...).');
   });
 
-  it('puts it in the banner for the methods shape', () => {
+  it('puts the frame in the banner as context, not as a switch to paste', () => {
+    // The methods below switch for themselves, so repeating it in the banner
+    // is noise the reader has to check against the code under it.
     const out = generateSeleniumJava(modelOf('selenium-java', framed(PATH, idSubmit)));
     expect(out).toContain(' * Submit\n * In frame: #same-frame › #deep-frame');
-    expect(out).toContain(' * driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));');
+    expect(out).not.toContain(' * driver.switchTo()');
+  });
+
+  it('makes each framed method switch in and out on its own', () => {
+    const out = generateSeleniumJava(modelOf('selenium-java', framed(PATH, idSubmit)));
+    expect(out).toBe(
+      [
+        '/*',
+        ' * Submit',
+        ' * In frame: #same-frame › #deep-frame',
+        ' * ***************************************************************',
+        ' */',
+        '',
+        'public void clickSubmit() {',
+        '    driver.switchTo().defaultContent();',
+        '    driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));',
+        '    driver.switchTo().frame(driver.findElement(By.cssSelector("#deep-frame")));',
+        '    try {',
+        '        driver.findElement(By.id("go")).click();',
+        '    } finally {',
+        // Or the next method starts inside this frame. That is what makes
+        // generated methods safe to call in any order (SPEC §16).
+        '        driver.switchTo().defaultContent();',
+        '    }',
+        '}',
+      ].join('\n')
+    );
+  });
+
+  it('gives a framed element no element getter', () => {
+    // A WebElement goes stale the moment the driver switches away, so handing
+    // one back is handing back a guaranteed failure.
+    const out = generateSeleniumJava(modelOf('selenium-java', framed(PATH, idSubmit)));
+    expect(out).not.toContain('getSubmitElement');
+    // Unframed, it is still there.
+    expect(generateSeleniumJava(modelOf('selenium-java', framed([], idSubmit)))).toContain(
+      'public WebElement getSubmitElement()'
+    );
+  });
+
+  it('leaves an opaque chain to the caller rather than switching wrongly', () => {
+    // Half a chain would switch into the wrong document and look like it worked.
+    const out = generateSeleniumJava(modelOf('selenium-java', framed(OPAQUE, idSubmit)));
+    expect(out).toContain('switch into it yourself first');
+    expect(out).not.toContain('switchTo()');
+    expect(out).toContain('public WebElement getSubmitElement()');
   });
 
 

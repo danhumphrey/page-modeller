@@ -696,7 +696,7 @@ than one that admits it is partial. **[settled]**
 | Target | How |
 |---|---|
 | Playwright | `frameLocator(…)` chains, so the locator is self-contained — nothing to explain, nothing to switch |
-| Selenium | a `By` is frame-agnostic: a comment carries the `switchTo` chain, ready to uncomment |
+| Selenium | methods switch in and out for themselves; the locators shape gets the `switchTo` chain as a comment |
 | Puppeteer | `page.locator` is page-scoped and there is no `frameLocator`: a comment walks down to the frame |
 
 The comment carries the **code**, not an instruction to go and write it: **[settled]**
@@ -718,6 +718,36 @@ private final By emailInput = By.name("email");
 
 An **opaque** chain gets the warning and *no* switch to paste: half a chain would switch into the wrong
 document and look like it worked.
+
+### Selenium methods switch for themselves **[settled]**
+
+`switchTo()` mutates driver state for everything after it, so a method that leaves the driver inside a
+frame breaks the next one. Every framed method switches to default content, into the chain, acts, and
+switches back **in a `finally`** — which is what makes generated methods safe to call in any order.
+
+```java
+public void clickSubmit() {
+    driver.switchTo().defaultContent();
+    driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));
+    driver.switchTo().frame(driver.findElement(By.cssSelector("#deep-frame")));
+    try {
+        driver.findElement(By.id("go")).click();
+    } finally {
+        driver.switchTo().defaultContent();
+    }
+}
+```
+
+**A framed element gets no `get{Name}Element()`** — nor a `Select` helper, which holds one. A
+`WebElement` goes stale the moment the driver switches away, so handing one back is handing back a
+guaranteed failure. The element is found inline instead, inside the switch.
+
+The banner carries the frame as **context only**: repeating the switch there is noise the reader has to
+check against the code below it.
+
+Two things are deliberately not wrapped: a method that never touches the driver (the convenience
+overload just calls its sibling, which switches for itself), and an element behind an **opaque** chain,
+which keeps its getter and leaves the switch to the caller — there is no correct switch to emit.
 
 Without that comment a framed Selenium or Puppeteer locator is indistinguishable from a main-frame one
 and silently resolves against the wrong document.
