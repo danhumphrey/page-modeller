@@ -133,8 +133,8 @@ than a sentence: the panel is as narrow as a sidebar, and walking the DOM and ad
 things nothing else in the UI reveals, so prose long enough to explain both does not fit. **[settled]**
 
 ```
-Add    ⌖  Click add · ↑↓ walk · ⌘+Click many · Esc stop
-Scan   ⌖  Click a container · ↑↓ walk · Esc stop
+Add    Click add · ↑↓ walk · ⌘+Click many · Esc stop
+Scan   Click a container · ↑↓ walk · Esc stop
 ```
 
 The strip is **always in the layout** and only made invisible when idle. A row that appears and

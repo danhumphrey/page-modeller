@@ -30,7 +30,6 @@
           :data-idle="isPickingNow ? undefined : ''"
           data-testid="picking-hint"
         >
-          <q-icon name="ads_click" size="16px" />
           <span v-for="hint in hints" :key="hint.label" class="hint">
             <kbd>{{ hint.key }}</kbd> {{ hint.label }}
           </span>
