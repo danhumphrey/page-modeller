@@ -10,6 +10,7 @@ import { classify, isImage } from './classify';
 import { underscoreCamel } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameFor } from './class-name';
+import { frameNote } from '../locators/frames';
 
 const q = doubleQuoted;
 
@@ -29,8 +30,11 @@ function by(c: LocatorCandidate): string {
   return parts ? `By.${BY[parts.kind]}(${q(parts.value)})` : `null /* ${c.kind} is not expressible in Selenium */`;
 }
 
-function banner(name: string): string {
-  return `/*\n * ${name}\n * ***************************************************************\n */`;
+function banner(el: ModelElement): string {
+  // The frame chain goes in the banner, where a reader is already looking to
+  // see what this block is about (SPEC §16).
+  const frames = frameNote(el.framePath, 'line').map((line) => ` * ${line.replace(/^\/\/ /, '')}`);
+  return [`/*`, ` * ${el.name}`, ...frames, ` * ***************************************************************`, ` */`].join('\n');
 }
 
 function methods(el: ModelElement): string[] {
@@ -106,12 +110,12 @@ function methods(el: ModelElement): string[] {
 /** `By` fields to paste into your own page object. */
 export function generateSeleniumCSharpLocators(model: TabModel): string {
   return model.elements
-    .map((el) => `private readonly By ${underscoreCamel(el.name)} = ${by(activeCandidate(el))};`)
+    .flatMap((el) => [...frameNote(el.framePath, 'line'), `private readonly By ${underscoreCamel(el.name)} = ${by(activeCandidate(el))};`])
     .join('\n');
 }
 
 export function generateSeleniumCSharp(model: TabModel): string {
-  return model.elements.map((el) => [banner(el.name), ...methods(el)].join('\n\n')).join('\n\n');
+  return model.elements.map((el) => [banner(el), ...methods(el)].join('\n\n')).join('\n\n');
 }
 
 /** The methods with a class around them (SPEC §17). */
@@ -137,7 +141,7 @@ export function generateSeleniumCSharpPageObject(model: TabModel): string {
     '    }',
     ...model.elements.flatMap((el) => [
       '',
-      indent(banner(el.name)),
+      indent(banner(el)),
       ...methods(el).map(indent).join('\n\n').split('\n'),
     ]),
     '}',

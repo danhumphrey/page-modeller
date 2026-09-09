@@ -47,7 +47,7 @@
           :framework-id="model.frameworkId"
           :taken-names="model.elements.filter((e) => e.id !== editing!.id).map((e) => e.name)"
           @close="editing = undefined"
-          @highlight="highlightCandidate"
+          @highlight="highlightEdited"
           @save="saveEdit"
         />
       </q-page>
@@ -64,12 +64,12 @@ import ModelTable, { type ModelRow } from './ModelTable.vue';
 import EditElementDialog from './EditElementDialog.vue';
 import CodeDialog from './CodeDialog.vue';
 import { defaultFrameworkId } from '@/src/frameworks';
-import { displayLocator } from '@/src/locators/display';
+import { displayElementLocator } from '@/src/locators/display';
 import { activeCandidate, emptyModel, type ModelElement, type TabModel } from '@/src/model';
 import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, type PanelToContent, type PickMode } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 import { applyTheme } from './theme';
-import type { LocatorCandidate } from '@/src/engine/types';
+import type { FrameStep, LocatorCandidate } from '@/src/engine/types';
 import { defaultSettings, loadSettings, watchSettings } from '@/src/settings';
 
 // The panel is a VIEW. The background owns the model, one per tab (SPEC §5), so
@@ -95,7 +95,7 @@ const rows = computed<ModelRow[]>(() =>
   model.value.elements.map((el) => ({
     id: el.id,
     name: el.name,
-    locator: displayLocator(activeCandidate(el), model.value.frameworkId),
+    locator: displayElementLocator(activeCandidate(el), model.value.frameworkId, el.framePath),
   }))
 );
 
@@ -309,21 +309,31 @@ function setFramework(frameworkId: string) {
 
 function clearHighlight() {
   if (tabId.value == null) return;
-  // Every frame may clear; only the top one ever draws.
+  // Every frame may clear; any one of them may have drawn (SPEC §16).
   send(tabId.value, { type: 'CLEAR_HIGHLIGHT' });
 }
 
 function highlight(id: string) {
   const el = model.value.elements.find((e) => e.id === id);
   if (!el) return;
-  highlightCandidate(activeCandidate(el));
+  highlightCandidate(activeCandidate(el), el.framePath);
 }
 
-/** Also used by the Edit dialog, which tests what is typed, not what is saved. */
-function highlightCandidate(candidate: LocatorCandidate) {
+/** The dialog tests a candidate against the element's own frame. */
+function highlightEdited(candidate: LocatorCandidate) {
+  highlightCandidate(candidate, editing.value?.framePath);
+}
+
+/**
+ * Also used by the Edit dialog, which tests what is typed, not what is saved.
+ * The frame path comes with it either way: a locator is resolved in the
+ * document the element lives in, and testing it anywhere else answers a
+ * different question (SPEC §16).
+ */
+function highlightCandidate(candidate: LocatorCandidate, framePath?: FrameStep[]) {
   if (tabId.value == null) return;
   // Fire and forget; the count arrives as HIGHLIGHT_RESULT.
-  send(tabId.value, { type: 'HIGHLIGHT', candidate });
+  send(tabId.value, { type: 'HIGHLIGHT', candidate, framePath });
 }
 
 function openEditor(id: string) {

@@ -5,6 +5,8 @@
 // name, so there is no single value to put after a colon.
 import type { LocatorCandidate } from '../engine/types';
 import { singleQuoted, doubleQuoted } from '../quote';
+import type { FrameStep } from '../engine/types';
+import { frameSelector, playwrightFramePrefix, playwrightPyFramePrefix } from './frames';
 
 const q = singleQuoted;
 const qq = doubleQuoted;
@@ -129,6 +131,22 @@ export function typeValue(c: LocatorCandidate): string {
     case 'partialLinkText':
       return `${c.kind}: ${c.text}`;
   }
+}
+
+/**
+ * What the table shows for an element, frame chain included (SPEC §6, §16).
+ *
+ * Playwright carries the chain in the expression. The others cannot, so they
+ * get a `frame › frame ›` prefix: shorter than a comment and it stops two rows
+ * looking identical when only their frame differs — which is exactly what
+ * happened before this existed.
+ */
+export function displayElementLocator(c: LocatorCandidate, frameworkId: string, framePath?: FrameStep[]): string {
+  if (!framePath || framePath.length === 0) return displayLocator(c, frameworkId);
+  if (frameworkId === 'playwright-python') return playwrightPyFramePrefix(framePath) + playwrightPyExpr(c);
+  if (frameworkId.startsWith('playwright')) return playwrightFramePrefix(framePath) + playwrightExpr(c);
+  const chain = framePath.map(frameSelector).join(' › ');
+  return `${chain} › ${displayLocator(c, frameworkId)}`;
 }
 
 export function displayLocator(c: LocatorCandidate, frameworkId: string): string {

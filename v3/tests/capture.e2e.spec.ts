@@ -166,6 +166,87 @@ test('only the frame under the pointer wears an overlay', async () => {
   await expect.poll(labels).toBe(0);
 });
 
+test('a pick inside a frame carries the chain, and the chain resolves (SPEC §16)', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-path', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  // Two frames deep, and its accessible name is shared with eight other
+  // buttons across the tree — so the path is the only thing that can separate
+  // them, which is what makes this worth asserting.
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+  const deep = page.frameLocator('#same-frame').frameLocator('#deep-frame');
+  await deep.getByRole('button', { name: 'Submit', exact: true }).hover();
+  await deep.getByRole('button', { name: 'Submit', exact: true }).click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = picks[0].result as { framePath: { frame: { value: string }; opaque?: boolean }[] };
+
+  expect(result.framePath.map((s) => s.frame.value), 'outermost first').toEqual(['#same-frame', '#deep-frame']);
+  expect(result.framePath.some((s) => s.opaque), 'same-origin, so the chain is complete').toBe(false);
+
+  // The whole point: rebuild the locator the generator would emit and check
+  // Playwright lands on the element that was clicked, not one of the eight
+  // others with the same name.
+  let chain = page.frameLocator(result.framePath[0].frame.value);
+  for (const step of result.framePath.slice(1)) chain = chain.frameLocator(step.frame.value);
+  const resolved = chain.getByRole('button', { name: 'Submit', exact: true });
+  await expect(resolved).toHaveCount(1);
+  await expect(resolved).toHaveAttribute('data-spike', 'deep-submit');
+});
+
+test('a pick in the main frame still has no chain', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-path-main', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+  await page.getByRole('button', { name: 'Submit', exact: true }).hover();
+  await page.getByRole('button', { name: 'Submit', exact: true }).click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  expect((picks[0].result as { framePath: unknown[] }).framePath).toEqual([]);
+});
+
+test('a pick in a cross-origin frame declares the break rather than lying', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-path-cross', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add' }), tabId);
+  const cross = page.frameLocator('#cross-frame');
+  await cross.getByRole('button', { name: 'Submit', exact: true }).hover();
+  await cross.getByRole('button', { name: 'Submit', exact: true }).click();
+
+  await expect
+    .poll(async () => (await sw.evaluate(() => (globalThis as unknown as { __picks: unknown[] }).__picks)).length)
+    .toBe(1);
+  const picks = await sw.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+  const result = picks[0].result as { framePath: { opaque?: boolean }[] };
+
+  // window.frameElement is unreadable across an origin, so the chain cannot be
+  // completed from inside. Saying so beats a path that starts halfway down and
+  // looks complete.
+  expect(result.framePath.length).toBeGreaterThan(0);
+  expect(result.framePath.some((s) => s.opaque), 'the break is declared').toBe(true);
+});
+
 test('highlighting reports its count as a message, and Close clears it', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
@@ -202,6 +283,54 @@ test('highlighting reports its count as a message, and Close clears it', async (
   // Close dismisses the highlight, not just the message.
   await sw.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'CLEAR_HIGHLIGHT' }), tabId);
   await expect(marks).toHaveCount(0);
+});
+
+test('the eye finds a framed element, and only its own frame answers (SPEC §16)', async () => {
+  // Before this, only the top frame answered a HIGHLIGHT, so anything inside a
+  // frame reported "0 elements match that locator" while its locator was fine.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'frame-eye', 'frames.html');
+  await page.waitForLoadState('networkidle');
+  await collectMessages(sw as never);
+
+  const results = async () =>
+    (await sw.evaluate(
+      () => (globalThis as unknown as { __picks: { type: string; count?: number }[] }).__picks
+    )).filter((m) => m.type === 'HIGHLIGHT_RESULT');
+
+  // Two frames deep. `#deep-cvv` exists only there.
+  await sw.evaluate(
+    (id) =>
+      chrome.tabs.sendMessage(id, {
+        type: 'HIGHLIGHT',
+        candidate: { kind: 'css', value: '#deep-cvv' },
+        framePath: [{ frame: { kind: 'css', value: '#same-frame' } }, { frame: { kind: 'css', value: '#deep-frame' } }],
+      }),
+    tabId
+  );
+  await expect.poll(async () => (await results()).length, { message: 'exactly one frame answers' }).toBe(1);
+  expect((await results())[0].count).toBe(1);
+
+  // The same locator with no path is a main-frame question, and the main frame
+  // has no #deep-cvv — 0 is the right answer, from one frame only.
+  await sw.evaluate(() => ((globalThis as unknown as { __picks: unknown[] }).__picks = []));
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: '#deep-cvv' } }),
+    tabId
+  );
+  await expect.poll(async () => (await results()).length).toBe(1);
+  expect((await results())[0].count).toBe(0);
+
+  // And a main-frame element still works, which is the regression to fear.
+  await sw.evaluate(() => ((globalThis as unknown as { __picks: unknown[] }).__picks = []));
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'HIGHLIGHT', candidate: { kind: 'css', value: '[data-spike=\"top-heading\"]' }, framePath: [] }),
+    tabId
+  );
+  await expect.poll(async () => (await results()).length).toBe(1);
+  expect((await results())[0].count).toBe(1);
 });
 
 test('the background relays panel messages, and reports an unreachable tab', async () => {

@@ -45,9 +45,21 @@ export interface ElementResult {
   candidates: RankedCandidate[];
   /** Index of the first predicted-unique candidate, or -1 if none. */
   preferredIndex: number;
+  /** Outermost first; empty for an element in the main frame (SPEC §16). */
+  framePath: FrameStep[];
 }
 
-/** A step in a frame path (Phase 1: main-frame only, so paths are empty). */
+/**
+ * One `<iframe>`/`<frame>` between the main document and the element, located
+ * the same way any other element is — the parent document is just a document.
+ */
 export interface FrameStep {
   frame: LocatorCandidate;
+  /**
+   * True when the chain could not be completed because a document in it is
+   * cross-origin, so `window.frameElement` is unreadable from inside. The
+   * locator is then relative to that frame rather than to the page, and saying
+   * so beats emitting a path that silently starts halfway down.
+   */
+  opaque?: boolean;
 }

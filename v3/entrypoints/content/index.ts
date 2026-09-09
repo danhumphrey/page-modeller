@@ -1,7 +1,9 @@
-import { generate, resolveCandidate } from '@/src/engine/candidates';
+import { framePathOf, generate, resolveCandidate } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
 import { collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
+import { frameSelector } from '@/src/locators/frames';
+import type { FrameStep } from '@/src/engine/types';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
 // on click, run the locator engine and report the result to the side panel.
@@ -354,6 +356,18 @@ export default defineContentScript({
       if (notify) browser.runtime.sendMessage({ type: 'PICKING_STOPPED' }).catch(() => {});
     }
 
+    /**
+     * Is this frame the one the element was picked in? Compared by selector
+     * rather than by identity: the path in the model was built by this same
+     * code, so the strings line up, including the `:root` marker that stands
+     * for a cross-origin break.
+     */
+    function samePath(mine: FrameStep[], theirs: FrameStep[] | undefined): boolean {
+      const other = theirs ?? [];
+      if (mine.length !== other.length) return false;
+      return mine.every((step, i) => frameSelector(step) === frameSelector(other[i]));
+    }
+
     browser.runtime.onMessage.addListener((msg: unknown) => {
       if (!isMessage(msg)) return;
       const m = msg as Message;
@@ -373,12 +387,15 @@ export default defineContentScript({
       else if (m.type === 'MOVE_TARGET') moveTarget(m.direction);
       else if (m.type === 'PICK_TARGET') pickCurrent();
       else if (m.type === 'HIGHLIGHT') {
-        // This script runs in every frame, but only the top one answers — a
-        // sub-frame with no matches would otherwise report 0 over the top
-        // frame's real count. Decided here rather than by the panel passing
-        // frameId, so the send is shaped exactly like the ones that work on
-        // both browsers. Cross-frame highlighting arrives with SPEC §16.
-        if (window.top !== window) return;
+        // This script runs in every frame and every frame hears this, so
+        // exactly one must answer or a sub-frame's 0 lands on top of the real
+        // count. The one that answers is the frame the element was picked in:
+        // each recomputes its own path and compares (SPEC §16).
+        //
+        // Decided here rather than by the panel passing a frameId, so the send
+        // is shaped exactly like the ones that work on both browsers — a
+        // DevTools panel on Firefox has no `browser.tabs` to target one with.
+        if (!samePath(framePathOf(window), m.framePath)) return;
         const targets = resolveCandidate(document, m.candidate);
         const { hidden } = highlightAll(targets);
         // Answered as a message, not a reply — sendResponse is not portable.

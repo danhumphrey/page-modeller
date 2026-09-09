@@ -17,6 +17,23 @@
           @keydown.enter="save"
         />
 
+        <!-- Read-only: the frame chain is where the element IS, not part of how
+             it is found within that frame. Editing it would be editing the
+             page. Shown because two elements can otherwise look identical
+             (SPEC §16). -->
+        <div v-if="framePath.length" class="frame-row" data-testid="edit-frame">
+          <span class="frame-label">Frame</span>
+          <span class="frame-chain">
+            <template v-for="(step, i) in framePath" :key="i">
+              <span v-if="i > 0" class="frame-sep">›</span>
+              <code>{{ step }}</code>
+            </template>
+          </span>
+        </div>
+        <div v-if="frameOpaque" class="frame-warn" data-testid="edit-frame-opaque">
+          A frame above this one is cross-origin, so the chain starts inside it.
+        </div>
+
         <div class="locator-row">
           <q-select
             v-model="kind"
@@ -78,6 +95,7 @@ import { frameworkById } from '@/src/frameworks';
 import { activeCandidate, type ModelElement } from '@/src/model';
 import { buildCandidate, fieldsFor, isComplete, valuesOf, type LocatorKind } from '@/src/locators/fields';
 import type { LocatorCandidate } from '@/src/engine/types';
+import { frameSelector, isOpaque } from '@/src/locators/frames';
 
 const props = defineProps<{
   element: ModelElement;
@@ -100,6 +118,13 @@ const kind = ref<LocatorKind>(current.kind);
 const values = ref<Record<string, string>>(valuesOf(current));
 
 /** The full framework list, not just what was generated (SPEC §7). */
+// The chain as selector strings; `:root` stands for a cross-origin break, so
+// it is reported as prose rather than shown as a selector nobody typed.
+const framePath = computed(() =>
+  (props.element.framePath ?? []).filter((s) => !s.opaque).map((s) => frameSelector(s))
+);
+const frameOpaque = computed(() => isOpaque(props.element.framePath));
+
 const typeOptions = computed(() => frameworkById(props.frameworkId).locatorTypes.map((t) => ({ label: t, value: t })));
 
 const fields = computed(() => fieldsFor(kind.value));
@@ -147,6 +172,31 @@ function save() {
 </script>
 
 <style scoped>
+.frame-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.frame-label {
+  color: var(--pm-muted);
+}
+
+.frame-chain code {
+  font: 12px/1.5 ui-monospace, SFMono-Regular, monospace;
+}
+
+.frame-sep {
+  margin: 0 4px;
+  color: var(--pm-muted);
+}
+
+.frame-warn {
+  font-size: 12px;
+  color: var(--pm-warn, #d29922);
+}
+
 .edit-card {
   width: 100%;
   max-width: 720px;

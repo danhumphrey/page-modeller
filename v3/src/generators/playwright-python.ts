@@ -5,10 +5,12 @@
 // carries the intent and the convention carries the rest.
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { playwrightPyExpr } from '../locators/display';
+import { playwrightPyFramePrefix } from '../locators/frames';
 import { classNameFor } from './class-name';
 import { snake } from './names';
 
-const expr = (el: ModelElement) => `page.${playwrightPyExpr(activeCandidate(el))}`;
+const expr = (el: ModelElement) =>
+  `page.${playwrightPyFramePrefix(el.framePath)}${playwrightPyExpr(activeCandidate(el))}`;
 
 export function generatePlaywrightPythonPageObject(model: TabModel): string {
   const className = classNameFor(model.url);

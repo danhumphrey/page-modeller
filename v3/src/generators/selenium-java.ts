@@ -8,6 +8,7 @@ import { classify, isImage } from './classify';
 import { lowerCamel } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameFor } from './class-name';
+import { frameNote } from '../locators/frames';
 
 const q = doubleQuoted;
 
@@ -37,8 +38,11 @@ function by(c: LocatorCandidate): string {
   }
 }
 
-function banner(name: string): string {
-  return `/*\n * ${name}\n * ***************************************************************\n */`;
+function banner(el: ModelElement): string {
+  // The frame chain goes in the banner, where a reader is already looking to
+  // see what this block is about (SPEC §16).
+  const frames = frameNote(el.framePath, 'line').map((line) => ` * ${line.replace(/^\/\/ /, '')}`);
+  return [`/*`, ` * ${el.name}`, ...frames, ` * ***************************************************************`, ` */`].join('\n');
 }
 
 function methods(el: ModelElement): string[] {
@@ -128,12 +132,12 @@ function methods(el: ModelElement): string[] {
  */
 export function generateSeleniumJavaLocators(model: TabModel): string {
   return model.elements
-    .map((el) => `private final By ${lowerCamel(el.name)} = ${by(activeCandidate(el))};`)
+    .flatMap((el) => [...frameNote(el.framePath, 'line'), `private final By ${lowerCamel(el.name)} = ${by(activeCandidate(el))};`])
     .join('\n');
 }
 
 export function generateSeleniumJava(model: TabModel): string {
-  return model.elements.map((el) => [banner(el.name), ...methods(el)].join('\n\n')).join('\n\n');
+  return model.elements.map((el) => [banner(el), ...methods(el)].join('\n\n')).join('\n\n');
 }
 
 /**
@@ -165,7 +169,7 @@ export function generateSeleniumJavaPageObject(model: TabModel): string {
     '    }',
     ...model.elements.flatMap((el) => [
       '',
-      indent(banner(el.name)),
+      indent(banner(el)),
       ...methods(el).map(indent).join('\n\n').split('\n'),
     ]),
     '}',

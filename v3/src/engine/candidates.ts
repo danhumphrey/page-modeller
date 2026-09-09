@@ -1,5 +1,5 @@
 import { computeAccessibleName, getRole } from 'dom-accessibility-api';
-import type { LocatorCandidate, ElementResult, RankedCandidate } from './types';
+import type { LocatorCandidate, ElementResult, FrameStep, RankedCandidate } from './types';
 import { baseName, looksGenerated } from './naming';
 
 const norm = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
@@ -267,10 +267,76 @@ export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] 
 
 // ---- candidate generation (ranked, mirrors Playwright's priority) ----
 
-export function generate(el: Element): ElementResult {
+/**
+ * The chain of frames between the main document and this element's document,
+ * outermost first (SPEC §16).
+ *
+ * Each frame is located with the ordinary candidate machinery: the document
+ * holding an `<iframe>` is just a document, and the `<iframe>` is just an
+ * element in it. So a frame gets the same testid/name/id/attribute preference
+ * as anything else, and the same uniqueness check.
+ *
+ * `window.frameElement` is the whole trick, and its limit is the whole
+ * difficulty: it is readable only when the parent is same-origin. Across an
+ * origin it throws, and a document cannot see what embeds it — so the chain
+ * stops there and says so rather than returning a path that starts halfway
+ * down and looks complete.
+ */
+export function framePathOf(win: Window | null): FrameStep[] {
+  const path: FrameStep[] = [];
+  if (!win) return path;
+  let cur: Window = win;
+
+  // A bounded walk: a malformed or hostile tree should not spin here.
+  for (let depth = 0; depth < 32 && cur !== cur.top; depth++) {
+    let el: Element | null = null;
+    try {
+      el = cur.frameElement;
+    } catch {
+      el = null; // cross-origin parent
+    }
+    if (!el) {
+      path.unshift({ frame: { kind: 'css', value: ':root' }, opaque: true });
+      break;
+    }
+    // Generated against the PARENT document, which is where the frame element
+    // lives and where it has to be unique.
+    //
+    // Restricted to css/xpath, unlike an ordinary element: `frameLocator` takes
+    // a SELECTOR, not a locator, so `getByTitle('Payment')` cannot address a
+    // frame however well it identifies one. Selenium and Puppeteer are the same
+    // — every frame API in reach speaks selectors. cssFor already prefers a
+    // test id, then name, then id, so this loses little.
+    const ranked = rankFor(el, safeRole(el), safeName(el)).filter(
+      (c) => c.candidate.kind === 'css' || c.candidate.kind === 'xpath'
+    );
+    const best = ranked[chooseFirstUnique(ranked)] ?? ranked[0];
+    if (!best) break;
+    path.unshift({ frame: best.candidate });
+    cur = cur.parent;
+  }
+
+  return path;
+}
+
+/** Index of the first predicted-unique candidate, or 0 when none is. */
+function chooseFirstUnique(ranked: RankedCandidate[]): number {
+  const i = ranked.findIndex((c) => c.predictedCount === 1);
+  return i === -1 ? 0 : i;
+}
+
+/** A selector string for a frame step, for the APIs that take one. */
+export function frameSelector(step: FrameStep): string {
+  return step.frame.kind === 'xpath' ? `xpath=${step.frame.value}` : (step.frame as { value: string }).value;
+}
+
+/**
+ * Every candidate for an element, filtered to those that actually find it and
+ * ranked by predicted uniqueness. Shared by `generate` and by `framePathOf`,
+ * which needs exactly this for an `<iframe>` in its parent document.
+ */
+function rankFor(el: Element, role: string | null, name: string): RankedCandidate[] {
   const doc = el.ownerDocument;
-  const role = safeRole(el);
-  const name = safeName(el);
   const tag = el.tagName.toLowerCase();
   const out: LocatorCandidate[] = [];
 
@@ -349,7 +415,14 @@ export function generate(el: Element): ElementResult {
     .filter(({ matches }) => matches.includes(el))
     .map(({ candidate, matches }) => ({ candidate, predictedCount: matches.length }));
 
-  const preferredIndex = candidates.findIndex((c) => c.predictedCount === 1);
+  return candidates;
+}
+
+export function generate(el: Element): ElementResult {
+  const role = safeRole(el);
+  const name = safeName(el);
+  const tag = el.tagName.toLowerCase();
+  const candidates = rankFor(el, role, name);
 
   return {
     tag,
@@ -358,6 +431,9 @@ export function generate(el: Element): ElementResult {
     suggestedName: baseName(el),
     inputType: tag === 'input' ? (el as HTMLInputElement).type : undefined,
     candidates,
-    preferredIndex,
+    preferredIndex: candidates.findIndex((c) => c.predictedCount === 1),
+    // The document this element lives in may be framed; the chain to it is as
+    // much a part of the locator as the locator (SPEC §16).
+    framePath: framePathOf(el.ownerDocument.defaultView),
   };
 }

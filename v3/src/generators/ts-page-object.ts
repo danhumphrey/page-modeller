@@ -14,6 +14,8 @@ export interface TsTarget {
   module: string;
   /** The call, without the leading `page.` */
   expr: (el: ModelElement) => string;
+  /** Comment lines to place above an element, when it needs any. */
+  note?: (el: ModelElement) => string[];
   /**
    * How to write the field's type. Playwright's `Locator` is plain; Puppeteer's
    * is generic over the node it yields, so a bare `Locator` does not compile.
@@ -44,7 +46,10 @@ export function tsPageObject(model: TabModel, target: TsTarget): string {
     // Assignment reads the constructor PARAMETER, not `this.page`: a parameter
     // property is not assigned until the constructor body completes.
     '  constructor(private readonly page: Page) {',
-    ...model.elements.map((el) => `    this.${lowerCamel(el.name)} = page.${target.expr(el)};`),
+    ...model.elements.flatMap((el) => [
+      ...(target.note?.(el) ?? []).map((line) => `    ${line}`),
+      `    this.${lowerCamel(el.name)} = page.${target.expr(el)};`,
+    ]),
     '  }',
     '}',
     '',
@@ -53,5 +58,7 @@ export function tsPageObject(model: TabModel, target: TsTarget): string {
 
 /** Locators only — no class, and the types are inferred. */
 export function tsLocators(model: TabModel, target: TsTarget): string {
-  return model.elements.map((el) => `const ${lowerCamel(el.name)} = page.${target.expr(el)};`).join('\n');
+  return model.elements
+    .flatMap((el) => [...(target.note?.(el) ?? []), `const ${lowerCamel(el.name)} = page.${target.expr(el)};`])
+    .join('\n');
 }

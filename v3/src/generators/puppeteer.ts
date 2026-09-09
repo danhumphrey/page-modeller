@@ -10,11 +10,16 @@
 // generated code cannot disagree about what a locator is.
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { puppeteerExpr } from '../locators/display';
+import { frameNote } from '../locators/frames';
 import { tsPageObject, tsLocators, type TsTarget } from './ts-page-object';
 
 const PUPPETEER: TsTarget = {
   module: 'puppeteer',
   expr: (el: ModelElement) => puppeteerExpr(activeCandidate(el)),
+  // `page.locator` is page-scoped and Puppeteer has no frameLocator, so a
+  // framed element needs `page.frames()` first. Said out loud, because the
+  // locator is otherwise indistinguishable from a main-frame one (SPEC §16).
+  note: (el: ModelElement) => frameNote(el.framePath, 'line'),
   // `Locator<T>` is generic over the node it yields — `page.locator('button')`
   // is a `Locator<HTMLButtonElement>`. Element is the common supertype, and
   // widening to it is what lets one field hold any of them.

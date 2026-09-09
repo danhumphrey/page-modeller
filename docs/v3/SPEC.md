@@ -677,7 +677,41 @@ extension is reloaded — which is every rebuild in dev — and the menu is then
 
 ## 16. Frames
 
-New in v3 — v2.5.1 has no frame support.
+New in v3 — v2.5.1 has no frame support. An element records its **frame path**: the frames containing
+it, outermost first, each identified by its own generated locator. **[settled]**
+
+A frame is located by the ordinary candidate machinery — the document holding an `<iframe>` is just a
+document — with one restriction: **css or xpath only**. `frameLocator` takes a *selector*, not a
+locator, and so does every other frame API in reach, so `getByTitle('Payment')` cannot address a frame
+however well it identifies one. `cssFor` already prefers a test id, then a name, then an id (§7), so
+little is lost.
+
+`window.frameElement` builds the chain, and its limit is the hard case: it is readable only when the
+parent is same-origin. Across an origin it throws, and a document cannot see what embeds it — so the
+chain stops there and is **marked opaque**. A path that starts halfway down and looks complete is worse
+than one that admits it is partial. **[settled]**
+
+### Carrying it, or admitting you cannot **[settled]**
+
+| Target | How |
+|---|---|
+| Playwright | `frameLocator(…)` chains, so the locator is self-contained — nothing to explain, nothing to switch |
+| Selenium | a `By` is frame-agnostic: a comment names the chain and says a switch is required first |
+| Puppeteer | `page.locator` is page-scoped and there is no `frameLocator`: the same comment |
+
+Without that comment a framed Selenium or Puppeteer locator is indistinguishable from a main-frame one
+and silently resolves against the wrong document.
+
+The **model table** shows the chain for the same reason — two rows differing only by frame otherwise
+read identically. The **Edit dialog** shows it too, read-only: the chain is where the element *is*, not
+part of how it is found within that frame, so editing it would be editing the page.
+
+### The eye **[settled]**
+
+Every frame hears a `HIGHLIGHT`, and exactly one must answer or a sub-frame's 0 lands on top of the real
+count. The one that answers is the frame the element was picked in: each recomputes its own path and
+compares. Before this, only the top frame answered, so anything inside a frame reported *0 elements
+match that locator* while its locator was perfectly good.
 
 ### One picker, many frames **[settled]**
 

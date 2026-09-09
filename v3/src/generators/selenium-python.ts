@@ -10,6 +10,7 @@ import { classify, isImage } from './classify';
 import { snake, upperSnake } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameFor } from './class-name';
+import { frameNote } from '../locators/frames';
 
 /** Double-quoted, Black's default. */
 const q = doubleQuoted;
@@ -36,9 +37,9 @@ function find(c: LocatorCandidate, recv: string): string {
   return parts ? `${recv}driver.find_element(By.${BY[parts.kind]}, ${q(parts.value)})` : byTuple(c);
 }
 
-function banner(name: string): string {
+function banner(el: ModelElement): string {
   const rule = '#'.repeat(63);
-  return `${rule}\n# ${name}\n${rule}`;
+  return [rule, `# ${el.name}`, ...frameNote(el.framePath, 'hash'), rule].join('\n');
 }
 
 /**
@@ -126,12 +127,14 @@ function methods(el: ModelElement, recv: string): string[] {
  * `driver.find_element(*EMAIL_ADDRESS)` at the call site.
  */
 export function generateSeleniumPythonLocators(model: TabModel): string {
-  return model.elements.map((el) => `${upperSnake(el.name)} = ${byTuple(activeCandidate(el))}`).join('\n');
+  return model.elements
+    .flatMap((el) => [...frameNote(el.framePath, 'hash'), `${upperSnake(el.name)} = ${byTuple(activeCandidate(el))}`])
+    .join('\n');
 }
 
 export function generateSeleniumPython(model: TabModel): string {
   // Two blank lines between top-level definitions, per PEP 8.
-  return model.elements.map((el) => [banner(el.name), ...methods(el, '')].join('\n\n\n')).join('\n\n\n');
+  return model.elements.map((el) => [banner(el), ...methods(el, '')].join('\n\n\n')).join('\n\n\n');
 }
 
 /** The methods as a class (SPEC §17). One blank line between methods, per PEP 8. */
@@ -152,7 +155,7 @@ export function generateSeleniumPythonPageObject(model: TabModel): string {
     '    def __init__(self, driver):',
     '        self.driver = driver',
     // One blank line between methods, per PEP 8 — two is for top level.
-    ...model.elements.flatMap((el) => ['', indent(banner(el.name)), ...methods(el, 'self.').map(indent).join('\n\n').split('\n')]),
+    ...model.elements.flatMap((el) => ['', indent(banner(el)), ...methods(el, 'self.').map(indent).join('\n\n').split('\n')]),
     '',
   ].join('\n');
 }

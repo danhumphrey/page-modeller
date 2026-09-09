@@ -1,4 +1,4 @@
-import type { ElementResult, LocatorCandidate } from './engine/types';
+import type { ElementResult, FrameStep, LocatorCandidate } from './engine/types';
 import type { TabModel } from './model';
 
 // Messages panel → content (sent via browser.tabs.sendMessage to the active tab).
@@ -29,7 +29,9 @@ export type PanelToContent =
   | { type: 'PICK_TARGET' }
   // View Matched Elements (SPEC §8). Answered by HIGHLIGHT_RESULT, not by a
   // reply — see the note on ContentToPanel below.
-  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate }
+  // framePath says WHICH document to resolve in: every frame hears this, and
+  // the one whose own path matches is the one that answers (SPEC §16).
+  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate; framePath?: FrameStep[] }
   // Clear the highlight early — the user dismissed the match count.
   | { type: 'CLEAR_HIGHLIGHT' };
 

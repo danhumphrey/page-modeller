@@ -16,6 +16,7 @@ export function modelOf(frameworkId: string, ...elements: TestElement[]): TabMod
     selectedIndex: 0,
     preferredIndex: 0,
     candidates: [{ candidate, predictedCount: 1 }],
+    framePath: [],
     ...el,
   })) as ModelElement[];
   return m;
