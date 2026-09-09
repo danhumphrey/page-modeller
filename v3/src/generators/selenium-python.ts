@@ -8,9 +8,10 @@ import type { LocatorCandidate } from '../engine/types';
 import { byParts, type ByKind } from './selenium';
 import { classify, isImage } from './classify';
 import { snake, upperSnake } from './names';
+import { doubleQuoted } from '../quote';
 
-/** Python string literal, double-quoted (Black's default). */
-const q = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+/** Double-quoted, Black's default. */
+const q = doubleQuoted;
 
 const BY: Record<ByKind, string> = {
   id: 'ID',
@@ -26,7 +27,7 @@ const BY: Record<ByKind, string> = {
 /** The `(By.X, "value")` pair — Python's locator is a tuple, not an object. */
 function byTuple(c: LocatorCandidate): string {
   const parts = byParts(c);
-  return parts ? `(By.${BY[parts.kind]}, ${q(parts.value)})` : `# ${c.kind} is not expressible in Selenium`;
+  return parts ? `(By.${BY[parts.kind]}, ${q(parts.value)})` : `None  # ${c.kind} is not expressible in Selenium`;
 }
 
 function find(c: LocatorCandidate): string {

@@ -58,3 +58,32 @@ export const HEADING: TestElement = {
   tag: 'h1',
   candidate: { kind: 'css', value: 'h1' },
 };
+
+// Playwright and Puppeteer cannot express `name` or `id` (SPEC §7), so a model
+// built from the Selenium fixtures above renders as garbage under them. Ask for
+// the right ones rather than remembering to.
+export const PW_EMAIL: TestElement = {
+  name: 'EmailAddress',
+  role: 'textbox',
+  tag: 'input',
+  candidate: { kind: 'label', text: 'Email address', exact: true },
+};
+export const PW_SIGN_IN: TestElement = {
+  name: 'SignIn',
+  role: 'button',
+  tag: 'button',
+  candidate: { kind: 'role', role: 'button', name: 'Sign in', exact: true },
+};
+export const CSS_ROW: TestElement = {
+  name: 'FirstRow',
+  role: null,
+  tag: 'div',
+  candidate: { kind: 'css', value: 'div.row' },
+};
+
+/** Elements the given framework can actually express. */
+export function elementsFor(frameworkId: string): TestElement[] {
+  if (frameworkId.startsWith('playwright')) return [PW_EMAIL, PW_SIGN_IN, HEADING];
+  if (frameworkId === 'puppeteer') return [CSS_ROW, HEADING];
+  return [EMAIL, SIGN_IN, HEADING];
+}

@@ -6,9 +6,9 @@ import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import type { LocatorCandidate } from '../engine/types';
 import { classify, isImage } from './classify';
 import { lowerCamel } from './names';
+import { doubleQuoted } from '../quote';
 
-/** Java string literal: only `\` and `"` need escaping for our values. */
-const q = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+const q = doubleQuoted;
 
 function by(c: LocatorCandidate): string {
   switch (c.kind) {
@@ -30,8 +30,9 @@ function by(c: LocatorCandidate): string {
       return `By.xpath(${q(c.value)})`;
     default:
       // Selection only ever picks a type the framework can express (SPEC §7),
-      // so this is unreachable — but say so rather than emitting nothing.
-      return `/* ${c.kind} is not expressible in Selenium */`;
+      // so this is unreachable — but say so rather than emitting nothing, and
+      // keep it parseable: a syntax error names a column, not an element.
+      return `null /* ${c.kind} is not expressible in Selenium */`;
   }
 }
 
