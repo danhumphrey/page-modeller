@@ -4,9 +4,10 @@
 // framework expression instead (SPEC §12) — `getByRole` takes a role AND a
 // name, so there is no single value to put after a colon.
 import type { LocatorCandidate } from '../engine/types';
+import { singleQuoted, doubleQuoted } from '../quote';
 
-const q = (s: string) => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
-const qq = (s: string) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+const q = singleQuoted;
+const qq = doubleQuoted;
 
 /** The Playwright call this candidate becomes. */
 export function playwrightExpr(c: LocatorCandidate): string {

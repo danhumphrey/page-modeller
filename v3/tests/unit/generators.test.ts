@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { canGenerate, generateCode, shapesFor } from '../../src/generators';
 import { frameworks } from '../../src/frameworks';
-import { modelOf, EMAIL, SIGN_IN } from './fixtures/model';
+import { modelOf, elementsFor, SIGN_IN } from './fixtures/model';
 
 describe('the generator registry', () => {
   it('covers every framework the toolbar offers', () => {
@@ -9,7 +9,11 @@ describe('the generator registry', () => {
     // that is not offered at all.
     for (const f of frameworks) {
       expect(canGenerate(f.id), f.label).toBe(true);
-      expect(generateCode(modelOf(f.id, EMAIL, SIGN_IN)), f.label).not.toBe('');
+      const code = generateCode(modelOf(f.id, ...elementsFor(f.id)));
+      expect(code, f.label).not.toBe('');
+      // `type: value` in generated code means a candidate the framework cannot
+      // express leaked through the display fallback.
+      expect(code, f.label).not.toMatch(/= \w+: /);
     }
   });
 

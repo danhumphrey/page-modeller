@@ -113,6 +113,25 @@ The automation that does earn its place is the part hand-testing cannot repeat c
 spec re-runs 43 DOM edge cases against real Playwright on every change, and the extension E2E proves the
 built extension still loads before a manual session starts. Keep both green, but neither is the gate.
 
+### What is verified per target
+
+Two separate questions: does the locator find the element, and is the emitted code valid.
+
+| Target | Locator semantics | Generated code |
+|---|---|---|
+| Playwright TS | ✅ every expression resolved in real Playwright | ❌ nothing compiles it |
+| Puppeteer | ✅ real Puppeteer (`puppeteer.fidelity.spec.ts`) | ❌ |
+| Playwright Python | ✅ inherited — proven the mechanical transform of the TS spelling | ✅ `python3 -m ast` |
+| Selenium Python | ⚠️ strategy only | ✅ `python3 -m ast` |
+| Selenium Java | ⚠️ strategy only | ❌ needs `javac` + the selenium jar |
+| Selenium C# | ⚠️ strategy only | ❌ needs `dotnet` + Selenium.WebDriver |
+
+⚠️ **strategy only**: `tests/pw-builder.ts` resolves each `By` strategy as the equivalent CSS/XPath in
+real Playwright, so *which* strategy is right is checked. The spelling (`By.Name` / `By.NAME`) is
+constant tables under unit test, and the API (`SelectElement.SelectByText`) is unchecked.
+
+Toolchain-gated tests **skip loudly**, never silently.
+
 ## v2.5.1 is not the default
 
 The shipping code is 10-15 years old and carries decisions made for a browser landscape that no longer

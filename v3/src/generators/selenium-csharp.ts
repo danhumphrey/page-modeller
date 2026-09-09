@@ -8,9 +8,9 @@ import type { LocatorCandidate } from '../engine/types';
 import { byParts, type ByKind } from './selenium';
 import { classify, isImage } from './classify';
 import { underscoreCamel } from './names';
+import { doubleQuoted } from '../quote';
 
-/** C# string literal: only `\` and `"` need escaping for our values. */
-const q = (value: string) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+const q = doubleQuoted;
 
 const BY: Record<ByKind, string> = {
   id: 'Id',
@@ -25,7 +25,7 @@ const BY: Record<ByKind, string> = {
 
 function by(c: LocatorCandidate): string {
   const parts = byParts(c);
-  return parts ? `By.${BY[parts.kind]}(${q(parts.value)})` : `/* ${c.kind} is not expressible in Selenium */`;
+  return parts ? `By.${BY[parts.kind]}(${q(parts.value)})` : `null /* ${c.kind} is not expressible in Selenium */`;
 }
 
 function banner(name: string): string {
