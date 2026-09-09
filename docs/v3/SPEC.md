@@ -204,9 +204,23 @@ offers the **full framework list**, not just the generated ones — selecting a 
 value leaves the value field **blank** for the user to type. The generated set is a convenience, never a
 constraint. **[settled]**
 
-Selenium Java types, in order: `id, linkText, partialLinkText, name, css, xpath, className, tagName`.
+The per-framework type lists are in §11. Adding a framework changes those lists, not the model's shape.
 
-Adding Playwright changes the per-framework type list, not the model's shape.
+### What the css candidate is built from **[settled]**
+
+CSS is not only a structural fallback. For Puppeteer it is the *only* expressible type, so the
+preference the other frameworks get from their type ordering, Puppeteer can only get here. Same order:
+
+1. `[data-testid="…"]` — most change-resistant
+2. `[name="…"]` — author-chosen
+3. `#id` — but only when the id does not look generated, the same rule the `id` candidate uses
+4. a `>` path, anchored on the nearest ancestor with a real id
+
+Each step is taken only if it singles the element out, so a radio group's shared name falls through.
+
+Without this, Facebook's email field came out as `css: #_R_1h6kqsqppb6amH1_` — a React `useId` value,
+sitting next to `name="email"`. Under Selenium that was cosmetic, because its `name` type ranks first
+anyway. Under Puppeteer it was the whole locator.
 
 ## 8. View Matched Elements (the eye)
 

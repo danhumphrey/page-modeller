@@ -51,16 +51,43 @@ export function safeRole(el: Element): string | null {
 
 // ---- selector builders (deterministic fallbacks) ----
 
+/**
+ * An attribute selector, if it singles the element out.
+ *
+ * CSS is not only a structural fallback: for Puppeteer it is the ONLY
+ * expressible type (SPEC §7), so whatever preference the other frameworks get
+ * from their locator-type ordering, Puppeteer can only get from here.
+ */
+function attrSelector(el: Element, attr: string): string | null {
+  const value = el.getAttribute(attr);
+  if (!value) return null;
+  const sel = `[${attr}="${CSS.escape(value)}"]`;
+  return el.ownerDocument.querySelectorAll(sel).length === 1 ? sel : null;
+}
+
+/** `#id`, unless the id is framework-generated — same rule as the id candidate. */
+function idSelector(el: Element): string | null {
+  const id = el.getAttribute('id');
+  if (!id || looksGenerated(id)) return null;
+  const sel = `#${CSS.escape(id)}`;
+  return el.ownerDocument.querySelectorAll(sel).length === 1 ? sel : null;
+}
+
 function cssFor(el: Element): string {
-  if (el.id) {
-    const byId = `#${CSS.escape(el.id)}`;
-    if (el.ownerDocument.querySelectorAll(byId).length === 1) return byId;
-  }
+  // Same order of preference as everywhere else: a test id is the most
+  // change-resistant, then an author-chosen name, then an id — which is only
+  // author-chosen when it does not look generated. React's useId gave
+  // Facebook's email field `id="_R_1h6kqsqppb6amH1_"` next to `name="email"`.
+  const direct = attrSelector(el, 'data-testid') ?? attrSelector(el, 'name') ?? idSelector(el);
+  if (direct) return direct;
+
   const parts: string[] = [];
   let cur: Element | null = el;
   while (cur && cur.nodeType === 1 && cur !== cur.ownerDocument.documentElement) {
-    if (cur.id) {
-      parts.unshift(`#${CSS.escape(cur.id)}`);
+    // Anchoring the path on a generated id would defeat the point.
+    const anchor = idSelector(cur);
+    if (anchor) {
+      parts.unshift(anchor);
       break;
     }
     let sel = cur.tagName.toLowerCase();
