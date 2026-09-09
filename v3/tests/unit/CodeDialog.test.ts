@@ -75,6 +75,21 @@ describe('CodeDialog', () => {
     expect(codeText()).toContain('readonly email: Locator;');
   });
 
+  it('keeps the shape control out of the title row', async () => {
+    // Three shapes plus Copy alongside the title truncated it to "Seleniu…" in
+    // the sidebar, which has no width to share.
+    await render(modelWith('selenium-java', { name: 'Email' }));
+    const toggle = document.body.querySelector('[data-testid="code-shape"]');
+    expect(toggle).not.toBeNull();
+    expect(toggle!.closest('.dialog-header')).toBeNull();
+  });
+
+  it('offers no shape row when the framework has one shape', async () => {
+    // No framework has one today; the row must still not appear if one does.
+    await render(modelWith('selenium-java', { name: 'Email' }));
+    expect(document.body.querySelectorAll('[data-testid="code-shape"]').length).toBe(1);
+  });
+
   it('switches shape without touching the model', async () => {
     const model = modelWith('playwright-ts', { name: 'Email' });
     await render(model);

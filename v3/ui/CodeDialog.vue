@@ -3,20 +3,25 @@
     <q-card class="code-card">
       <q-toolbar class="dialog-header">
         <q-toolbar-title class="text-subtitle1">{{ frameworkLabel }}</q-toolbar-title>
-        <!-- Shapes are per-framework, so this is hidden when there is only one. -->
+        <q-btn flat dense no-caps icon="content_copy" label="Copy" data-testid="code-copy" @click="copy" />
+      </q-toolbar>
+
+      <!-- Its own row: in the sidebar there is no width to share with the
+           title, and three shapes plus Copy pushed the title to "Seleniu…".
+           Shapes are per-framework, so this is absent when there is only one. -->
+      <div v-if="shapes.length > 1" class="shape-row">
         <q-btn-toggle
-          v-if="shapes.length > 1"
           v-model="shapeId"
           :options="shapeOptions"
-          flat
+          spread
+          unelevated
           dense
           no-caps
           toggle-color="primary"
-          class="shape-toggle q-mr-sm"
+          class="shape-toggle"
           data-testid="code-shape"
         />
-        <q-btn flat dense no-caps icon="content_copy" label="Copy" data-testid="code-copy" @click="copy" />
-      </q-toolbar>
+      </div>
 
       <q-card-section class="code-body q-pa-none">
         <!-- Read-only, as in v2.5.1: the model is edited in the table, not here. -->
@@ -96,7 +101,15 @@ async function copy() {
   min-height: 44px;
 }
 
+.shape-row {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--pm-rule);
+}
+
+/* `spread` divides the row evenly, so the labels stay readable however narrow
+   the panel gets rather than truncating the widest one. */
 .shape-toggle {
+  width: 100%;
   border: 1px solid var(--pm-rule);
   border-radius: 4px;
 }
