@@ -7,11 +7,16 @@ independently mergeable.
 
 | | Why it is yours |
 |---|---|
-| **The AMO add-on id** | v2.5.1 declares no `gecko.id`, so AMO assigned one. It is on the listing, not in this repo. `wxt.config.ts` has `todo-amo-id@page-modeller.invalid` — submit with that and AMO creates a **second add-on** rather than updating the existing one. Find it in the Developer Hub, or in the manifest of the published XPI. |
-| **The CWS item id** | The long string in the store URL. Needed as the `CHROME_EXTENSION_ID` secret. |
-| **The version number** | v3 is `0.1.0`. Both stores reject an upload that is not **higher than 2.5.1**. `2.6.0` says "same tool, rebuilt"; `3.0.0` says "new major". |
-| **Store secrets** | `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`, `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET`, and the two ids above. |
+| **The AMO add-on id** | ✅ `{1e34b9b3-8f45-415e-9586-c7d5de0d0aff}` — found on the public AMO search API, not supplied by hand. Now in `wxt.config.ts`, and `check-manifests.mjs` rejects a placeholder so it cannot regress. |
+| **The CWS item id** | `ejgkdhekcepfgdghejpkmbfjgnioejak`, from the store URL. |
+| **The version number** | ✅ `3.0.0`. Both stores reject an upload that is not higher than the published 2.5.1; the manifest check now enforces it at build time. |
 | **Listing copy and branding** | I can draft; the words and the artwork are a product decision. |
+
+**Credentials are not on this list, and must never be.** The store API keys go straight into GitHub
+repo secrets (`Settings → Secrets and variables → Actions`); CI reads them at submit time. Nothing
+local needs them, nothing in this repo reads them, and they should not be pasted into a terminal, a
+file, or a conversation. An earlier draft listed their names here alongside things that genuinely
+needed telling, which read as a request for the values. It was not.
 
 ## Phase 1 — Restructure the repo
 

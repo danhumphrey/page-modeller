@@ -34,7 +34,24 @@ const EXPECT = {
     // storage.session is Firefox 115+, which is the highest floor here.
     'strict_min_version covers storage.session': (m) =>
       parseFloat(m.browser_specific_settings?.gecko?.strict_min_version) >= 115,
+    // The id AMO assigned to the existing listing. A placeholder here does not
+    // fail the upload — it creates a SECOND add-on, quietly, and the first one
+    // stops receiving updates.
+    'gecko.id is the real one, not a placeholder': (m) =>
+      /^\{[0-9a-f-]{36}\}$/.test(m.browser_specific_settings?.gecko?.id ?? ''),
   },
+};
+
+// Both stores reject an upload that is not higher than what is published, and
+// v2.5.1 is what is published. Checked here because the failure at submit time
+// is late, remote, and after a tag has been pushed.
+const SHIPPED = [2, 5, 1];
+const newerThanShipped = (version) => {
+  const parts = version.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((parts[i] ?? 0) !== SHIPPED[i]) return (parts[i] ?? 0) > SHIPPED[i];
+  }
+  return false;
 };
 
 let failed = 0;
@@ -43,6 +60,7 @@ const fail = (dir, name) => { console.error(`✗ ${dir}: ${name}`); failed++; };
 for (const [dir, checks] of Object.entries(EXPECT)) {
   const manifest = JSON.parse(await readFile(`.output/${dir}/manifest.json`, 'utf8'));
   for (const [name, ok] of Object.entries(checks)) if (!ok(manifest)) fail(dir, name);
+  if (!newerThanShipped(manifest.version)) fail(dir, `version ${manifest.version} must be higher than 2.5.1`);
 
   // Frames the content script has to reach (SPEC §16). A srcdoc iframe's URL is
   // `about:srcdoc`, which `<all_urls>` does not match, so without these its

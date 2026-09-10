@@ -43,7 +43,13 @@ export default defineConfig({
   manifestVersion: 3,
 
   manifest: ({ browser }) => ({
-    name: 'Page Modeller',
+    // The frameworks people search the stores for. v2.5.1 was "Page Modeller
+    // (Selenium, Robot Framework etc)"; Robot Framework and Protractor are
+    // gone and Playwright leads now.
+    name: 'Page Modeller (Playwright, Selenium, Puppeteer etc.)',
+    // Shown under the icon in the Chrome store, where the full name will not
+    // fit. Carried over from v2.5.1 unchanged.
+    short_name: 'PageModeller',
     description: 'Pick a DOM element and generate a verified Playwright Page Object Model.',
     // `sidePanel` is Chromium-only and is rejected by Firefox; WXT adds it to
     // the Chrome build itself when it sees the sidepanel entrypoint.
@@ -68,7 +74,10 @@ export default defineConfig({
           // mismatch creates a second listing instead of updating the existing
           // one (NFR-6). v2.5.1's manifest never carried an id, so AMO assigned
           // it; read it off the Developer Hub.
-          id: 'todo-amo-id@page-modeller.invalid',
+          // The id AMO assigned to the existing listing. v2.5.1 declared none,
+          // so this is the only thing that makes an upload an UPDATE rather
+          // than a second add-on. Found via the public AMO search API.
+          id: '{1e34b9b3-8f45-415e-9586-c7d5de0d0aff}',
           strict_min_version: '115.0',
           // Nothing leaves the browser — locators are computed locally and the
           // extension makes no network requests.
