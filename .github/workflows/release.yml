@@ -1,0 +1,72 @@
+name: Release
+
+# Tag to build, test and submit to both stores. The listings already exist;
+# this updates them, and going live is gated by store review.
+#
+# `v3.*` rather than `v*`: v2.5.1's tags share this repo, and `v*` would match
+# them. The tag must also agree with the manifest — checked below, because a
+# mismatch is only discovered at submit time otherwise.
+on:
+  push:
+    tags: ['v3.*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Everything here mirrors ci.yml deliberately: a release that runs a
+      # different, smaller check than every PR is a release nobody has tested.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium
+      - run: npm run fetch:test-deps
+
+      - run: npm test
+        env:
+          PM_REQUIRE_FULL_SUITE: '1'
+
+      - name: The tag and the manifest must agree
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          MANIFEST=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$MANIFEST" ]; then
+            echo "tag $GITHUB_REF_NAME says $TAG, package.json says $MANIFEST"
+            exit 1
+          fi
+
+      - run: npm run zip
+
+      - name: Submit to both stores
+        run: npx wxt submit --chrome-zip .output/*-chrome.zip --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+
+      - name: Keep the artifacts that were submitted
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-zips
+          path: .output/*.zip
+          retention-days: 90

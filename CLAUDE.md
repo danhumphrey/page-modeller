@@ -1,19 +1,12 @@
 # CLAUDE.md
 
-## Orientation — two codebases live here
+## Orientation
 
-| | Ships today | The rewrite |
-|---|---|---|
-| Version | **v2.5.1** | **v3** |
-| Branch | `master` | `v3-rewrite` |
-| Code | `src/` (repo root) | `v3/` |
-| Stack | JS · Vue 2 · Vuetify · Webpack · Sizzle | TS · Vue 3 · Quasar · WXT · Vite |
+One codebase, at the repo root: **TS · Vue 3 · Quasar · WXT · Vite**, MV3 on Chrome and Firefox.
 
-They are independent trees with separate `package.json`s and toolchains. **Never mix them in one
-change.** v3 work goes on the `v3-rewrite` branch, inside `v3/`.
-
-Note the branch is `v3-rewrite`, not `v3` — a branch named `v3` would be ambiguous with the `v3/`
-directory in every revision argument (`git log v3`, `git show v3:file`).
+v2.5.1 — the Webpack/Vue 2 extension this replaces — is gone from the tree and reachable at the
+`v2.5.1-final` tag. Nothing here builds it, and nothing here should be judged against how it did
+things (see "v2.5.1 is not the default" below).
 
 **Branch from `v3-rewrite`, not from the branch you happen to be on.** PRs here are squash-merged, so a
 branch cut from another branch carries commits that land again under a different identity — and every
@@ -22,30 +15,27 @@ file both touched then conflicts, even though the content is identical. Recovery
 only your own commits.
 
 **Always `gh pr create --base v3-rewrite`.** `gh` defaults the base to the repo's default branch,
-`master`. A v3 branch PR'd that way does not carry one commit — squash-merging it collapses the whole
+`master`. A branch PR'd that way does not carry one commit — squash-merging it collapses the whole
 `v3-rewrite`..branch difference into `master` (97 files the one time it happened, #75/#76).
 
-> **Until the `v3-rewrite` branch merges, `v3/` and `docs/v3/` exist only on that branch** — `git checkout v3-rewrite` before
-> looking for anything below. This file is on `master` so the orientation is available from either side.
+## The docs
 
-## v3 — the rewrite
+Read `docs/SPEC.md` (owns *what the tool does*) before changing behaviour, and `docs/REWRITE-PLAN.md`
+(owns *how*) before changing architecture. `docs/RELEASE-PLAN.md` is what stands between here and the
+stores. `docs/SESSION-CONTEXT.md` is history. Spike evidence is in `docs/spikes/`.
 
-On the `v3-rewrite` branch. Read `docs/v3/SPEC.md` (owns *what the tool does*) before changing behaviour,
-and `docs/v3/REWRITE-PLAN.md` (owns *how*) before changing architecture. `docs/v3/SESSION-CONTEXT.md` is
-the history. Spike evidence is in `docs/v3/spikes/`.
-
-**`docs/v3/PRD.md` is not authoritative for behaviour** — it was generated from the locator spike before
+**`docs/PRD.md` is not authoritative for behaviour** — it was generated from the locator spike before
 anyone wrote down what the tool does, and several of its FR-* items describe functionality that does not
 exist (FR-G2's class generation, most obviously). Its NFRs and store/release constraints still hold.
 
 **Status:** the host-agnostic shell is built and hand-verified on both browsers. Behaviour was specced
 from scratch with the author on 2026-09-08 (`SPEC.md`, 18 sections). **Next is stripping the spike UI**,
-then rebuilding to the spec one manually-verifiable increment at a time. Roadmap: `REWRITE-PLAN.md` §12.
+then rebuilding to the spec one manually-verifiable increment at a time. Roadmap: `docs/REWRITE-PLAN.md` §12.
 
-The spike UI in `v3/ui/` and `v3/src/generators/` predates the spec and does not match it. Only
-`v3/src/engine/` and its fidelity test survive.
+The spike UI in `ui/` and `src/generators/` predates the spec and does not match it. Only
+`src/engine/` and its fidelity test survive.
 
-Run everything from `v3/` — it is self-contained:
+Everything runs from the repo root:
 
 ```
 npm test          # unit + engine bundle + build + Playwright (the gate)
@@ -56,13 +46,13 @@ npm run typecheck # strict TS over the pure core
 ### Constraints that bind v3
 
 - **No LLM in the critical path.** Locators are computed deterministically from published a11y specs.
-  This was measured, not assumed (`REWRITE-PLAN.md` §1, §11). Fully offline, no network.
+  This was measured, not assumed (`docs/REWRITE-PLAN.md` §1, §11). Fully offline, no network.
 - **Cross-browser.** Chrome + Firefox, **MV3 on both** — v2.5.1 already ships MV3 to AMO, so MV2 would be
   a downgrade on an in-place update. Three surfaces off one host-agnostic app: Chrome side panel,
   Firefox sidebar (`sidebar_action`), DevTools panel on both.
 - **Ships as an in-place update** to the existing Chrome Web Store and AMO listings. The CWS item ID
   and AMO `gecko.id` must be preserved, and user storage must survive the upgrade.
-- **Locator fidelity is the core contract.** `v3/tests/engine.fidelity.spec.ts` checks generated
+- **Locator fidelity is the core contract.** `tests/engine.fidelity.spec.ts` checks generated
   locators against real Playwright resolution. If you touch the engine, that test is the arbiter.
 
 ## v2.5.1 — the shipping extension
@@ -79,19 +69,14 @@ exploited.
 
 - **v3 needs Node 22+.** jsdom's bundled undici calls `webidl.util.markAsUncloneable`, absent on Node
   20, and every jsdom component test fails to start with `Failed to start forks worker`. CI pins 24.
-- **Root CI runs both trees.** `.github/workflows/ci.yml` has a `test` job for v2.5.1's `src/` and a
-  `v3` job for the rewrite. GitHub reads workflows from the repo root only, so anything under
-  `v3/.github/` is inert — the v3 CI workflow lived there and never ran once.
-- `v3/.github/workflows/release.yml` is **still inert**, deliberately: at the root it would fire on any
-  `v*` tag and submit v3 to the stores. Move it when v3 is ready to ship, and give it a tag prefix that
-  cannot collide with a v2.5.1 tag.
-- **Root CI is the only CI, and it sees the whole repo.** It runs on every `pull_request`, so anything
-  added anywhere in the tree lands in its path. Root Jest had no ignore patterns and walked into `v3/`,
-  handing TypeScript to a Babel configured for v2.5.1's JS — three suites failed to parse the first time
-  a branch containing `v3/` was PR'd. `/v3/` is now in `testPathIgnorePatterns`; `lint`, `prettier:check`
-  and `build` were already scoped to `src`. Check the root scripts before adding a tree.
-- Build output is gitignored (`/v3/.output`, `/v3/.wxt`, `/v3/.test-dist`, `/v3/test-results`).
-- `v3/` output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
+- **CI is one job over one tree.** GitHub reads workflows from the repo root only; a `.github/` further
+  down is inert, which is how the v3 workflow sat unrun for months.
+- `.github/workflows/release.yml` fires on a `v3.*` tag — not `v*`, which would match v2.5.1's tags —
+  and checks that the tag agrees with `package.json` before submitting.
+- **CI sees the whole repo**, and runs on every `pull_request`, so anything added anywhere lands in its
+  path. Check `package.json`'s scripts before adding a tree.
+- Build output is gitignored (`.output`, `.wxt`, `.test-dist`, `test-results`).
+- Output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
 
 - **A sandboxed iframe is unreachable on Firefox.** `sandbox="allow-scripts"` gives a null principal;
   Firefox's `match_about_blank` only injects where the principal is *inherited*, and it has no
@@ -113,7 +98,7 @@ exploited.
 
 **Firefox has no automated coverage, and cannot easily get any.** Playwright *installs* a Firefox
 extension fine (`playwright-webextext`), but Juggler cannot navigate to `moz-extension://` pages, so the
-panel is undrivable — see `docs/v3/spikes/SPIKE6-FIREFOX-E2E.md`. Every cross-browser bug so far passed
+panel is undrivable — see `docs/spikes/SPIKE6-FIREFOX-E2E.md`. Every cross-browser bug so far passed
 the Chrome suite. Hand-test Firefox.
 
 **Automated tests are a net, not the criterion for done.** Nothing is complete until it has been

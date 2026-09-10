@@ -1,104 +1,141 @@
-# ![Page Modeller](src/icons/icon_32.png) Page Modeller
+# Page Modeller (Phase 1)
 
-> Browser DevTools extension for modelling web pages for automation.
+Pick a DOM element (DevTools-style) and generate a **verified Playwright Page Object Model**, built on
+the stack validated in the feasibility study (WXT + Vue 3 + Quasar + TypeScript, no LLM).
 
-The Page Modeller extension enables developers to scan a web page and generate page object style code for various tools, languages and frameworks and test the UI locators in the browser.
+## What's here (Phase 1 scope)
 
-Current release: **2.5.1**
+- **Locator engine** (`src/engine/`) — computes ranked, verified locator candidates (`getByRole`,
+  `getByLabel`, … → CSS/XPath fallback) via `dom-accessibility-api`. Validated against real Playwright
+  resolution (see the fidelity test).
+- **Locator IR** (`src/engine/types.ts`) — framework-agnostic candidate list; the contract for generators.
+- **Inspector overlay** (`entrypoints/content/`) — highlight + click to pick; runs in all frames.
+- **Panel UI** (`ui/`) — Quasar: `AppToolbar` (SPEC §3) over `ModelTable` (SPEC §6). One app, three
+  surfaces. Shell only so far — capture, generation and the dialogs are the next increments.
+- **Generators** (`src/generators/`) — `classify.ts` maps role to method bucket; `selenium-java.ts` is
+  the reference template (SPEC §11), `playwright-ts.ts` the primary target (SPEC §12).
+- **Frameworks** (`src/frameworks.ts`) — the targets and the locator types each can express (SPEC §7).
+- **Settings** (`src/settings.ts`, `ui/OptionsPage.vue`) — `storage.sync`, read live by every surface
+  (SPEC §14).
+- **Session model** (`src/model.ts`) — one model per tab, owned by the background; panels are views
+  (SPEC §5).
+- **Naming** (`src/engine/naming.ts`) — split across the message boundary: `baseName` runs in the page,
+  where the DOM rules apply; `uniqueName` runs in the panel, which owns the model (SPEC §13).
+- **Host adapter** (`host/`) — the only thing that differs per surface: which tab the panel drives.
+  Side panel / sidebar follow the active tab (`tabs.query`); a DevTools panel is pinned to the tab it
+  was opened on (`devtools.inspectedWindow.tabId`).
 
-Supported tools and languages are:
+## Scripts
 
-- Selenium WebDriver Java
-- Selenium WebDriver C#
-- Puppeteer
-- Robot Framework
-- Protractor
+| Script | Purpose |
+|---|---|
+| `npm run dev` / `dev:firefox` | WXT dev server (HMR); launches the browser with the extension loaded |
+| `npm run fixtures` | Optional — serve `tests/fixtures/` at `http://localhost:5199` |
+| `npm run build` / `build:firefox` | Production build (`.output/`) |
+| `npm run zip` | Store-ready zips (incl. Firefox sources zip) |
+| `npm run typecheck` | Strict TS check of the pure core |
+| `npm run test:unit` | Vitest — pure core, plus Vue component tests |
+| `npm run check:manifests` | Assert both builds emit the expected surfaces |
+| `npm test` | Unit + engine fidelity (real Playwright) + both builds + manifests + extension & capture E2E |
 
-## Contents
+## Surfaces
 
-- [Browser Support](https://github.com/danhumphrey/page-modeller#browser-support)
-- [Installation](https://github.com/danhumphrey/page-modeller#installation)
-- [Usage](https://github.com/danhumphrey/page-modeller#usage)
-- [Options](https://github.com/danhumphrey/page-modeller#options)
-- [Screenshots](https://github.com/danhumphrey/page-modeller#screenshots)
-- [Contribute](https://github.com/danhumphrey/page-modeller#contribute)
-- [License](https://github.com/danhumphrey/page-modeller#license)
+MV3 on both browsers. One `sidepanel` entrypoint gives Chrome `side_panel` and Firefox `sidebar_action`;
+`devtools.html` registers the panel on both.
 
-## Browser Support
+| | Chrome | Firefox |
+|---|---|---|
+| Side panel / sidebar | toolbar icon | toolbar icon (or View → Sidebar → Page Modeller) |
+| Support | right-click the toolbar icon | right-click the toolbar icon |
+| Options | right-click the toolbar icon (Chrome's own item) | right-click the toolbar icon |
+| DevTools panel | F12 → **Page Modeller** | F12 → **Page Modeller** |
 
-<p align="center">
-  <img src="media/browsers.png" width="504" alt="Chrome, Firefox, Brave, Opera, Vivaldi" /> 
-</p>
+## Load it
 
-## Installation
+`npm run dev` (Chrome) or `npm run dev:firefox` — WXT launches the browser with the extension loaded.
+Navigate wherever you want to test.
 
-Install the extension using the links below:
+The dev browser is Chrome **stable**, and reuses a profile under `.wxt/` rather than a throwaway one, so
+settings, logins and history survive a restart. `chrome-launcher` otherwise picks the newest install it
+finds — Canary, on a machine that has it — which would hide exactly the version problems
+`minimum_chrome_version` exists to catch. Set `CHROME_PATH` to override. `web-ext` uses a temporary profile by default, which meant `storage.sync`
+started empty every run and no setting ever appeared to persist. Delete `.wxt/chrome-profile` or
+`.wxt/firefox-profile` to start clean.
 
-https://chrome.google.com/webstore/detail/page-modeller/ejgkdhekcepfgdghejpkmbfjgnioejak
+Manually, from a production build:
 
-https://addons.mozilla.org/en-US/firefox/addon/page-modeller/
+- **Chrome** — `npm run build`, then `chrome://extensions` → Developer mode → Load unpacked →
+  `.output/chrome-mv3`.
+- **Firefox** — `npm run build:firefox`, then `about:debugging#/runtime/this-firefox` → Load Temporary
+  Add-on → `.output/firefox-mv3/manifest.json`.
 
-https://addons.opera.com/en/extensions/details/install-chrome-extensions/
+## Manual verification
 
-## Usage
+Automated tests are a net; this is the gate. Per increment, on **both** browsers.
 
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=h14zWscnloI" target="_blank"><img src="media/youtube.jpg" width="600" alt="YouTube" /></a> 
-</p>
-<p align="center">
-  Click to watch demonstration video on YouTube.
-</p>
+> **Reload the page tab after any change to the engine, content script or naming.** WXT re-registers the
+> content script on rebuild, but re-registration only affects pages loaded afterwards — a tab open across
+> a rebuild keeps the old script and the old behaviour. Panel-only changes are hot-reloaded, which is
+> what makes the mixed behaviour confusing.
 
-## Options
 
-Options can be configured via the browser extension options.
+1. Extension loads with no console errors (check the background/service-worker console too).
+2. Open the side panel / sidebar **and** the DevTools panel. Both render, and the header chip names the
+   surface you're on.
+3. Toolbar reads Scan · Delete Model · framework · Add Element · Generate Code, with Delete Model and
+   Generate Code visibly disabled while the model is empty (SPEC §3).
+4. **Add Element** → hover highlights → click adds one row, then picking *stops* (SPEC §4). Clicking
+   again without pressing Add must not add a second row.
+   - The label is a breadcrumb ending in the target: `body › main › div › button (div) "Log in"`.
+   - **↑ / ↓** walk the target up and down the nesting; moving the mouse starts again from the cursor.
+     **Enter** or a click picks the walked-to element, not what is under the pointer. The page must not
+     scroll, and Enter must not re-trigger the Add Element button.
+5. **Scan Page** → pick a container (arrow keys help: clicking the middle of a form lands on an input)
+   → its interactive descendants arrive as rows, the container itself does not, and Scan then greys out
+   because it is once per model.
+6. **Escape** cancels Add Element — both with focus in the panel and with focus in the page.
+7. The row's name and locator look right, **on one line** — Name, Locator and Actions across, not
+   stacked; a second element with the same name becomes `About2`.
+8. Row trash and Delete Model both confirm, and the dialog follows the light/dark theme.
+9. **Eye** highlights every match in yellow with a red outline, scrolls the first into view, and reports
+   the count — green for 1, red for 0, amber for more. Highlight clears after ~3s, or at once on
+   **Close**. Clicking it repeatedly replaces the message rather than stacking a counter badge, and the
+   new highlight survives the replacement.
+10. With **Model hidden elements** on, the eye on a hidden row marks its nearest visible ancestor
+    with a dashed outline captioned *hidden element*, and the count says so.
+11. **Edit** (pencil or double-click): name validation rejects blank, spaced and duplicate names;
+   switching type fills the fields from a generated locator or blanks them; the eye tests what is
+   typed; Save updates the row in **both** surfaces.
+12. **Clicking a row** does nothing — that is setting-gated and off by default (SPEC §6). Double-click
+   still opens the editor.
+13. **Both surfaces at once**: open the sidebar and the DevTools panel on one tab — they show the same
+    rows, and a pick in either appears in both. Close one; the model survives in the other. Close them
+    all and reopen; that tab's model is gone. Check this with a second tab modelled too — closing one
+    tab's panels must not touch the other's.
+14. **Switch tabs**: the table swaps to that tab's model and swaps back (SPEC §5). Build a model in tab A,
+   switch to B, add something different, switch back — A must be intact.
+15. **Navigate within a tab** with a model built: a banner names the page it was built on and offers
+    Delete Model. Navigate back and the banner clears.
+16. **Generate Code** with Selenium WebDriver Java selected: the dialog is titled with the framework,
+    the code is read-only and scrolls, and Copy puts it on the clipboard. Any other target says it is
+    not generated yet rather than showing an empty dialog.
+17. Table headers stay visible at the narrowest side-panel width.
 
-- Show Tooltips
-- Dark Mode
-- Model Hidden Elements
+`npm run fixtures` serves `tests/fixtures/` over http if you want to pick against the four pages the
+engine was validated on — each links to the others, so you can move between them while testing — expected locators are tabulated in `docs/v3/spikes/SPIKE-RESULTS.md`, so a
+mismatch there is a real signal. Optional; the fidelity spec covers them automatically. They're bare
+markup, so the failures that matter — overlays, sticky headers, shadow roots, frames — only show up on
+real sites.
 
-<p align="center">
-  <img src="media/popup_options.png" width="302" alt="Popup Options" /> 
-</p>
+## Where this is up to
 
-## Screenshots
+Behaviour is owned by [`../docs/v3/SPEC.md`](../docs/v3/SPEC.md); the build order is `REWRITE-PLAN.md`
+§12. Built so far: the host-agnostic shell, and the toolbar + table shell. **No capture yet** — the
+toolbar buttons acknowledge and do nothing, so the table only ever shows its empty state until Add
+Element lands.
 
-<p align="center">
-  <img src="media/screen1_chrome.jpg" width="600" alt="Chrome Selenium WebDriver Java" /> 
-</p>
-<p align="center">
-  <img src="media/screen2_firefox.png" width="600" alt="Firefox Testing Locators" /> 
-</p>
-<p align="center">
-  <img src="media/screen3_chrome.png" width="600" alt="Chrome Model Entities" /> 
-</p>
-<p align="center">
-  <img src="media/screen4_firefox.png" width="600" alt="Firefox Robot Framework" /> 
-</p>
-<p align="center">
-  <img src="media/screen3_opera.png" width="600" alt="Opera Edit Entity Locator" /> 
-</p>
-
-## Contribute
-
-### Bugs and Suggestions
-
-If you like this extension, please :star: this repository!
-
-Feel free to propose new functionality and additional frameworks here: https://github.com/danhumphrey/page-modeller/issues
-
-This extension is being actively developed and is considered a beta release.
-
-### Code Contributions
-
-1. Fork this repository
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Added some feature'`)
-4. Push to your branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
-
-## License
-
-This library is distributed under the MIT license. Please see the [LICENSE](https://github.com/danhumphrey/page-modeller/blob/master/LICENSE) file.
-
-:point_up_2: I really should call this "licence" as I don't live in the US, but I'm adopting the MIT spelling :wink:
+- Content script applies to pages loaded after install; already-open tabs need a reload.
+- `browser_specific_settings.gecko.id` is a **placeholder**. The real AMO id must replace it before any
+  upload, or Firefox gets a second listing instead of an update (NFR-6).
+- Firefox MV3 treats `host_permissions` as optional — if picking doesn't work there, check the
+  extension's permissions in `about:addons`.

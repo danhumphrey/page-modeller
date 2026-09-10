@@ -1,23 +1,27 @@
 .idea
-*.zip
-*.xpi
 .DS_Store
-*.build.js
+Thumbs.db
 node_modules
 /*.log
-/build
-/build-firefox
-/.chrome-for-testing
-/release-chrome
-/release-firefox
-/coverage
-Thumbs.db
-.appenv
+*.zip
+*.xpi
 
-# v3/ — WXT / Playwright build output
-/v3/.output
-/v3/.wxt
-/v3/.test-dist
-/v3/test-results
-/v3/playwright-report
-/v3/.test-venv
+# WXT / Vite / Playwright build output
+/.output
+/.wxt
+/.test-dist
+/test-results
+/playwright-report
+
+# Compile checks: fetched dependencies and the files written for them
+# (`npm run fetch:test-deps`).
+/.test-venv
+/tests/compile/lib
+/tests/compile/csharp/obj
+/tests/compile/csharp/bin
+/tests/compile/ts/*.ts
+/tests/compile/csharp/Generated.cs
+/tests/compile/csharp/GeneratedPageObject.cs
+
+# Renders from `scripts/screenshot.mjs`, regenerated on demand.
+/*-render.png

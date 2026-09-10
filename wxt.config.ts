@@ -42,6 +42,17 @@ export default defineConfig({
   // downgrade on an in-place update. WXT makes the background swap for us.
   manifestVersion: 3,
 
+  /**
+   * AMO reviews the source of a bundled add-on, so this zip is read by a
+   * person. Without these it carried 17 MB of C# build output — three
+   * `selenium-manager` binaries the compile check pulls in — which is both
+   * noise and a reason to ask questions.
+   */
+  zip: {
+    excludeSources: ['tests/compile/**', '.test-venv/**', '.test-dist/**', 'test-results/**', '*-render.png'],
+  },
+
+
   manifest: ({ browser }) => ({
     // The frameworks people search the stores for. v2.5.1 was "Page Modeller
     // (Selenium, Robot Framework etc)"; Robot Framework and Protractor are
