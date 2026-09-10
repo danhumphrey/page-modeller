@@ -408,9 +408,15 @@ before starting the next.
 
 19. **A help page.** The **?** gives it a home; the dialog is the short version.
 
-20. **Real-browser verification for Selenium and the Python targets.** Today the generated code is
-    compiled or parsed but never *run*: only Playwright and Puppeteer are driven for real (CLAUDE.md,
-    "What is verified per target"). The frame fixtures now give that something worth running against.
+20. **Real-browser verification for Selenium and the Python targets** ✅ **Done** — the generated
+    Selenium Python is driven through WebDriver and the generated Playwright Python through the Python
+    bindings, both against the fixtures. Four bugs that nothing else could reach: `get_dom_property`
+    (Java's and C#'s spelling, absent in Python), `self.continue` and `const continue` (keywords), and
+    `getClass()` (already on `Object`).
+
+    **Java and C# are still not run.** Which strategy to use is decided once for all three in
+    `selenium.ts`, and the method bodies are the same decisions in three spellings, so what is left
+    unproven there is spelling — which their compilers check.
 
 21. **Release**: the real AMO `gecko.id`, and merging `v3/.github/workflows/release.yml` to the root
     with a tag prefix that cannot collide with a v2.5.1 tag.
