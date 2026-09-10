@@ -215,7 +215,11 @@ shows a banner naming that page, with **Delete Model** to hand — the model als
 page, since scan is once-per-model (§4). Navigating back makes the model current again rather than
 leaving it flagged. **[settled]**
 
-Still to do: the 0-match snackbar naming the likely reason rather than just the count. **[inferred]**
+**The 0-match snackbar reports the count and nothing else.** It could guess at a reason — the model is
+stale, hidden elements are not modelled — but the locator under test is often not the generated one:
+the Edit dialog exists so people can type their own and try it. A guess would be wrong exactly when
+someone is iterating, which is when they are looking at it most. Report the fact; the reader can tell
+why. **[settled]**
 
 ## 6. Model table
 
@@ -465,8 +469,32 @@ requires a real `<select>` (`new Select(div)` throws `UnexpectedTagNameException
 falls back to **actionable** methods — `click{Name}()` to open, with the options modelled as their own
 elements. Revisit if a real DOM turns up that needs better. **[settled]**
 
-`role="slider"` joins the **text** bucket: it carries a value, and both Selenium and Playwright set it
-through the element rather than a dedicated API. **[inferred]**
+### Sliders are not text **[settled]**
+
+`role="slider"` looks like a text field — it carries a value — and Selenium's text setter is *actively
+wrong* on one. Measured on `<input type="range" min="0" max="10" value="3">`:
+
+| | |
+|---|---|
+| `clear()` | moves it to **5**, the middle of its span, silently |
+| `send_keys("7")` | does nothing at all |
+
+So `set{Name}("7")` would leave it on 5 and report success. Its own bucket, driven by the keyboard,
+which is the whole API a range offers:
+
+| Method | |
+|---|---|
+| `get{Name}()` | the value |
+| `increment{Name}()` · `decrement{Name}()` | one step, `ARROW_RIGHT` / `ARROW_LEFT` |
+| `set{Name}ToMin()` · `set{Name}ToMax()` | `HOME` / `END` |
+| `set{Name}(value)` | steps toward the target from wherever it is |
+
+The setter reads the current value and steps toward the target rather than resetting to min first:
+fewer presses, and neither `min` nor `step` ever has to be read. It stops when the value stops changing
+— a range clamps at its ends — or when a step carries it past a target it cannot land on.
+
+Only Selenium is affected. Playwright and Puppeteer bind locators and emit no methods, so buckets do
+not reach them. (`fill()` does drive a range correctly, for what it is worth.)
 
 Also: the templates emit a stray leading space on every line.
 
@@ -971,8 +999,6 @@ rather than confirmed, flagged so they are visible rather than silent:
 
 | § | Inferred |
 |---|---|
-| 5 | Stale-model banner + reason on the 0-match snackbar |
-| 11 | `role="slider"` → text bucket |
 | 11 | Playwright locator type list and its ranking |
 | 12 | Playwright method bodies; bare `page` reference; `testId` first; `testIdAttribute` note |
 | 12 | `.nth()` as the tail of the disambiguation chain |

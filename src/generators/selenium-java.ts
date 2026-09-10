@@ -116,6 +116,32 @@ function methods(el: ModelElement): string[] {
       );
       break;
 
+    case 'slider':
+      out.push(
+        `public String ${getValue}() {\n    return ${elExpr}.getDomProperty("value");\n}`,
+        // The keyboard is the whole API a range offers, so these are it.
+        `public void increment${n}() {\n    ${elExpr}.sendKeys(Keys.ARROW_RIGHT);\n}`,
+        `public void decrement${n}() {\n    ${elExpr}.sendKeys(Keys.ARROW_LEFT);\n}`,
+        `public void set${n}ToMin() {\n    ${elExpr}.sendKeys(Keys.HOME);\n}`,
+        `public void set${n}ToMax() {\n    ${elExpr}.sendKeys(Keys.END);\n}`,
+        // Steps from wherever it is, rather than resetting to min first: fewer
+        // presses, and min and step never have to be read.
+        `public void set${n}(String value) {\n` +
+          `    WebElement el = ${elExpr};\n` +
+          `    double target = Double.parseDouble(value);\n` +
+          `    double now = Double.parseDouble(el.getDomProperty("value"));\n` +
+          `    while (now != target) {\n` +
+          `        boolean up = now < target;\n` +
+          `        el.sendKeys(up ? Keys.ARROW_RIGHT : Keys.ARROW_LEFT);\n` +
+          `        double next = Double.parseDouble(el.getDomProperty("value"));\n` +
+          `        // Clamped at an end, or stepped past a value this slider\n` +
+          `        // cannot land on. Either way it goes no closer.\n` +
+          `        if (next == now || (up ? next > target : next < target)) return;\n` +
+          `        now = next;\n` +
+          `    }\n}`
+      );
+      break;
+
     case 'toggle':
       out.push(
         `public boolean is${n}Checked() {\n    return ${elExpr}.isSelected();\n}`,
@@ -200,6 +226,7 @@ export function generateSeleniumJavaPageObject(model: TabModel): string {
   const imports = [
     ...(buckets.has('multiSelect') ? ['java.util.List', 'java.util.stream.Collectors'] : []),
     'org.openqa.selenium.By',
+    ...(buckets.has('slider') ? ['org.openqa.selenium.Keys'] : []),
     'org.openqa.selenium.WebDriver',
     'org.openqa.selenium.WebElement',
     ...(buckets.has('select') || buckets.has('multiSelect') ? ['org.openqa.selenium.support.ui.Select'] : []),

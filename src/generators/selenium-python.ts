@@ -117,6 +117,32 @@ function methods(el: ModelElement, recv: string): string[] {
       );
       break;
 
+    case 'slider':
+      out.push(
+        `${def(`get_${n}()`)}:\n    return ${elExpr}.get_property("value")`,
+        // The keyboard is the whole API a range offers, so these are it.
+        `${def(`increment_${n}()`)}:\n    ${elExpr}.send_keys(Keys.ARROW_RIGHT)`,
+        `${def(`decrement_${n}()`)}:\n    ${elExpr}.send_keys(Keys.ARROW_LEFT)`,
+        `${def(`set_${n}_to_min()`)}:\n    ${elExpr}.send_keys(Keys.HOME)`,
+        `${def(`set_${n}_to_max()`)}:\n    ${elExpr}.send_keys(Keys.END)`,
+        // Steps from wherever it is, rather than resetting to min first: fewer
+        // presses, and min and step never have to be read.
+        `${def(`set_${n}(value)`)}:\n` +
+          `    el = ${elExpr}\n` +
+          `    target = float(value)\n` +
+          `    now = float(el.get_property("value"))\n` +
+          `    while now != target:\n` +
+          `        up = now < target\n` +
+          `        el.send_keys(Keys.ARROW_RIGHT if up else Keys.ARROW_LEFT)\n` +
+          `        moved = float(el.get_property("value"))\n` +
+          `        # Clamped at an end, or stepped past a value this slider\n` +
+          `        # cannot land on. Either way it goes no closer.\n` +
+          `        if moved == now or (moved > target if up else moved < target):\n` +
+          `            return\n` +
+          `        now = moved`
+      );
+      break;
+
     case 'toggle':
       out.push(
         `${def(`is_${n}_checked()`)}:\n    return ${elExpr}.is_selected()`,
@@ -185,6 +211,7 @@ export function generateSeleniumPythonPageObject(model: TabModel): string {
   const buckets = new Set(model.elements.map(classify));
   const imports = [
     'from selenium.webdriver.common.by import By',
+    ...(buckets.has('slider') ? ['from selenium.webdriver.common.keys import Keys'] : []),
     ...(buckets.has('select') || buckets.has('multiSelect')
       ? ['from selenium.webdriver.support.ui import Select']
       : []),

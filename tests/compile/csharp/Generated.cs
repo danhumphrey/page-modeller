@@ -180,6 +180,58 @@ public void DeselectAllMultiSelectEl()
 }
 
 /*
+ * SliderEl
+ * ***************************************************************
+ */
+
+public IWebElement GetSliderElElement()
+{
+    return driver.FindElement(By.CssSelector("input.volume"));
+}
+
+public string GetSliderEl()
+{
+    return GetSliderElElement().GetDomProperty("value");
+}
+
+public void IncrementSliderEl()
+{
+    GetSliderElElement().SendKeys(Keys.Right);
+}
+
+public void DecrementSliderEl()
+{
+    GetSliderElElement().SendKeys(Keys.Left);
+}
+
+public void SetSliderElToMin()
+{
+    GetSliderElElement().SendKeys(Keys.Home);
+}
+
+public void SetSliderElToMax()
+{
+    GetSliderElElement().SendKeys(Keys.End);
+}
+
+public void SetSliderEl(string value)
+{
+    IWebElement el = GetSliderElElement();
+    double target = double.Parse(value);
+    double now = double.Parse(el.GetDomProperty("value"));
+    while (now != target)
+    {
+        bool up = now < target;
+        el.SendKeys(up ? Keys.Right : Keys.Left);
+        double next = double.Parse(el.GetDomProperty("value"));
+        // Clamped at an end, or stepped past a value this slider
+        // cannot land on. Either way it goes no closer.
+        if (next == now || (up ? next > target : next < target)) return;
+        now = next;
+    }
+}
+
+/*
  * StaticEl
  * ***************************************************************
  */
@@ -589,6 +641,114 @@ public void DeselectAllFramedMultiSelectEl()
 }
 
 /*
+ * FramedSliderEl
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public string GetFramedSliderEl()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return driver.FindElement(By.CssSelector("input.volume")).GetDomProperty("value");
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void IncrementFramedSliderEl()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        driver.FindElement(By.CssSelector("input.volume")).SendKeys(Keys.Right);
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void DecrementFramedSliderEl()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        driver.FindElement(By.CssSelector("input.volume")).SendKeys(Keys.Left);
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedSliderElToMin()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        driver.FindElement(By.CssSelector("input.volume")).SendKeys(Keys.Home);
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedSliderElToMax()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        driver.FindElement(By.CssSelector("input.volume")).SendKeys(Keys.End);
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedSliderEl(string value)
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        IWebElement el = driver.FindElement(By.CssSelector("input.volume"));
+        double target = double.Parse(value);
+        double now = double.Parse(el.GetDomProperty("value"));
+        while (now != target)
+        {
+            bool up = now < target;
+            el.SendKeys(up ? Keys.Right : Keys.Left);
+            double next = double.Parse(el.GetDomProperty("value"));
+            // Clamped at an end, or stepped past a value this slider
+            // cannot land on. Either way it goes no closer.
+            if (next == now || (up ? next > target : next < target)) return;
+            now = next;
+        }
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
  * FramedStaticEl
  * In frame: #same-frame › #deep-frame
  * ***************************************************************
@@ -893,6 +1053,7 @@ private readonly By _toggleEl = By.CssSelector("input.remember");
 private readonly By _radioEl = By.CssSelector("input.plan");
 private readonly By _selectEl = By.CssSelector("select.country");
 private readonly By _multiSelectEl = By.CssSelector("select.toppings");
+private readonly By _sliderEl = By.CssSelector("input.volume");
 private readonly By _staticEl = By.CssSelector("h1");
 private readonly By _imageEl = By.CssSelector("img.logo");
 private readonly By _passwordEl = By.CssSelector("input.pass");
@@ -929,6 +1090,11 @@ private readonly By _framedSelectEl = By.CssSelector("select.country");
 // driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
 // driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
 private readonly By _framedMultiSelectEl = By.CssSelector("select.toppings");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedSliderEl = By.CssSelector("input.volume");
 // In frame: #same-frame › #deep-frame
 // driver.SwitchTo().DefaultContent();
 // driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));

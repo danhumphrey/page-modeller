@@ -94,6 +94,33 @@ function methods(el: ModelElement): string[] {
       );
       break;
 
+    case 'slider':
+      out.push(
+        `public string Get${n}()\n{\n    return ${elExpr}.GetDomProperty("value");\n}`,
+        // The keyboard is the whole API a range offers, so these are it.
+        `public void Increment${n}()\n{\n    ${elExpr}.SendKeys(Keys.Right);\n}`,
+        `public void Decrement${n}()\n{\n    ${elExpr}.SendKeys(Keys.Left);\n}`,
+        `public void Set${n}ToMin()\n{\n    ${elExpr}.SendKeys(Keys.Home);\n}`,
+        `public void Set${n}ToMax()\n{\n    ${elExpr}.SendKeys(Keys.End);\n}`,
+        // Steps from wherever it is, rather than resetting to min first: fewer
+        // presses, and min and step never have to be read.
+        `public void Set${n}(string value)\n{\n` +
+          `    IWebElement el = ${elExpr};\n` +
+          `    double target = double.Parse(value);\n` +
+          `    double now = double.Parse(el.GetDomProperty("value"));\n` +
+          `    while (now != target)\n` +
+          `    {\n` +
+          `        bool up = now < target;\n` +
+          `        el.SendKeys(up ? Keys.Right : Keys.Left);\n` +
+          `        double next = double.Parse(el.GetDomProperty("value"));\n` +
+          `        // Clamped at an end, or stepped past a value this slider\n` +
+          `        // cannot land on. Either way it goes no closer.\n` +
+          `        if (next == now || (up ? next > target : next < target)) return;\n` +
+          `        now = next;\n` +
+          `    }\n}`
+      );
+      break;
+
     case 'toggle':
       // `isChecked`, not `checked` — `checked` is a C# keyword.
       out.push(
