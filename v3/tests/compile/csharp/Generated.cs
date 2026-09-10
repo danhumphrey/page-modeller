@@ -235,6 +235,61 @@ public void SetPasswordEl(string value, bool clearFirst = true)
 }
 
 /*
+ * Continue
+ * ***************************************************************
+ */
+
+public IWebElement GetContinueElement()
+{
+    return driver.FindElement(By.CssSelector("button.continue"));
+}
+
+public void ClickContinue()
+{
+    GetContinueElement().Click();
+}
+
+/*
+ * Class
+ * ***************************************************************
+ */
+
+public IWebElement GetClassElement()
+{
+    return driver.FindElement(By.CssSelector("input.class"));
+}
+
+public string GetClass()
+{
+    return GetClassElement().GetDomProperty("value");
+}
+
+public void SetClass(string value, bool clearFirst = true)
+{
+    IWebElement el = GetClassElement();
+    if (clearFirst)
+    {
+        el.Clear();
+    }
+    el.SendKeys(value);
+}
+
+/*
+ * Import
+ * ***************************************************************
+ */
+
+public IWebElement GetImportElement()
+{
+    return driver.FindElement(By.CssSelector("a.import"));
+}
+
+public void ClickImport()
+{
+    GetImportElement().Click();
+}
+
+/*
  * FramedActionableEl
  * In frame: #same-frame › #deep-frame
  * ***************************************************************
@@ -617,6 +672,89 @@ public void SetFramedPasswordEl(string value, bool clearFirst = true)
 }
 
 /*
+ * FramedContinue
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public void ClickFramedContinue()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        driver.FindElement(By.CssSelector("button.continue")).Click();
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedClass
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public string GetFramedClass()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        return driver.FindElement(By.CssSelector("input.class")).GetDomProperty("value");
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+public void SetFramedClass(string value, bool clearFirst = true)
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        IWebElement el = driver.FindElement(By.CssSelector("input.class"));
+        if (clearFirst)
+        {
+            el.Clear();
+        }
+        el.SendKeys(value);
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
+ * FramedImport
+ * In frame: #same-frame › #deep-frame
+ * ***************************************************************
+ */
+
+public void ClickFramedImport()
+{
+    driver.SwitchTo().DefaultContent();
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+    driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+    try
+    {
+        driver.FindElement(By.CssSelector("a.import")).Click();
+    }
+    finally
+    {
+        driver.SwitchTo().DefaultContent();
+    }
+}
+
+/*
  * ById
  * ***************************************************************
  */
@@ -758,6 +896,9 @@ private readonly By _multiSelectEl = By.CssSelector("select.toppings");
 private readonly By _staticEl = By.CssSelector("h1");
 private readonly By _imageEl = By.CssSelector("img.logo");
 private readonly By _passwordEl = By.CssSelector("input.pass");
+private readonly By _continue = By.CssSelector("button.continue");
+private readonly By _class = By.CssSelector("input.class");
+private readonly By _import = By.CssSelector("a.import");
 // In frame: #same-frame › #deep-frame
 // driver.SwitchTo().DefaultContent();
 // driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
@@ -803,6 +944,21 @@ private readonly By _framedImageEl = By.CssSelector("img.logo");
 // driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
 // driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
 private readonly By _framedPasswordEl = By.CssSelector("input.pass");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedContinue = By.CssSelector("button.continue");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedClass = By.CssSelector("input.class");
+// In frame: #same-frame › #deep-frame
+// driver.SwitchTo().DefaultContent();
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#same-frame")));
+// driver.SwitchTo().Frame(driver.FindElement(By.CssSelector("#deep-frame")));
+private readonly By _framedImport = By.CssSelector("a.import");
 private readonly By _byId = By.Id("go");
 private readonly By _byName = By.Name("email");
 private readonly By _byClassName = By.ClassName("row");

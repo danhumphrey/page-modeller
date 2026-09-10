@@ -5,7 +5,7 @@
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import type { LocatorCandidate } from '../engine/types';
 import { classify, isImage } from './classify';
-import { lowerCamel } from './names';
+import { javaMethod, javaName, lowerCamel } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameFor } from './class-name';
 import { frameContext, frameNote, isOpaque } from '../locators/frames';
@@ -89,6 +89,10 @@ function methods(el: ModelElement): string[] {
   const elExpr = framed ? `driver.findElement(${by(activeCandidate(el))})` : `get${n}Element()`;
   const selectExpr = framed ? `new Select(${elExpr})` : `get${n}Select()`;
 
+  // `getClass` is already on Object, so an element called Class cannot have the
+  // plain getter its bucket would otherwise give it.
+  const getValue = javaMethod(`get${n}`);
+
   const out: string[] = framed
     ? []
     : [`public WebElement get${n}Element() {\n    return driver.findElement(${by(activeCandidate(el))});\n}`];
@@ -102,7 +106,7 @@ function methods(el: ModelElement): string[] {
       out.push(
         // getDomProperty, not getAttribute: the attribute is the INITIAL value
         // and does not change as the user types (Selenium 4.5+).
-        `public String get${n}() {\n    return ${elExpr}.getDomProperty("value");\n}`,
+        `public String ${getValue}() {\n    return ${elExpr}.getDomProperty("value");\n}`,
         // Clearing is the default, because v2.5.1's setter appended and almost
         // nobody wanted that. An overload keeps appending available rather than
         // trading one hard-coded behaviour for the other — Java has no default
@@ -160,7 +164,7 @@ function methods(el: ModelElement): string[] {
         isImage(el)
           ? // getText() on an <img> returns an empty string; alt is the text.
             `public String get${n}AltText() {\n    return ${elExpr}.getDomAttribute("alt");\n}`
-          : `public String get${n}() {\n    return ${elExpr}.getText();\n}`
+          : `public String ${getValue}() {\n    return ${elExpr}.getText();\n}`
       );
       break;
   }
@@ -176,7 +180,7 @@ function methods(el: ModelElement): string[] {
  */
 export function generateSeleniumJavaLocators(model: TabModel): string {
   return model.elements
-    .flatMap((el) => [...frameNote(el.framePath, '//', frameSwitch), `private final By ${lowerCamel(el.name)} = ${by(activeCandidate(el))};`])
+    .flatMap((el) => [...frameNote(el.framePath, '//', frameSwitch), `private final By ${javaName(lowerCamel(el.name))} = ${by(activeCandidate(el))};`])
     .join('\n');
 }
 
