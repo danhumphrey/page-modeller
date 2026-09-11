@@ -50,7 +50,7 @@ https://addons.mozilla.org/en-US/firefox/addon/page-modeller/
 ## Usage
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=VIDEO_ID" target="_blank"><img src="media/youtube.jpg" width="600" alt="YouTube" /></a>
+  <a href="https://youtu.be/R2bj3Oksf9c" target="_blank"><img src="https://img.youtube.com/vi/R2bj3Oksf9c/maxresdefault.jpg" width="600" alt="Page Modeller v3 demonstration video" /></a>
 </p>
 <p align="center">
   Click to watch demonstration video on YouTube.
