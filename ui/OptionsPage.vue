@@ -15,6 +15,27 @@
     </div>
 
     <div class="option">
+      <q-input
+        v-model="testIdAttribute"
+        dense
+        outlined
+        class="attr-input"
+        placeholder="data-testid"
+        data-testid="option-testIdAttribute"
+        @blur="commitTestIdAttribute"
+        @keydown.enter="commitTestIdAttribute"
+      />
+      <div class="option-text">
+        <div class="option-label">Test ID attribute</div>
+        <div class="option-hint">
+          Where a test id lives. Playwright, Cypress and Testing Library each let a project choose;
+          <code>data-qa</code> and <code>data-test</code> are common. Must match your test runner’s own setting, or the
+          generated <code>getByTestId</code> will not resolve.
+        </div>
+      </div>
+    </div>
+
+    <div class="option">
       <q-select
         v-model="theme"
         dense
@@ -34,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useQuasar } from 'quasar';
 import { applyTheme } from './theme';
 import { defaultSettings, loadSettings, saveSettings, watchSettings, type Settings, type ThemePreference } from '@/src/settings';
@@ -71,6 +92,23 @@ const themeOptions: Array<{ label: string; value: ThemePreference }> = [
 const $q = useQuasar();
 const settings = ref<Settings>({ ...defaultSettings });
 let unwatch: (() => void) | undefined;
+
+// Kept local while typing and written on blur or Enter: saving per keystroke
+// would store `data-t` on the way to `data-testid`, and every frame re-reads
+// the setting when it changes.
+const testIdAttribute = ref(settings.value.testIdAttribute);
+watch(
+  () => settings.value.testIdAttribute,
+  (v) => {
+    testIdAttribute.value = v;
+  }
+);
+
+function commitTestIdAttribute() {
+  const next = testIdAttribute.value.trim() || defaultSettings.testIdAttribute;
+  testIdAttribute.value = next;
+  if (next !== settings.value.testIdAttribute) set('testIdAttribute', next);
+}
 
 const theme = computed({
   get: () => settings.value.theme,
@@ -132,6 +170,11 @@ async function set<K extends keyof Settings>(key: K, value: Settings[K]) {
   font-size: 12px;
   color: var(--pm-text-muted);
   margin-top: 2px;
+}
+
+.attr-input {
+  width: 180px;
+  flex: none;
 }
 
 .theme-select {

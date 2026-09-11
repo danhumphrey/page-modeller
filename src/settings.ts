@@ -23,6 +23,13 @@ export interface Settings {
    */
   seenAddHelp: boolean;
   seenScanHelp: boolean;
+  /**
+   * The attribute a test id lives in (SPEC §12). Playwright, Cypress and
+   * Testing Library all let a project choose its own, and `data-qa` and
+   * `data-test` are common — with this hardcoded, those teams got no test-id
+   * candidates at all and no hint as to why.
+   */
+  testIdAttribute: string;
 }
 
 export const defaultSettings: Settings = {
@@ -33,6 +40,7 @@ export const defaultSettings: Settings = {
   appendTypeToName: false,
   seenAddHelp: false,
   seenScanHelp: false,
+  testIdAttribute: 'data-testid',
 };
 
 const KEY = 'options';

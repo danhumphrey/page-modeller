@@ -22,6 +22,11 @@
 
     <input type="text" aria-label="Search products" data-spike="aria-label-input" />
 
+    <!-- A project that configures its own test-id attribute (SPEC §12). Only a
+         candidate once the setting names it; with the default it is invisible
+         to the engine, which is the point. -->
+    <button data-qa="checkout-now" data-spike="custom-testid-button">Checkout now</button>
+
     <textarea placeholder="Leave a comment" data-spike="comment-textarea"></textarea>
 
     <a href="/help" title="Open help center" data-spike="title-link">?</a>

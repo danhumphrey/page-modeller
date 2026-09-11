@@ -69,7 +69,7 @@
             data-testid="edit-highlight"
             @click="$emit('highlight', candidate)"
           >
-            <q-tooltip>View Matched Elements</q-tooltip>
+            <q-tooltip v-if="showTooltips">View Matched Elements</q-tooltip>
           </q-btn>
         </div>
       </q-card-section>
@@ -98,6 +98,7 @@ import type { LocatorCandidate } from '@/src/engine/types';
 import { frameSelector, isOpaque } from '@/src/locators/frames';
 
 const props = defineProps<{
+  showTooltips: boolean;
   element: ModelElement;
   frameworkId: string;
   /** Every other name in the model, for the uniqueness check. */

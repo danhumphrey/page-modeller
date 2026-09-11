@@ -539,8 +539,12 @@ What closes the gap instead is a better css candidate (§7): `a[href="/forgot"]`
 of `div:nth-of-type`. XPath keeps Puppeteer's `xpath/` prefix, so an absolute path doubles the slash —
 `xpath//html[1]/body[1]` is correct.
 
-Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
-engine's existing ranking, testId first as the most change-resistant.
+Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[settled]** —
+Playwright's own documented preference, with css and xpath last as structural fallbacks.
+
+**`testId` leads.** There is no reason to add a `data-testid` to an element except to be tested against
+it, so where one exists it is an instruction. It costs teams who do not use them nothing: it is only
+ever a candidate when the attribute is actually present.
 
 These lists are also the **order of preference** for choosing an element's starting locator (§7).
 
@@ -631,16 +635,19 @@ the page. **[inferred]**
 
 No banner comments. Field names carry the same information in a fifth of the lines.
 
-### Test IDs **[inferred]**
+### Test IDs **[settled]**
 
-`testId` ranks first: it is only ever a candidate when the attribute is actually present, so preferring
-it costs nothing for teams who do not use test IDs, and a team that added one clearly means it to be
-used. The attribute name is configurable (default `data-testid`).
+`testId` ranks first: there is no reason to add one except to be tested against it, so where one exists
+it is an instruction. It costs teams who do not use them nothing, being a candidate only when the
+attribute is present.
 
-`getByTestId` resolves against Playwright's own `testIdAttribute` config, so a project using `data-qa`
-must set `testIdAttribute: 'data-qa'` in `playwright.config` or the generated call will not resolve. The
-code dialog carries a one-line note whenever the model uses `testId` and the configured attribute is not
-the default `data-testid`. **[inferred]**
+**Which attribute is a setting**, defaulting to `data-testid`. Playwright, Cypress and Testing Library
+each let a project choose, and `data-qa` and `data-test` are common; hardcoded, those teams got no
+test-id candidates at all and no hint as to why. It must agree with the test runner's own setting —
+`getByTestId` resolves against Playwright's `testIdAttribute` — which the options page says.
+
+The engine reads it at load and watches it, because the eye resolves a `testId` candidate too and that
+happens without picking ever starting.
 
 ## 13. Naming
 
@@ -999,8 +1006,6 @@ rather than confirmed, flagged so they are visible rather than silent:
 
 | § | Inferred |
 |---|---|
-| 11 | Playwright locator type list and its ranking |
-| 12 | Playwright method bodies; bare `page` reference; `testId` first; `testIdAttribute` note |
 | 12 | `.nth()` as the tail of the disambiguation chain |
 | 13 | Truncation at a word boundary |
 | 17 | Wrapper constructor shape; class name prefilled from title/URL |

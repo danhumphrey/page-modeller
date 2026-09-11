@@ -54,6 +54,7 @@
           v-if="editing"
           :key="editing.id"
           :element="editing"
+          :show-tooltips="settings.showTooltips"
           :framework-id="model.frameworkId"
           :taken-names="model.elements.filter((e) => e.id !== editing!.id).map((e) => e.name)"
           @close="editing = undefined"

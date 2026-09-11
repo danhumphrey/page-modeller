@@ -58,13 +58,29 @@ export function safeRole(el: Element): string | null {
  * expressible type (SPEC §7), so whatever preference the other frameworks get
  * from their locator-type ordering, Puppeteer can only get from here.
  */
+/**
+ * The attribute a test id lives in. Configurable because Playwright, Cypress
+ * and Testing Library all let a project choose, and `data-qa` and `data-test`
+ * are common (SPEC §12).
+ *
+ * Module state rather than a parameter: the engine runs once per document, and
+ * threading it through every caller — including the fidelity harness, which
+ * has no settings — would buy nothing. Set from settings when the content
+ * script loads; the default is what Playwright itself defaults to.
+ */
+let testIdAttribute = 'data-testid';
+
+export function setTestIdAttribute(attr: string): void {
+  testIdAttribute = attr.trim() || 'data-testid';
+}
+
 function attrSelector(el: Element, attr: string): string | null {
   const value = el.getAttribute(attr);
   if (!value) return null;
   // Tag-qualified for the weaker attributes: `[type="submit"]` says nothing on
   // its own, `button[type="submit"]` is a locator. Uniqueness is still what
   // decides, so qualifying can only ever help.
-  const prefix = attr === 'data-testid' || attr === 'name' ? '' : el.localName;
+  const prefix = attr === testIdAttribute || attr === 'name' ? '' : el.localName;
   // A quoted attribute value is a CSS *string*, where only `\` and `"` need
   // escaping. CSS.escape is for identifiers and would render `/forgot` as
   // `\/forgot` — still valid, but nobody writes that.
@@ -88,7 +104,7 @@ function idSelector(el: Element): string | null {
  * The tail matters most for Puppeteer, whose only other option is that path —
  * `a[href="/forgot"]` instead of seven levels of `div:nth-of-type`.
  */
-const CSS_ATTRS = ['data-testid', 'name', 'aria-label', 'placeholder', 'alt', 'title', 'href', 'type'];
+const CSS_ATTRS = ['name', 'aria-label', 'placeholder', 'alt', 'title', 'href', 'type'];
 
 function cssFor(el: Element): string {
   // A test id is the most change-resistant, then an author-chosen name, then an
@@ -96,7 +112,7 @@ function cssFor(el: Element): string {
   // useId gave Facebook's email field `id="_R_1h6kqsqppb6amH1_"` next to
   // `name="email"`.
   const direct =
-    attrSelector(el, 'data-testid') ??
+    attrSelector(el, testIdAttribute) ??
     attrSelector(el, 'name') ??
     idSelector(el) ??
     CSS_ATTRS.reduce<string | null>((found, attr) => found ?? attrSelector(el, attr), null);
@@ -207,7 +223,7 @@ export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] 
   const all = () => Array.from(doc.querySelectorAll('*'));
   switch (c.kind) {
     case 'testId':
-      return Array.from(doc.querySelectorAll(`[data-testid="${CSS.escape(c.value)}"]`));
+      return Array.from(doc.querySelectorAll(`[${testIdAttribute}="${CSS.escape(c.value)}"]`));
     case 'role':
       return all()
         .filter((e) => safeRole(e) === c.role && (c.name === undefined || matchesText(safeName(e), c.name, c.exact)))
@@ -353,7 +369,7 @@ function rankFor(el: Element, role: string | null, name: string): RankedCandidat
   const tag = el.tagName.toLowerCase();
   const out: LocatorCandidate[] = [];
 
-  const testId = el.getAttribute('data-testid');
+  const testId = el.getAttribute(testIdAttribute);
   if (testId) out.push({ kind: 'testId', value: testId });
 
   if (role) {

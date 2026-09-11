@@ -612,6 +612,47 @@ test('a frame that can be read reports nothing', async () => {
   expect(reports, 'a readable frame must not be reported').toEqual([]);
 });
 
+test('the test-id attribute is whatever the settings say (SPEC §12)', async () => {
+  // Playwright, Cypress and Testing Library all let a project choose. With it
+  // hardcoded, a team using data-qa got no test-id candidates at all and no
+  // hint as to why.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'testid-attr', 'widgets.html');
+  await collectMessages(sw as never);
+
+  const pickCheckout = async () => {
+    await sw!.evaluate((id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'add', nonce: 'n' }), tabId);
+    const btn = page.getByRole('button', { name: 'Checkout now' });
+    await btn.hover();
+    await btn.click();
+    await expect
+      .poll(async () => (await sw!.evaluate(() => (globalThis as unknown as { __picks: { type: string }[] }).__picks))
+        .filter((m) => m.type === 'ELEMENT_PICKED').length)
+      .toBeGreaterThan(0);
+    const picks = await sw!.evaluate(() => (globalThis as unknown as { __picks: Record<string, unknown>[] }).__picks);
+    const last = picks.filter((m) => m.type === 'ELEMENT_PICKED').at(-1) as {
+      result: { candidates: { candidate: { kind: string; value?: string } }[] };
+    };
+    return last.result.candidates.map((c) => c.candidate).filter((c) => c.kind === 'testId');
+  };
+
+  // `data-qa` means nothing by default, so the element has no test id.
+  expect(await pickCheckout(), 'data-qa is not a test id until it is named').toEqual([]);
+
+  await sw.evaluate(() => chrome.storage.sync.set({ options: { testIdAttribute: 'data-qa' } }));
+  // The content script watches the setting, so no reload is needed.
+  await page.waitForTimeout(300);
+  await sw.evaluate(() => ((globalThis as unknown as { __picks: unknown[] }).__picks = []));
+
+  expect(await pickCheckout(), 'named, it becomes the test id').toEqual([
+    { kind: 'testId', value: 'checkout-now' },
+  ]);
+
+  await sw.evaluate(() => chrome.storage.sync.remove('options'));
+});
+
 test('the background relays panel messages, and reports an unreachable tab', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });

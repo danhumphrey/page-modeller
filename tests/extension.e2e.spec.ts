@@ -37,6 +37,25 @@ test('the options page renders every setting', async () => {
       await expect(page.getByTestId(`option-${key}`)).toBeVisible();
     }
     await expect(page.getByTestId('option-theme')).toBeVisible();
+    await expect(page.getByTestId('option-testIdAttribute')).toBeVisible();
+
+    // Round-tripped through storage rather than inspected there: reloading is
+    // what a user does, and it is the only proof the value was actually kept.
+    // Saved on blur, not per keystroke — `data-t` would be stored on the way
+    // to `data-testid`, and every frame re-reads the setting when it changes.
+    // Quasar forwards stray attributes to the native input, so the test id is
+    // on the input itself rather than on a wrapper around it.
+    const attr = () => page.getByTestId('option-testIdAttribute');
+    await attr().fill('data-qa');
+    await attr().blur();
+    await page.reload();
+    await expect(attr()).toHaveValue('data-qa');
+
+    // Emptied, it falls back rather than turning test ids off altogether.
+    await attr().fill('   ');
+    await attr().blur();
+    await page.reload();
+    await expect(attr()).toHaveValue('data-testid');
 
     // Choosing Light must move BOTH our tokens and Quasar's dark mode. Setting
     // only the tokens left dark text on Quasar's dark body.

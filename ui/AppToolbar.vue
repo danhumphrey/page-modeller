@@ -40,7 +40,7 @@
     <!-- Never disabled: the one control whose whole job is to explain the
          others is no use only when everything is already clear. -->
     <q-btn flat dense round icon="help_outline" data-testid="btn-help" @click="$emit('help')">
-      <q-tooltip v-if="showTooltips">How picking works</q-tooltip>
+      <q-tooltip v-if="showTooltips">Help</q-tooltip>
     </q-btn>
 
     <q-btn flat dense round icon="code" :disable="!hasModel || isPicking" data-testid="btn-generate" @click="$emit('generate')">

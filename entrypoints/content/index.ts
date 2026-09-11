@@ -1,9 +1,10 @@
-import { frameStepFor, generate, resolveCandidate } from '@/src/engine/candidates';
+import { frameStepFor, generate, resolveCandidate, setTestIdAttribute } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
 import { collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
 import { frameSelector } from '@/src/locators/frames';
 import type { FrameStep } from '@/src/engine/types';
+import { loadSettings, watchSettings } from '@/src/settings';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
 // on click, run the locator engine and report the result to the side panel.
@@ -25,6 +26,12 @@ export default defineContentScript({
     /** 'add' takes the element itself; 'scan' takes its interactive children. */
     let mode: PickMode = 'add';
     let includeHidden = false;
+    // Which attribute holds a test id (SPEC §12). Read at load and watched,
+    // because the eye resolves a testId candidate too and that can happen
+    // without picking ever starting.
+    void loadSettings().then((s) => setTestIdAttribute(s.testIdAttribute));
+    watchSettings((s) => setTestIdAttribute(s.testIdAttribute));
+
     /** Shared by every frame in the tab for this picking session. */
     let nonce = '';
     /**
