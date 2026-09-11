@@ -11,6 +11,7 @@
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { puppeteerExpr } from '../locators/display';
 import { frameNote, frameSelector } from '../locators/frames';
+import { puppeteerShadowSelector, shadowContext } from '../locators/shadow';
 import type { FrameStep } from '../engine/types';
 import { singleQuoted as q } from '../quote';
 import { tsPageObject, tsLocators, type TsTarget } from './ts-page-object';
@@ -34,16 +35,39 @@ const frameSwitch = (path: FrameStep[]) => {
 
 const PUPPETEER: TsTarget = {
   module: 'puppeteer',
-  expr: (el: ModelElement) => puppeteerExpr(activeCandidate(el)),
+  // A shadow element is reached with `>>>`, Puppeteer's deep descendant
+  // combinator — its plain css does not pierce (SPEC §19). The selector goes
+  // through puppeteerExpr first so the table and the code cannot disagree
+  // about what the locator is, then the hosts are joined in front of it.
+  expr: (el: ModelElement) => puppeteerShadowExpr(el),
   // `page.locator` is page-scoped and Puppeteer has no frameLocator, so a
   // framed element needs `page.frames()` first. Said out loud, because the
   // locator is otherwise indistinguishable from a main-frame one (SPEC §16).
-  note: (el: ModelElement) => frameNote(el.framePath, '//', frameSwitch),
+  note: (el: ModelElement) => [...frameNote(el.framePath, '//', frameSwitch), ...shadowContext(el.shadowPath, '//')],
   // `Locator<T>` is generic over the node it yields — `page.locator('button')`
   // is a `Locator<HTMLButtonElement>`. Element is the common supertype, and
   // widening to it is what lets one field hold any of them.
   locatorType: 'Locator<Element>',
 };
+
+/**
+ * `page.locator('host >>> input[name="x"]')`.
+ *
+ * Rebuilt from the selector rather than wrapped around the expression, because
+ * the hosts belong INSIDE the quoted selector — prefixing the expression would
+ * produce `page.locator('host').locator('input')`, which is Playwright's shape
+ * and does not pierce in Puppeteer.
+ */
+function puppeteerShadowExpr(el: ModelElement): string {
+  const base = puppeteerExpr(activeCandidate(el));
+  if (!el.shadowPath?.length) return base;
+  const m = base.match(/^locator\('([\s\S]*)'\)$/);
+  // Anything not a plain single-quoted css selector is left alone: the shadow
+  // path would have nowhere to go, and a wrong guess is worse than none.
+  if (!m) return base;
+  const inner = m[1].replace(/\\'/g, "'");
+  return `locator(${q(puppeteerShadowSelector(el.shadowPath, inner))})`;
+}
 
 export const generatePuppeteerPageObject = (model: TabModel) => tsPageObject(model, PUPPETEER);
 export const generatePuppeteerLocators = (model: TabModel) => tsLocators(model, PUPPETEER);

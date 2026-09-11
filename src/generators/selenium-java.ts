@@ -9,6 +9,7 @@ import { javaMethod, javaName, lowerCamel } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameOf } from './class-name';
 import { frameContext, frameNote, isOpaque } from '../locators/frames';
+import { hasShadow, seleniumShadowRoot, shadowContext, shadowNote } from '../locators/shadow';
 import type { FrameStep } from '../engine/types';
 
 const q = doubleQuoted;
@@ -45,11 +46,32 @@ const frameSwitch = (path: FrameStep[]) => [
   ...path.map((s) => `driver.switchTo().frame(driver.findElement(${by(s.frame)}));`),
 ];
 
+/**
+ * What a find runs against: the driver, or a chain of hosts ending in a
+ * `getShadowRoot()` (SPEC §19). `SearchContext` is what that returns, and it
+ * carries `findElement`, so the call below is unchanged.
+ *
+ * Unlike a frame switch this mutates nothing, so there is no try/finally: a
+ * shadow root is reached by chaining off an element rather than by moving the
+ * driver. An element inside both a frame and a component needs both, and gets
+ * both — the frame switch wraps the method, this builds the receiver.
+ */
+function shadowRoot(el: ModelElement): string {
+  return seleniumShadowRoot(el.shadowPath, 'driver', (r, css) => `${r}.findElement(By.cssSelector(${q(css)})).getShadowRoot()`);
+}
+
+/** The element expression, host chain included. */
+function findIn(el: ModelElement): string {
+  return `${shadowRoot(el)}.findElement(${by(activeCandidate(el))})`;
+}
+
 function banner(el: ModelElement): string {
   // The frame chain goes in the banner, where a reader is already looking to
   // see what this block is about (SPEC §16).
   // Context only: every method below switches for itself.
-  const frames = frameContext(el.framePath, '//').map((line) => ` * ${line.replace(/^\/\/ /, '')}`);
+  const frames = [...frameContext(el.framePath, '//'), ...shadowContext(el.shadowPath, '//')].map((line) =>
+    ` * ${line.replace(/^\/\/ /, '')}`
+  );
   return [`/*`, ` * ${el.name}`, ...frames, ` * ***************************************************************`, ` */`].join('\n');
 }
 
@@ -86,7 +108,7 @@ function methods(el: ModelElement): string[] {
   // No element getter for a framed element: a WebElement goes stale the moment
   // the driver switches away, so handing one back is handing back a guaranteed
   // failure (SPEC §16). Same for the Select wrapper, which holds one.
-  const elExpr = framed ? `driver.findElement(${by(activeCandidate(el))})` : `get${n}Element()`;
+  const elExpr = framed ? findIn(el) : `get${n}Element()`;
   const selectExpr = framed ? `new Select(${elExpr})` : `get${n}Select()`;
 
   // `getClass` is already on Object, so an element called Class cannot have the
@@ -95,7 +117,7 @@ function methods(el: ModelElement): string[] {
 
   const out: string[] = framed
     ? []
-    : [`public WebElement get${n}Element() {\n    return driver.findElement(${by(activeCandidate(el))});\n}`];
+    : [`public WebElement get${n}Element() {\n    return ${findIn(el)};\n}`];
 
   switch (classify(el)) {
     case 'actionable':
@@ -206,7 +228,12 @@ function methods(el: ModelElement): string[] {
  */
 export function generateSeleniumJavaLocators(model: TabModel): string {
   return model.elements
-    .flatMap((el) => [...frameNote(el.framePath, '//', frameSwitch), `private final By ${javaName(lowerCamel(el.name))} = ${by(activeCandidate(el))};`])
+    .flatMap((el) => [
+      ...frameNote(el.framePath, '//', frameSwitch),
+      // A `By` cannot carry the host chain, so the traversal is spelled out.
+      ...shadowNote(el.shadowPath, '//', () => [`${shadowRoot(el)}.findElement(${javaName(lowerCamel(el.name))})`]),
+      `private final By ${javaName(lowerCamel(el.name))} = ${by(activeCandidate(el))};`,
+    ])
     .join('\n');
 }
 

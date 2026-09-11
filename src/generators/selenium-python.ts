@@ -11,6 +11,7 @@ import { snake, upperSnake } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameOf } from './class-name';
 import { frameContext, frameNote, isOpaque } from '../locators/frames';
+import { hasShadow, seleniumShadowRoot, shadowContext, shadowNote } from '../locators/shadow';
 import type { FrameStep } from '../engine/types';
 
 /** Double-quoted, Black's default. */
@@ -44,6 +45,31 @@ function find(c: LocatorCandidate, recv: string): string {
   return parts ? `${recv}driver.find_element(${findArgs(c)})` : byTuple(c);
 }
 
+/**
+ * What a find runs against: the driver, or a chain of hosts ending in a
+ * `.shadow_root` (SPEC §19).
+ *
+ * Nothing here mutates driver state the way a frame switch does — a shadow
+ * root is reached by chaining off an element — so there is no `finally` and no
+ * default content to return to. A shadow element inside a frame needs both,
+ * and gets both: the frame switch wraps the method, this builds the receiver.
+ */
+function shadowRoot(el: ModelElement, recv: string): string {
+  return seleniumShadowRoot(
+    el.shadowPath,
+    `${recv}driver`,
+    (r, css) => `${r}.find_element(By.CSS_SELECTOR, ${q(css)}).shadow_root`
+  );
+}
+
+/** The element expression, host chain included. */
+function findIn(el: ModelElement, recv: string): string {
+  const c = activeCandidate(el);
+  if (!hasShadow(el.shadowPath)) return find(c, recv);
+  const parts = byParts(c);
+  return parts ? `${shadowRoot(el, recv)}.find_element(${findArgs(c)})` : byTuple(c);
+}
+
 /** The switch a reader can paste, one line per level, outermost first. */
 const frameSwitch = (path: FrameStep[], recv = '') => [
   `${recv}driver.switch_to.default_content()`,
@@ -53,7 +79,7 @@ const frameSwitch = (path: FrameStep[], recv = '') => [
 function banner(el: ModelElement): string {
   const rule = '#'.repeat(63);
   // Context only: every definition below switches for itself.
-  return [rule, `# ${el.name}`, ...frameContext(el.framePath, '#'), rule].join('\n');
+  return [rule, `# ${el.name}`, ...frameContext(el.framePath, '#'), ...shadowContext(el.shadowPath, '#'), rule].join('\n');
 }
 
 /**
@@ -83,9 +109,7 @@ function methods(el: ModelElement, recv: string): string[] {
 
   // No element getter for a framed element: the WebElement goes stale the
   // moment the driver switches away (SPEC §16).
-  const elExpr = framed
-    ? `${recv}driver.find_element(${findArgs(activeCandidate(el))})`
-    : `${recv}get_${n}_element()`;
+  const elExpr = framed ? findIn(el, recv) : `${recv}get_${n}_element()`;
   const selectExpr = framed ? `Select(${elExpr})` : `${recv}get_${n}_select()`;
   // `def f()` at module level, `def f(self)` in a class — and `self` goes
   // first, ahead of any real arguments.
@@ -97,7 +121,7 @@ function methods(el: ModelElement, recv: string): string[] {
   };
   const out: string[] = framed
     ? []
-    : [`${def(`get_${n}_element()`)}:\n    return ${find(activeCandidate(el), recv)}`];
+    : [`${def(`get_${n}_element()`)}:\n    return ${findIn(el, recv)}`];
 
   switch (classify(el)) {
     case 'actionable':
@@ -197,7 +221,15 @@ function methods(el: ModelElement, recv: string): string[] {
  */
 export function generateSeleniumPythonLocators(model: TabModel): string {
   return model.elements
-    .flatMap((el) => [...frameNote(el.framePath, '#', frameSwitch), `${upperSnake(el.name)} = ${byTuple(activeCandidate(el))}`])
+    .flatMap((el) => [
+      ...frameNote(el.framePath, '#', frameSwitch),
+      // A tuple cannot carry the host chain, so the traversal is spelled out:
+      // `driver.find_element(*COUPON)` finds nothing on its own (SPEC §19).
+      ...shadowNote(el.shadowPath, '#', () => [
+        `${shadowRoot(el, '')}.find_element(*${upperSnake(el.name)})`,
+      ]),
+      `${upperSnake(el.name)} = ${byTuple(activeCandidate(el))}`,
+    ])
     .join('\n');
 }
 

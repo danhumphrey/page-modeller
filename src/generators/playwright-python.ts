@@ -6,11 +6,12 @@
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { playwrightPyExpr } from '../locators/display';
 import { playwrightPyFramePrefix } from '../locators/frames';
+import { playwrightPyShadowPrefix } from '../locators/shadow';
 import { classNameOf } from './class-name';
 import { pythonName, snake } from './names';
 
 const expr = (el: ModelElement) =>
-  `page.${playwrightPyFramePrefix(el.framePath)}${playwrightPyExpr(activeCandidate(el))}`;
+  `page.${playwrightPyFramePrefix(el.framePath)}${playwrightPyShadowPrefix(el.shadowPath)}${playwrightPyExpr(activeCandidate(el))}`;
 
 export function generatePlaywrightPythonPageObject(model: TabModel): string {
   const className = classNameOf(model);
