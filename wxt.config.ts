@@ -114,5 +114,27 @@ export default defineConfig({
 
   vite: () => ({
     plugins: [vue({ template: { transformAssetUrls } }), quasar({})],
+    build: {
+      /**
+       * No `<link rel="modulepreload">` on the panel pages.
+       *
+       * Vite emits them with `crossorigin`, which on a `chrome-extension://`
+       * URL fetches in CORS mode while the module import that follows does
+       * not. The preloaded response cannot be reused, so Chromium discards it,
+       * refetches the chunk, and logs two warnings per chunk:
+       *
+       *   A preload for '…/chunks/settings-*.js' is found, but is not used
+       *   because it is a cross-world extension resource mismatch.
+       *
+       * Harmless — the chunk loads the second time — but it fills the
+       * extension's error list on chrome://extensions, where a user or a store
+       * reviewer reads it as something being wrong. Vivaldi surfaces them where
+       * Chrome hides them, which is how they were noticed.
+       *
+       * Nothing is lost by dropping the hints: every chunk is a local file
+       * already on disk, so there is no network latency for a preload to hide.
+       */
+      modulePreload: false,
+    },
   }),
 });
