@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Modeller</title>
+    <!--
+      The action popup, shown only on a Chromium browser with no side panel
+      API — Opera, today. SPEC §15 dropped v2.5.1's popup because the toolbar
+      click opens the panel instead; where there is no panel to open, its
+      reason for existing comes back, so this is v2.5.1's popup again.
+
+      The panel cannot fall back to an ordinary tab: it finds the page it is
+      modelling with `tabs.query({ active: true, currentWindow: true })`, so in
+      a tab of its own it would target itself. DevTools is the only surface
+      that works here.
+    -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1d1d1f;
+        --muted: #6b6b70;
+        --key-bg: #2b2b31;
+        --key-fg: #ffffff;
+        --link: #1a73e8;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1f1f23;
+          --fg: #ececf1;
+          --muted: #a1a1aa;
+          --key-bg: #3a3a42;
+          --link: #7cb2ff;
+        }
+      }
+      body {
+        margin: 0;
+        width: 280px;
+        padding: 18px 20px 14px;
+        background: var(--bg);
+        color: var(--fg);
+        font: 13px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 17px;
+        font-weight: 600;
+      }
+      p {
+        margin: 0 0 14px;
+        color: var(--muted);
+      }
+      .keys {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+      kbd {
+        padding: 3px 8px;
+        border-radius: 4px;
+        background: var(--key-bg);
+        color: var(--key-fg);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .plus {
+        color: var(--muted);
+      }
+      nav {
+        display: flex;
+        justify-content: flex-end;
+        gap: 18px;
+      }
+      a {
+        color: var(--link);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+      a:hover,
+      a:focus-visible {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Page Modeller <span id="version"></span></h1>
+    <p>This browser has no side panel, so please open DevTools to use Page Modeller:</p>
+    <div class="keys" id="keys"></div>
+    <nav>
+      <a id="support" href="#">Support</a>
+      <a id="options" href="#">Options</a>
+    </nav>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

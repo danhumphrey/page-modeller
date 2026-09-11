@@ -257,5 +257,22 @@ export default defineBackground(() => {
 
   // Chromium: let the action button open the side panel directly. Doing it this
   // way (rather than sidePanel.open) keeps the click a trusted user gesture.
-  browser.sidePanel?.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+  if (browser.sidePanel) {
+    browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+  } else {
+    // No side panel API — Opera. It parses the `side_panel` manifest key and
+    // ignores the feature, so there was nothing to set a behaviour on and the
+    // button did nothing whatever: no panel, no popup, no error.
+    //
+    // The panel cannot fall back to a tab of its own, because it finds the
+    // page it is modelling with `tabs.query({ active: true, currentWindow:
+    // true })` and would target itself. DevTools genuinely is the only surface
+    // here, so the click says so — which is what v2.5.1's popup did, back when
+    // DevTools was the only surface anywhere (SPEC §15).
+    //
+    // Set at runtime rather than declared, because one Chromium build serves
+    // every Chromium browser and only this one wants a popup: declaring
+    // `default_popup` would replace the side panel with a leaflet on Chrome.
+    void browser.action.setPopup({ popup: 'nopanel.html' });
+  }
 });

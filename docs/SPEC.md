@@ -704,6 +704,18 @@ Its reason for existing — DevTools being the only surface — is gone in v3. *
 toolbar click opens the panel** (side panel on Chrome, sidebar toggle on Firefox), because a click
 should get you working rather than show you a menu. **[settled]**
 
+**Except where there is no panel to open.** Opera implements no `chrome.sidePanel` at all — it parses
+the `side_panel` manifest key and ignores the feature — so the click had nothing to do and did nothing
+whatever: no panel, no popup, no error. There DevTools is the only surface again, exactly as in v2.5.1,
+and the popup comes back with it: version, *"This browser has no side panel, so please open DevTools"*,
+the platform's shortcut, **Support** and **Options**. Set with `action.setPopup` at runtime on finding
+`sidePanel` undefined, never declared — one Chromium build serves every Chromium browser, and a
+declared `default_popup` would replace the side panel with a leaflet on Chrome. Brave and Vivaldi both
+have the API and are unaffected. **[settled]**
+
+The panel cannot simply open in a tab instead: it finds the page it is modelling with
+`tabs.query({ active: true, currentWindow: true })`, so in a tab of its own it would target itself.
+
 **Right-clicking the toolbar icon carries what the popup did**, via `contextMenus` with
 `contexts: ['action']` — but only what the browser does not already offer. Chrome puts **Options** on
 that menu itself (along with *Open side panel*), so adding our own would show it twice; Firefox offers

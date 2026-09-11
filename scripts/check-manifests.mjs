@@ -84,6 +84,14 @@ for (const [dir, checks] of Object.entries(EXPECT)) {
   if (!tag) fail(dir, 'devtools.html loads devtools-register.js');
   else if (/type=["']?module/.test(tag)) fail(dir, 'devtools-register.js must NOT be a module (defers panel registration)');
   await readFile(`.output/${dir}/devtools-register.js`, 'utf8').catch(() => fail(dir, 'devtools-register.js emitted'));
+
+  // The popup the background falls back to where there is no side panel API
+  // (SPEC §15). `action.setPopup` with a path that is not there fails exactly
+  // as quietly as the bug it exists to fix: no panel, no popup, no error. The
+  // name is written in two places, so check they still agree.
+  const popup = (await readFile('entrypoints/background.ts', 'utf8')).match(/setPopup\(\{\s*popup:\s*'([^']+)'/)?.[1];
+  if (!popup) fail(dir, 'background sets an action popup when sidePanel is missing');
+  else await readFile(`.output/${dir}/${popup}`, 'utf8').catch(() => fail(dir, `${popup} emitted (referenced by setPopup)`));
 }
 
 if (failed) process.exit(1);
