@@ -1090,14 +1090,23 @@ the locator itself:
   chain — and the element it arrives at is an ordinary `WebElement`: `send_keys`, `click`,
   `get_property` and `is_displayed` all work through a boundary.
 
-### The eye must agree with the framework **[settled]**
+### The eye pierces, and says so by over-counting **[settled]**
 
-The in-page resolver does not pierce today, so a shadow element reports *0 elements match* even where
-the generated locator is correct. Making it always pierce would be worse: with Selenium selected it
-would report *1 element matches* for a locator Selenium cannot resolve at all.
+The resolver has to pierce, and the reason is the opposite of the expected one. It is not about
+shadow elements — those are resolved within their own root, where the question does not arise. It is
+about **light-DOM** ones: Playwright's engines pierce, so a plain `<button>Submit</button>` on a page
+whose components each contain their own Submit is not unique at all. The engine called it unique and a
+real Playwright run resolved six, which `tests/engine.fidelity.spec.ts` now catches on
+`shadow.html/top-submit`.
 
-So the resolver pierces **when the target framework does**, which is the rule §7 already states —
-*"a green tick on a locator that cannot exist in the target framework is worse than no check at all"*.
+Selenium does not pierce, so where the two differ this reports **more** matches than a Selenium run
+would. That is the safe direction and it is deliberate: an amber *6 elements match* sends the user to
+look, where a green tick on a locator that really matches six would not. The inverse — under-counting
+— is the failure §7 warns about.
+
+A per-framework resolver would be exact, and is not worth what it costs: the framework is fixed before
+picking starts (§3), so it could be threaded through, but the divergence only appears when identical
+content exists both inside and outside a component on the same page.
 
 ### Picking **[settled]**
 
