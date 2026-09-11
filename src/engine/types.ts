@@ -47,6 +47,26 @@ export interface ElementResult {
   preferredIndex: number;
   /** Outermost first; empty for an element in the main frame (SPEC §16). */
   framePath: FrameStep[];
+  /** Outermost first; empty for an element in the light DOM (SPEC §19). */
+  shadowPath: ShadowStep[];
+}
+
+/**
+ * One shadow host between an element's document and the element, located the
+ * same way a frame is — the tree holding the host is just a tree.
+ *
+ * Restricted to css for the same reason a frame step is: every API that enters
+ * a shadow root takes a selector. Puppeteer's `>>>` and Selenium's
+ * `shadowRoot` both do, and `cssFor` already prefers a test id, then a name,
+ * then a non-generated id (§7).
+ *
+ * Unlike a frame there is no `opaque` case: a host is an ordinary element in
+ * its own tree and is always readable from there. The unreachable case is a
+ * CLOSED root, and that is invisible from the outside rather than partially
+ * visible, so there is no half-path to record (§19).
+ */
+export interface ShadowStep {
+  host: LocatorCandidate;
 }
 
 /**

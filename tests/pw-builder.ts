@@ -1,8 +1,15 @@
 import type { Page, Locator } from '@playwright/test';
 import type { LocatorCandidate } from '../src/engine/types';
 
-/** Resolve an IR candidate with Playwright's own engine — the ground-truth bridge. */
-export function buildLocator(page: Page, c: LocatorCandidate): Locator {
+/**
+ * Resolve an IR candidate with Playwright's own engine — the ground-truth bridge.
+ *
+ * `page` is a Page or a Locator, because a shadow element's locator is scoped
+ * by its host chain (SPEC §19) and the scoping is done by resolving the host
+ * first and building the candidate against that. A Locator offers the same
+ * getBy* surface, so nothing below changes.
+ */
+export function buildLocator(page: Page | Locator, c: LocatorCandidate): Locator {
   switch (c.kind) {
     case 'testId':
       return page.getByTestId(c.value);

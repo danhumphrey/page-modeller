@@ -45,6 +45,12 @@
          never silently skipped (SPEC §19). -->
     <closed-field></closed-field>
 
+    <h2>A custom element with no shadow root</h2>
+    <!-- Defined, and renders nothing of its own. It must NOT be reported as a
+         closed root, or a scan would warn about every inert custom element on
+         a page and the warning would stop meaning anything. -->
+    <behaviour-only></behaviour-only>
+
     <h2>An iframe inside a shadow root</h2>
     <!-- framePath and shadowPath have to compose, in both directions. -->
     <frame-host></frame-host>
@@ -116,6 +122,9 @@
         root.innerHTML = `<input name="secret" placeholder="Unreachable"><button>Submit</button>`;
       }
     });
+
+    // Behaviour only: no shadow root, nothing rendered.
+    customElements.define('behaviour-only', class extends HTMLElement {});
 
     customElements.define('frame-host', class extends HTMLElement {
       connectedCallback() {

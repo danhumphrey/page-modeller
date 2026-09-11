@@ -76,12 +76,70 @@ export function isInteractive(el: Element): boolean {
  * find. On, they are kept: a validation message or an unopened modal is real
  * page-object material, and Add cannot reach what is not rendered.
  */
-export function collectInteractive(root: Element, includeHidden: boolean): Element[] {
+export function collectInteractive(root: Element | ShadowRoot, includeHidden: boolean): Element[] {
   const found: Element[] = [];
   for (const el of Array.from(root.querySelectorAll('*'))) {
-    if (!isInteractive(el)) continue;
-    if (!includeHidden && ariaHidden(el)) continue;
-    found.push(el);
+    if (isInteractive(el) && (includeHidden || !ariaHidden(el))) found.push(el);
+    // A web component's controls live in its shadow root, which
+    // querySelectorAll does not enter (SPEC §19). Etsy's sign-up form is
+    // <clg-text-input> elements whose real <input> is inside one, so a scan of
+    // the dialog returned the buttons around the form and none of the form.
+    //
+    // Open roots only: `shadowRoot` is null for a closed one and there is no
+    // way in from script. `collectClosedHosts` reports those separately, so a
+    // scan says what it could not read rather than quietly returning less.
+    if (el.shadowRoot) found.push(...collectInteractive(el.shadowRoot, includeHidden));
   }
   return found;
+}
+
+/**
+ * A custom element rendering content that no tree walk can reach.
+ *
+ * A closed root cannot be detected directly — `shadowRoot` is null exactly as
+ * it is for an element with no root at all — so this asks whether the element
+ * DRAWS something it has no light DOM to explain. A defined custom element
+ * with no children, no text and a real box on screen is rendering from a
+ * closed root; there is nowhere else for it to come from.
+ *
+ * Deliberately conservative. A false positive warns about an element that is
+ * fine, and a warning that fires on every inert custom element stops being
+ * read — so a behaviour-only component, which is common, must not trip it.
+ * A closed root that is itself hidden goes unreported, which costs nothing:
+ * there was nothing to collect from it either way.
+ */
+function isClosedHost(el: Element): boolean {
+  if (!el.localName.includes('-')) return false;
+  if (el.childElementCount > 0 || el.textContent?.trim()) return false;
+  try {
+    if (!el.ownerDocument.defaultView?.customElements.get(el.localName)) return false;
+  } catch {
+    return false;
+  }
+  const box = el.getBoundingClientRect();
+  return box.width > 0 && box.height > 0;
+}
+
+/**
+ * Hosts inside `root` whose shadow root is closed, so a scan can say what it
+ * could not read (SPEC §19). Silence is indistinguishable from a bug, which is
+ * how the whole shadow DOM gap was first reported.
+ *
+ * A closed root is detectable even though it is not readable: the element is a
+ * custom element that renders content no tree walk can reach. `shadowRoot`
+ * being null is not enough on its own — most elements have no shadow root at
+ * all — so this asks the element whether it has one the only way available,
+ * which is to look for a registered custom element whose rendering cannot be
+ * accounted for by its light DOM.
+ */
+export function collectClosedHosts(root: Element | ShadowRoot): Element[] {
+  const out: Element[] = [];
+  for (const el of Array.from(root.querySelectorAll('*'))) {
+    if (el.shadowRoot) {
+      out.push(...collectClosedHosts(el.shadowRoot));
+    } else if (isClosedHost(el)) {
+      out.push(el);
+    }
+  }
+  return out;
 }

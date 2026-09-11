@@ -112,23 +112,33 @@ export default defineContentScript({
      * Built as elements rather than innerHTML: the text comes from the page.
      */
     function renderBreadcrumb(el: Element) {
-      const chain: Element[] = [];
-      for (let cur: Element | null = el.parentElement; cur && cur !== document.documentElement; cur = cur.parentElement) {
-        chain.unshift(cur);
+      // Ancestors, and whether each step crossed a shadow boundary — the walk
+      // uses `parentOf`, so it steps out of a component instead of stopping at
+      // it (SPEC §19). The crossing is drawn, because "this element is inside a
+      // web component" changes what the locator will look like and there is
+      // nothing else on screen that says so.
+      const chain: { el: Element; crossed: boolean }[] = [];
+      for (let cur: Element | null = el; cur && cur !== document.documentElement; ) {
+        const up = parentOf(cur);
+        if (!up || up === document.documentElement) break;
+        chain.unshift({ el: up, crossed: cur.parentElement === null });
+        cur = up;
       }
       const shown = chain.slice(-CRUMB_DEPTH);
 
       label!.replaceChildren();
       if (chain.length > shown.length) label!.appendChild(crumb('…', false));
       for (const ancestor of shown) {
-        label!.appendChild(crumb(describeBrief(ancestor), false));
+        label!.appendChild(crumb(describeBrief(ancestor.el), false));
       }
-      label!.appendChild(crumb(describeElement(el), true));
+      label!.appendChild(crumb(describeElement(el), true, chain.at(-1)?.crossed ?? false));
     }
 
-    function crumb(text: string, isTarget: boolean): HTMLSpanElement {
+    function crumb(text: string, isTarget: boolean, inShadow = false): HTMLSpanElement {
       const span = document.createElement('span');
-      span.textContent = text;
+      // `⛉` marks a shadow boundary: everything after it lives inside a web
+      // component, which is why its locator will be scoped by the host.
+      span.textContent = inShadow ? `⛉ ${text}` : text;
       Object.assign(span.style, {
         opacity: isTarget ? '1' : '0.55',
         fontWeight: isTarget ? '600' : '400',
@@ -292,9 +302,27 @@ export default defineContentScript({
       return { hidden: placed.filter((p) => p.hidden).length };
     }
 
+    /**
+     * The element actually under the pointer (SPEC §19).
+     *
+     * `e.target` is RETARGETED to the host for any listener outside the shadow
+     * tree, so hovering a web component's input reports the component. On Etsy
+     * that still produced a working locator, because that component mirrors
+     * `name` and `placeholder` onto its host — a component that does not would
+     * have handed back a locator for a wrapper.
+     *
+     * `composedPath()[0]` is the innermost target, and stops at a closed root
+     * of its own accord: a closed tree is absent from the composed path, so
+     * this yields the host, which is the most specific thing there is.
+     */
+    const targetOf = (e: Event): Element | null => {
+      const first = e.composedPath()[0];
+      return first instanceof Element ? first : ((e.target as Element | null) ?? null);
+    };
+
     const onMove = (e: MouseEvent) => {
       if (!active) return;
-      const el = e.target as Element | null;
+      const el = targetOf(e);
       if (!el || el === hovered) return;
       // Moving the mouse abandons any arrow-key walk and starts again from
       // whatever is under the cursor.
@@ -548,11 +576,25 @@ export default defineContentScript({
     };
 
     /** The child of `of` that contains `hovered`, for walking back down. */
+    /**
+     * The element above this one, crossing a shadow boundary where there is
+     * one (SPEC §19).
+     *
+     * `parentElement` is null at the top of a shadow tree — the parent is the
+     * root, which is not an Element — so the ↑ walk stopped dead inside a
+     * component instead of stepping out to it.
+     */
+    function parentOf(el: Element): Element | null {
+      if (el.parentElement) return el.parentElement;
+      const root = el.getRootNode();
+      return root instanceof ShadowRoot ? root.host : null;
+    }
+
     function childTowardsHovered(of: Element): Element | null {
       if (!hovered || of === hovered) return null;
       let cur: Element | null = hovered;
-      while (cur && cur.parentElement && cur.parentElement !== of) cur = cur.parentElement;
-      return cur?.parentElement === of ? cur : null;
+      while (cur && parentOf(cur) && parentOf(cur) !== of) cur = parentOf(cur);
+      return cur && parentOf(cur) === of ? cur : null;
     }
 
     /**
@@ -565,9 +607,11 @@ export default defineContentScript({
       if (!active || !current) return;
       const next =
         direction === 'up'
-          ? // Stop at <body>: <html> is never a useful target.
-            current.parentElement && current.parentElement !== document.documentElement
-            ? current.parentElement
+          ? // Stop at <body>: <html> is never a useful target. `parentOf`
+            // crosses a shadow boundary, so ↑ from a component's input steps
+            // out to the component rather than stopping.
+            parentOf(current) && parentOf(current) !== document.documentElement
+            ? parentOf(current)
             : null
           : childTowardsHovered(current);
       if (!next) return;
