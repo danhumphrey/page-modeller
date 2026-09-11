@@ -93,6 +93,17 @@ export default defineBackground(() => {
         console.log('[Page Modeller] panel closed; was watching tab', wasOn, stillWatched ? '— still watched' : '— dropping model');
       }
       if (wasOn == null || stillWatched) return;
+      // Disarm the page as well as dropping the model. Picking lives in the
+      // content script, which has no idea a panel ever closed: left armed, it
+      // goes on drawing the overlay over every element the pointer crosses and
+      // swallowing the next click, and there is no longer anything listening
+      // for what it picks. Closing the panel is the end of the session (SPEC
+      // §5), so it is the end of picking too.
+      //
+      // Only once no panel is left on the tab — the guard above — because two
+      // panels can watch one tab, and the one still open can still receive a
+      // pick.
+      stopEveryFrame(wasOn);
       void store
         .clear(wasOn)
         .then(() => store.get(wasOn))
