@@ -1,136 +1,140 @@
-# Page Modeller
+# ![Page Modeller](public/icon/32.png) Page Modeller
 
-Browser DevTools extension for modelling web pages for automation.
+> Browser DevTools extension for modelling web pages for automation.
 
-Pick an element on any page — or scan a whole form at once — and Page Modeller names it, works out a
-locator that resolves to it, and generates page object code you can paste into your tests.
+The Page Modeller extension enables developers to scan a web page and generate page object style code
+for various tools, languages and frameworks, and test the UI locators in the browser.
 
-Chrome and Firefox, MV3 on both. Everything is computed in the browser from the DOM and the published
-accessibility rules: no LLM, no network requests, nothing leaves the page.
+Current release: **3.0.0**
 
-**Install:** [Chrome Web Store](https://chromewebstore.google.com/detail/page-modeller-selenium-ro/ejgkdhekcepfgdghejpkmbfjgnioejak)
-· [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/page-modeller/)
+Supported tools and languages are:
 
-## What it generates
+- Playwright (TypeScript)
+- Playwright (Python)
+- Selenium WebDriver Java
+- Selenium WebDriver C#
+- Selenium WebDriver Python
+- Puppeteer
 
-| Target | Shapes |
-|---|---|
-| Playwright (TypeScript) | Page object · Locators only |
-| Playwright (Python) | Page object · Locators only |
-| Selenium WebDriver Java | Methods · Page object · Locators only |
-| Selenium WebDriver C# | Methods · Page object · Locators only |
-| Selenium WebDriver Python | Methods · Page object · Locators only |
-| Puppeteer | Page object · Locators only |
+## Contents
 
-**Locators only** is there for teams with their own page-object conventions — the locator declarations
-and nothing else. No composite actions, no user-supplied templates: the point is a head start, not a
-framework.
+- [Browser Support](https://github.com/danhumphrey/page-modeller#browser-support)
+- [Installation](https://github.com/danhumphrey/page-modeller#installation)
+- [Usage](https://github.com/danhumphrey/page-modeller#usage)
+- [Output](https://github.com/danhumphrey/page-modeller#output)
+- [Options](https://github.com/danhumphrey/page-modeller#options)
+- [Screenshots](https://github.com/danhumphrey/page-modeller#screenshots)
+- [Contribute](https://github.com/danhumphrey/page-modeller#contribute)
+- [License](https://github.com/danhumphrey/page-modeller#license)
 
-## How it picks a locator
+## Browser Support
 
-The engine generates every strategy it can find for an element, then offers the first one that the
-chosen framework can express *and* that resolves to exactly one element on the page. Accessible role
-and name come first — `getByRole('button', { name: 'Log in' })`, `By.name("email")` — and a structural
-CSS or XPath path is the last resort, not the default.
+<p align="center">
+  <img src="media/browsers.png" width="504" alt="Chrome, Firefox, Brave, Opera, Vivaldi" />
+</p>
 
-Where CSS is the only option it is built in the same order of preference: `[data-testid]` (the
-attribute is configurable), then `[name]`, then a non-generated `#id`, then the other authored
-attributes tag-qualified, then a `>` path anchored on the nearest real id.
+Chrome 114+ and Firefox 115+, on Manifest V3. Other Chromium browsers install from the Chrome Web
+Store listing and are expected to work, but are not tested.
 
-The **eye** on each row shows what the locator actually matches, before you trust it. Elements inside
-iframes carry their frame path, and the generated code enters the frames to reach them.
+Page Modeller runs as a **side panel** (Chrome) or **sidebar** (Firefox), and as a **DevTools panel**
+on both.
 
-## Surfaces
+## Installation
 
-One app, three surfaces. One `sidepanel` entrypoint gives Chrome `side_panel` and Firefox
-`sidebar_action`; `devtools.html` registers the panel on both.
+Install the extension using the links below:
 
-| | Chrome | Firefox |
-|---|---|---|
-| Side panel / sidebar | toolbar icon | toolbar icon (or View → Sidebar → Page Modeller) |
-| DevTools panel | F12 → **Page Modeller** | F12 → **Page Modeller** |
-| Options | right-click the toolbar icon | right-click the toolbar icon |
+https://chromewebstore.google.com/detail/page-modeller-selenium-ro/ejgkdhekcepfgdghejpkmbfjgnioejak
 
----
+https://addons.mozilla.org/en-US/firefox/addon/page-modeller/
 
-## Development
+## Usage
 
-TypeScript · Vue 3 · Quasar · WXT · Vite. **Node 22+** (jsdom's bundled undici needs it; CI pins 24).
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=VIDEO_ID" target="_blank"><img src="media/youtube.jpg" width="600" alt="YouTube" /></a>
+</p>
+<p align="center">
+  Click to watch demonstration video on YouTube.
+</p>
 
-```
-npm install
-npm run dev          # Chrome, with the extension loaded
-npm run dev:firefox
-npm test             # the automated gate
-```
+Open the side panel from the toolbar icon, or find **Page Modeller** in DevTools, then:
 
-> **If the dev server stops, the extension keeps running and quietly stops working.** In dev the
-> manifest carries no `content_scripts` — WXT registers them at runtime and the background fetches them
-> from the dev server. Kill the server and every page reports *"Page Modeller can't reach this page"*,
-> and reloading the tab cannot help. Check the server before believing the extension is broken.
+- **Add Element** — pick one element anywhere on the page. Hold **⌘** (or **Ctrl**) while clicking to
+  keep picking, and let go on the last one. The **↑ / ↓** arrows walk the selection up and down the
+  nesting when the element you want sits underneath the one you can hover.
+- **Scan Page** — pick a container, such as a form, and every interactive element inside it enters the
+  model at once.
+- **The eye** on a row shows what that locator actually matches, before you trust it.
+- **Generate Code** for the framework you chose.
 
-> **Reload the page tab after any change to the engine, content script or naming.** Re-registration
-> only affects pages loaded afterwards, so a tab open across a rebuild keeps the old behaviour. Panel
-> changes hot-reload, which is what makes the mix confusing.
+Elements inside iframes are picked the same way, and the generated code enters the frames to reach
+them.
 
-### Scripts
+## Output
 
-| Script | Purpose |
-|---|---|
-| `npm run dev` / `dev:firefox` | WXT dev server (HMR); launches the browser with the extension loaded |
-| `npm run build` / `build:firefox` | Production build (`.output/`) |
-| `npm run zip` | Store-ready zips, including the Firefox sources zip |
-| `npm run typecheck` | Strict TS over the pure core |
-| `npm run test:unit` | Vitest — pure core plus Vue component tests |
-| `npm run check:manifests` | Assert both builds emit the expected surfaces, ids and version |
-| `npm run fixtures` | Serve `tests/fixtures/` at `http://localhost:5199` |
-| `npm run fetch:test-deps` | One-off: Maven jars and a NuGet restore for the Java/C# compile checks |
-| `npm test` | Unit + engine fidelity + both builds + manifests + Playwright E2E and run specs |
+Every framework offers a full page object or **locators only** — the locator declarations and nothing
+else, for teams with their own page-object conventions. Selenium also offers its **methods** shape,
+the getters and interaction methods v2.5.1 generated.
 
-### Loading a production build by hand
+Locators are computed from the page itself: the accessible role and name first, then the attributes a
+person actually wrote, and a structural CSS or XPath path only as a last resort. Every candidate is
+checked against the page before it is offered, so a locator that matches nothing — or matches five
+things — is never presented as though it matched one.
 
-- **Chrome** — `npm run build`, then `chrome://extensions` → Developer mode → Load unpacked →
-  `.output/chrome-mv3`.
-- **Firefox** — `npm run build:firefox`, then `about:debugging#/runtime/this-firefox` → Load Temporary
-  Add-on → `.output/firefox-mv3/manifest.json`.
+It is all deterministic and entirely offline. No LLM, no network requests, nothing leaves the browser.
 
-The dev browser is Chrome **stable** and keeps its profile under `.wxt/`, so logins and settings
-survive a restart; set `CHROME_PATH` to override, or delete `.wxt/chrome-profile` to start clean.
+## Options
 
-### Verification
+Options can be configured via the browser extension options.
 
-**Automated tests are a net, not the criterion for done.** Firefox has no automated coverage and cannot
-easily get any — Playwright installs the extension fine, but Juggler cannot navigate to
-`moz-extension://` pages, so the panel is undrivable
-([SPIKE6](docs/spikes/SPIKE6-FIREFOX-E2E.md)). Every cross-browser bug so far passed the Chrome suite.
-Hand-test both browsers against [`docs/MANUAL-VERIFICATION.md`](docs/MANUAL-VERIFICATION.md).
+- Show tooltips
+- Append the element type to names
+- Model hidden elements
+- Click a row to view matched elements
+- Theme — System, Light or Dark
+- Test ID attribute — `data-testid` by default; set it to whatever your test runner uses
 
-What the automation does cover is the part hand-testing cannot repeat cheaply:
+<p align="center">
+  <img src="media/popup_options.png" width="302" alt="Popup Options" />
+</p>
 
-| | |
-|---|---|
-| Locator fidelity | 43 DOM edge cases resolved in real Playwright and real Puppeteer |
-| Generated Python | imported and **run** — Playwright Python in a browser, Selenium Python through WebDriver |
-| Generated Java / C# / TS | compiled against the real client libraries |
-| The built extension | loads in Chrome and every surface renders |
+## Screenshots
 
-`npm run fixtures` serves the pages the engine was validated on, including
-`tests/fixtures/frames.html`. They are bare markup, so the failures that matter — overlays, sticky
-headers, shadow roots, unusual frames — only show up on real sites.
+<p align="center">
+  <img src="media/screen1_chrome.jpg" width="600" alt="Chrome Playwright TypeScript" />
+</p>
+<p align="center">
+  <img src="media/screen2_firefox.png" width="600" alt="Firefox Testing Locators" />
+</p>
+<p align="center">
+  <img src="media/screen3_chrome.png" width="600" alt="Chrome Model Elements" />
+</p>
+<p align="center">
+  <img src="media/screen4_firefox.png" width="600" alt="Firefox Selenium WebDriver Python" />
+</p>
 
-### Docs
+## Contribute
 
-| | |
-|---|---|
-| [`docs/SPEC.md`](docs/SPEC.md) | **What the tool does.** Read before changing behaviour |
-| [`docs/REWRITE-PLAN.md`](docs/REWRITE-PLAN.md) | **How.** Read before changing architecture |
-| [`docs/MANUAL-VERIFICATION.md`](docs/MANUAL-VERIFICATION.md) | The completion gate |
-| [`docs/RELEASE-PLAN.md`](docs/RELEASE-PLAN.md) | What stands between here and the stores |
-| [`docs/spikes/`](docs/spikes/) | Evidence behind the decisions |
+### Bugs and Suggestions
 
-`docs/PRD.md` predates the spec and is **not authoritative for behaviour**; `docs/SESSION-CONTEXT.md`
-is history. Version 2.5.1 — the Vue 2 / Webpack extension this replaces — is at the `v2.5.1-final` tag.
+If you like this extension, please :star: this repository!
 
-## Licence
+Feel free to propose new functionality and additional frameworks here:
+https://github.com/danhumphrey/page-modeller/issues
 
-[MIT](LICENSE).
+### Code Contributions
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the stack, the scripts, and how the work is verified.
+
+1. Fork this repository
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Commit your changes (`git commit -am 'Added some feature'`)
+4. Push to your branch (`git push origin my-new-feature`)
+5. Create a new Pull Request
+
+## License
+
+This library is distributed under the MIT license. Please see the
+[LICENSE](https://github.com/danhumphrey/page-modeller/blob/master/LICENSE) file.
+
+:point_up_2: I really should call this "licence" as I don't live in the US, but I'm adopting the MIT
+spelling :wink:
