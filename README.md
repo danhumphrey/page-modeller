@@ -33,11 +33,13 @@ Supported tools and languages are:
   <img src="media/browsers.png" width="504" alt="Chrome, Firefox, Brave, Opera, Vivaldi" />
 </p>
 
-Chrome 114+ and Firefox 115+, on Manifest V3. Other Chromium browsers install from the Chrome Web
-Store listing and are expected to work, but are not tested.
+Chrome 114+ and Firefox 115+, on Manifest V3. Page Modeller runs as a **side panel** (Chrome) or
+**sidebar** (Firefox), and as a **DevTools panel** on both.
 
-Page Modeller runs as a **side panel** (Chrome) or **sidebar** (Firefox), and as a **DevTools panel**
-on both.
+Other Chromium browsers install from the Chrome Web Store listing. Brave and Vivaldi have the side
+panel and work exactly as Chrome does. **Opera has no extension side panel API**, so the toolbar
+button explains that and Page Modeller runs in its DevTools panel instead — everything works there,
+it is simply the only surface Opera offers.
 
 ## Installation
 
@@ -93,23 +95,19 @@ Options can be configured via the browser extension options.
 - Theme — System, Light or Dark
 - Test ID attribute — `data-testid` by default; set it to whatever your test runner uses
 
-<p align="center">
-  <img src="media/popup_options.png" width="302" alt="Popup Options" />
-</p>
-
 ## Screenshots
 
 <p align="center">
-  <img src="media/screen1_chrome.jpg" width="600" alt="Chrome Playwright TypeScript" />
+  <img src="media/screenshot-model-chrome.png" width="600" alt="Chrome: a model of the Facebook login form, each element named with its Playwright locator" />
 </p>
 <p align="center">
-  <img src="media/screen2_firefox.png" width="600" alt="Firefox Testing Locators" />
+  <img src="media/screenshot-eye-firefox.png" width="600" alt="Firefox: the eye highlighting the element a Selenium locator matches, reporting one match" />
 </p>
 <p align="center">
-  <img src="media/screen3_chrome.png" width="600" alt="Chrome Model Elements" />
+  <img src="media/screenshot-page-object-chrome.png" width="600" alt="Chrome: the generated Playwright TypeScript page object, in the DevTools panel" />
 </p>
 <p align="center">
-  <img src="media/screen4_firefox.png" width="600" alt="Firefox Selenium WebDriver Python" />
+  <img src="media/screenshot-locators-chrome.png" width="600" alt="Chrome: the same model as Selenium WebDriver Python locators" />
 </p>
 
 ## Contribute
