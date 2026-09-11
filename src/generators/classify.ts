@@ -5,10 +5,10 @@
 // through to getText().
 import type { ModelElement } from '../model';
 
-export type Bucket = 'actionable' | 'text' | 'toggle' | 'radio' | 'select' | 'multiSelect' | 'static';
+export type Bucket = 'actionable' | 'text' | 'toggle' | 'radio' | 'select' | 'multiSelect' | 'slider' | 'static';
 
 const ACTIONABLE = new Set(['button', 'link', 'menuitem', 'menuitemcheckbox', 'menuitemradio', 'tab', 'option', 'treeitem']);
-const TEXT = new Set(['textbox', 'searchbox', 'spinbutton', 'slider']);
+const TEXT = new Set(['textbox', 'searchbox', 'spinbutton']);
 const TOGGLE = new Set(['checkbox', 'switch']);
 
 /**
@@ -21,6 +21,10 @@ const ROLELESS_TEXT_INPUTS = new Set(['password', 'email', 'tel', 'url', 'search
 export function classify(el: Pick<ModelElement, 'role' | 'tag'> & { inputType?: string }): Bucket {
   const { role, tag } = el;
 
+  // Not text, though it carries a value. Selenium's text setter would call
+  // clear() on it, which moves a range to the MIDDLE of its span and reports
+  // nothing, then send_keys, which does nothing at all — measured, not assumed.
+  if (role === 'slider') return 'slider';
   if (role === 'radio') return 'radio';
   if (role && TOGGLE.has(role)) return 'toggle';
   if (role && ACTIONABLE.has(role)) return 'actionable';

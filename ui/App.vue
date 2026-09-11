@@ -39,7 +39,15 @@
           @remove="removeElement"
         />
 
-        <CodeDialog v-if="showCode" :model="model" @close="showCode = false" />
+        <CodeDialog
+          v-if="showCode"
+          :model="model"
+          :shape="codeShape"
+          :class-name="codeClassName"
+          @update:shape="codeShape = $event"
+          @update:class-name="codeClassName = $event"
+          @close="showCode = false"
+        />
 
         <PickingHelpDialog
           v-if="helpMode"
@@ -54,6 +62,7 @@
           v-if="editing"
           :key="editing.id"
           :element="editing"
+          :show-tooltips="settings.showTooltips"
           :framework-id="model.frameworkId"
           :taken-names="model.elements.filter((e) => e.id !== editing!.id).map((e) => e.name)"
           @close="editing = undefined"
@@ -101,6 +110,9 @@ const isScanning = ref(false);
 const isAdding = ref(false);
 const editing = ref<ModelElement | undefined>();
 const showCode = ref(false);
+/** Survive closing the dialog, not reloading the panel (SPEC §11, §12). */
+const codeShape = ref<string | undefined>();
+const codeClassName = ref<string | undefined>();
 
 const rows = computed<ModelRow[]>(() =>
   model.value.elements.map((el) => ({

@@ -141,6 +141,7 @@ export const ALL_BUCKETS: TestElement[] = [
   { name: 'RadioEl', role: 'radio', tag: 'input', candidate: { kind: 'css', value: 'input.plan' } },
   { name: 'SelectEl', role: 'combobox', tag: 'select', candidate: { kind: 'css', value: 'select.country' } },
   { name: 'MultiSelectEl', role: 'listbox', tag: 'select', candidate: { kind: 'css', value: 'select.toppings' } },
+  { name: 'SliderEl', role: 'slider', tag: 'input', candidate: { kind: 'css', value: 'input.volume' } },
   { name: 'StaticEl', role: 'heading', tag: 'h1', candidate: { kind: 'css', value: 'h1' } },
   { name: 'ImageEl', role: 'img', tag: 'img', candidate: { kind: 'css', value: 'img.logo' } },
   { name: 'PasswordEl', role: null, tag: 'input', inputType: 'password', candidate: { kind: 'css', value: 'input.pass' } },

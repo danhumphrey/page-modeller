@@ -22,6 +22,11 @@
 
     <input type="text" aria-label="Search products" data-spike="aria-label-input" />
 
+    <!-- A project that configures its own test-id attribute (SPEC §12). Only a
+         candidate once the setting names it; with the default it is invisible
+         to the engine, which is the point. -->
+    <button data-qa="checkout-now" data-spike="custom-testid-button">Checkout now</button>
+
     <textarea placeholder="Leave a comment" data-spike="comment-textarea"></textarea>
 
     <a href="/help" title="Open help center" data-spike="title-link">?</a>
@@ -30,6 +35,12 @@
 
     <input type="radio" name="plan" id="plan-pro" data-spike="radio-pro" />
     <label for="plan-pro">Pro plan</label>
+
+    <!-- A range. Its role is `slider`, and Selenium's text setter is actively
+         wrong on it: clear() jumps it to the middle of its span and send_keys
+         does nothing. Modelled as its own bucket for that reason. -->
+    <label for="volume">Volume</label>
+    <input type="range" id="volume" name="volume" min="0" max="10" value="3" data-spike="volume-slider" />
 
     <p data-spike="unique-paragraph">This is a unique descriptive paragraph of text.</p>
 

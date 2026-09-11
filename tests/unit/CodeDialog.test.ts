@@ -34,9 +34,9 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-async function render(model: TabModel) {
+async function render(model: TabModel, shape?: string, className?: string) {
   wrapper = mount(CodeDialog, {
-    props: { model },
+    props: { model, shape, className },
     global: {
       plugins: [Quasar],
       // `v-close-popup` is a Quasar directive, and registering the components
@@ -91,6 +91,53 @@ describe('CodeDialog', () => {
     // No framework has one today; the row must still not appear if one does.
     await render(modelWith('selenium-java', { name: 'Email' }));
     expect(document.body.querySelectorAll('[data-testid="code-shape"]').length).toBe(1);
+  });
+
+  it('reopens on the shape last chosen', async () => {
+    // Someone who works in locators-only should not pick it every time.
+    await render(modelWith('selenium-java', { name: 'Email' }));
+    await chooseShape('Locators only');
+    expect(wrapper!.emitted('update:shape')?.at(-1)).toEqual(['locators']);
+
+    // What the panel hands back next time.
+    wrapper!.unmount();
+    document.body.innerHTML = '';
+    await render(modelWith('selenium-java', { name: 'Email' }), 'locators');
+    expect(codeText()).toContain('private final By email');
+  });
+
+  it('falls back when the remembered shape is not on offer', async () => {
+    // `methods` means nothing to Playwright, and a dialog opening on nothing
+    // would be worse than one opening on its default.
+    await render(modelWith('playwright-ts', { name: 'Email' }), 'methods');
+    expect(codeText()).toContain('export class');
+  });
+
+  it('names the class from the URL, and lets you say otherwise', async () => {
+    // `/checkout/step2` yields `Step2Page`, and the name only ever appears in
+    // generated code — so correcting it afterwards means correcting it again
+    // on every regeneration.
+    const model = modelWith('playwright-ts', { name: 'Email' });
+    model.url = 'https://example.com/account/login.html';
+    await render(model);
+    expect(codeText()).toContain('export class LoginPage {');
+
+    // QDialog teleports, so a second mount would sit alongside the first.
+    wrapper!.unmount();
+    document.body.innerHTML = '';
+    await render(model, undefined, 'CheckoutPage');
+    expect(codeText()).toContain('export class CheckoutPage {');
+    // The model is untouched: this is about the code being read, not the
+    // elements captured.
+    expect(model.className).toBeUndefined();
+  });
+
+  it('offers no name where no class is emitted', async () => {
+    const model = modelWith('playwright-ts', { name: 'Email' });
+    await render(model);
+    expect(document.body.querySelector('[data-testid="code-class-name"]')).not.toBeNull();
+    await chooseShape('Locators only');
+    expect(document.body.querySelector('[data-testid="code-class-name"]')).toBeNull();
   });
 
   it('switches shape without touching the model', async () => {

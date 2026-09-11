@@ -27,6 +27,12 @@ export interface TabModel {
   /** The URL the model was built against. Set when the first element lands. */
   url: string | null;
   /**
+   * Overrides the class name derived from `url` (SPEC §12). Not persisted: it
+   * belongs to the code being read, like the shape, and a derived name is
+   * right often enough that remembering a stale one would be worse.
+   */
+  className?: string;
+  /**
    * The tab has navigated away from `url`. The background decides this: a
    * DevTools panel cannot read the tab's URL for itself (SPEC §5).
    */

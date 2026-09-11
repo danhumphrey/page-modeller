@@ -6,7 +6,7 @@
 // they differ only in which module the types come from and how an expression
 // is spelled.
 import type { ModelElement, TabModel } from '../model';
-import { classNameFor } from './class-name';
+import { classNameOf } from './class-name';
 import { jsName, lowerCamel } from './names';
 
 export interface TsTarget {
@@ -24,7 +24,7 @@ export interface TsTarget {
 }
 
 export function tsPageObject(model: TabModel, target: TsTarget): string {
-  const className = classNameFor(model.url);
+  const className = classNameOf(model);
 
   if (model.elements.length === 0) {
     return [

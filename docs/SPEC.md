@@ -215,7 +215,11 @@ shows a banner naming that page, with **Delete Model** to hand — the model als
 page, since scan is once-per-model (§4). Navigating back makes the model current again rather than
 leaving it flagged. **[settled]**
 
-Still to do: the 0-match snackbar naming the likely reason rather than just the count. **[inferred]**
+**The 0-match snackbar reports the count and nothing else.** It could guess at a reason — the model is
+stale, hidden elements are not modelled — but the locator under test is often not the generated one:
+the Edit dialog exists so people can type their own and try it. A guess would be wrong exactly when
+someone is iterating, which is when they are looking at it most. Report the fact; the reader can tell
+why. **[settled]**
 
 ## 6. Model table
 
@@ -358,8 +362,11 @@ Puppeteer's page object is TypeScript, emitted by the same code as Playwright's 
 the selector syntax differ. Puppeteer ships its own types and its docs are TS-first; a JS user deletes
 the annotations. **[settled]**
 
-Shape ids are shared, so `Locators only` means the same thing in every framework. The choice is not
-remembered between openings of the dialog. **[inferred]**
+Shape ids are shared, so `Locators only` means the same thing in every framework — and the choice is
+**remembered for as long as the panel lives**, so someone who works in locators-only does not re-pick
+it every time. Not a setting: it lasts the session and no longer. A remembered shape the current
+framework does not offer falls back to that framework's first, since `methods` means nothing to
+Playwright. **[settled]**
 
 **Locators only** exists for every framework: locator declarations and nothing else, for the many teams
 with their own page-object conventions. Our locators, none of our opinions — and the one output still
@@ -465,8 +472,32 @@ requires a real `<select>` (`new Select(div)` throws `UnexpectedTagNameException
 falls back to **actionable** methods — `click{Name}()` to open, with the options modelled as their own
 elements. Revisit if a real DOM turns up that needs better. **[settled]**
 
-`role="slider"` joins the **text** bucket: it carries a value, and both Selenium and Playwright set it
-through the element rather than a dedicated API. **[inferred]**
+### Sliders are not text **[settled]**
+
+`role="slider"` looks like a text field — it carries a value — and Selenium's text setter is *actively
+wrong* on one. Measured on `<input type="range" min="0" max="10" value="3">`:
+
+| | |
+|---|---|
+| `clear()` | moves it to **5**, the middle of its span, silently |
+| `send_keys("7")` | does nothing at all |
+
+So `set{Name}("7")` would leave it on 5 and report success. Its own bucket, driven by the keyboard,
+which is the whole API a range offers:
+
+| Method | |
+|---|---|
+| `get{Name}()` | the value |
+| `increment{Name}()` · `decrement{Name}()` | one step, `ARROW_RIGHT` / `ARROW_LEFT` |
+| `set{Name}ToMin()` · `set{Name}ToMax()` | `HOME` / `END` |
+| `set{Name}(value)` | steps toward the target from wherever it is |
+
+The setter reads the current value and steps toward the target rather than resetting to min first:
+fewer presses, and neither `min` nor `step` ever has to be read. It stops when the value stops changing
+— a range clamps at its ends — or when a step carries it past a target it cannot land on.
+
+Only Selenium is affected. Playwright and Puppeteer bind locators and emit no methods, so buckets do
+not reach them. (`fill()` does drive a range correctly, for what it is worth.)
 
 Also: the templates emit a stray leading space on every line.
 
@@ -511,8 +542,12 @@ What closes the gap instead is a better css candidate (§7): `a[href="/forgot"]`
 of `div:nth-of-type`. XPath keeps Puppeteer's `xpath/` prefix, so an absolute path doubles the slash —
 `xpath//html[1]/body[1]` is correct.
 
-Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[inferred]** — the
-engine's existing ranking, testId first as the most change-resistant.
+Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[settled]** —
+Playwright's own documented preference, with css and xpath last as structural fallbacks.
+
+**`testId` leads.** There is no reason to add a `data-testid` to an element except to be tested against
+it, so where one exists it is an instruction. It costs teams who do not use them nothing: it is only
+ever a candidate when the attribute is actually present.
 
 These lists are also the **order of preference** for choosing an element's starting locator (§7).
 
@@ -537,10 +572,15 @@ EDIT (type = role)          EDIT (type = css)
 
 Selenium is unaffected — all its types stay single-field.
 
-### Disambiguation **[settled]**
+### Disambiguation — deferred, not built **[open]**
 
-When role+name matches more than one element, **scope under an ancestor** — Playwright's own idiom, and
-far more durable than a positional index or a generated CSS path.
+**What happens today:** a role+name that matches more than one element simply loses to the next
+candidate that *is* unique, which is almost always css. Two "About" links give
+`locator('a[href="/about"]')`. Unique, resolves, and brittle in exactly the way the idea below exists to
+avoid.
+
+**The idea, for after release.** Scope under an ancestor — Playwright's own idiom, and far more durable
+than a positional index or a generated CSS path:
 
 ```js
 // Two "About" links — nav and footer
@@ -548,10 +588,11 @@ page.getByRole('navigation').getByRole('link', { name: 'About', exact: true })
 page.getByRole('contentinfo').getByRole('link', { name: 'About', exact: true })
 ```
 
-The engine walks up to the nearest landmark or uniquely-identifiable ancestor and verifies that ancestor
-is itself unique. Scoping cannot save a genuinely repeated element — the delete button in the third table
-row — so the full chain is **scope → `.nth()` within the scope → CSS/XPath**, the tail being
-**[inferred]**.
+It is the largest behavioural change left: the IR needs a chained candidate, and the engine needs to
+find a scoping ancestor and verify that the ancestor is itself unique. Scoping cannot save a genuinely
+repeated element — the delete button in the third table row — so a full chain would be
+**scope → `.nth()` within the scope → CSS/XPath**, and whether `.nth()` belongs there at all is part of
+what is deferred.
 
 ### XPath needs its prefix **[settled]**
 
@@ -598,21 +639,30 @@ Field names are the element name, lower-camel. Assignment reads the constructor 
 not `this.page`: the parameter property is not assigned until the constructor body completes.
 
 Class name comes from the last path segment of the model's URL — `/account/login.html` → `LoginPage`,
-`facebook.com` → `FacebookPage`, no URL → `GeneratedPage`. Rename it; the tool cannot know what you call
-the page. **[inferred]**
+`facebook.com` → `FacebookPage`, no URL → `GeneratedPage`.
+
+**It is editable in the code dialog**, because the derivation is a guess: `/checkout/step2` yields
+`Step2Page` and `/p/B08N5WRWNW` yields worse. The name only ever appears in generated code, so
+correcting it after copying means correcting it again on every regeneration. The field shows the
+derived name as its placeholder — that is what typing nothing gives you — and is offered only by the
+shapes that emit a class. Held for the panel session like the shape, and not on the model: it belongs
+to the code being read, not to the elements captured. **[settled]**
 
 No banner comments. Field names carry the same information in a fifth of the lines.
 
-### Test IDs **[inferred]**
+### Test IDs **[settled]**
 
-`testId` ranks first: it is only ever a candidate when the attribute is actually present, so preferring
-it costs nothing for teams who do not use test IDs, and a team that added one clearly means it to be
-used. The attribute name is configurable (default `data-testid`).
+`testId` ranks first: there is no reason to add one except to be tested against it, so where one exists
+it is an instruction. It costs teams who do not use them nothing, being a candidate only when the
+attribute is present.
 
-`getByTestId` resolves against Playwright's own `testIdAttribute` config, so a project using `data-qa`
-must set `testIdAttribute: 'data-qa'` in `playwright.config` or the generated call will not resolve. The
-code dialog carries a one-line note whenever the model uses `testId` and the configured attribute is not
-the default `data-testid`. **[inferred]**
+**Which attribute is a setting**, defaulting to `data-testid`. Playwright, Cypress and Testing Library
+each let a project choose, and `data-qa` and `data-test` are common; hardcoded, those teams got no
+test-id candidates at all and no hint as to why. It must agree with the test runner's own setting —
+`getByTestId` resolves against Playwright's `testIdAttribute` — which the options page says.
+
+The engine reads it at load and watches it, because the eye resolves a `testId` candidate too and that
+happens without picking ever starting.
 
 ## 13. Naming
 
@@ -961,8 +1011,7 @@ reviewer notices.
 unchanged. Python does not: every definition gains `self` and every call site a `self.` prefix, so the
 generator is receiver-aware rather than wrapped. **[settled]**
 
-Class name is derived as it is for Playwright (§12). Making it an **editable field** in the dialog is
-the obvious next step and is not built. **[open]**
+Class name is derived as it is for Playwright (§12), and editable in the dialog the same way.
 
 ## 18. Still open
 
@@ -971,12 +1020,9 @@ rather than confirmed, flagged so they are visible rather than silent:
 
 | § | Inferred |
 |---|---|
-| 5 | Stale-model banner + reason on the 0-match snackbar |
-| 11 | `role="slider"` → text bucket |
-| 11 | Playwright locator type list and its ranking |
-| 12 | Playwright method bodies; bare `page` reference; `testId` first; `testIdAttribute` note |
-| 12 | `.nth()` as the tail of the disambiguation chain |
 | 13 | Truncation at a word boundary |
-| 17 | Wrapper constructor shape; class name prefilled from title/URL |
 
-**Release blocker, unrelated to behaviour:** the real AMO `gecko.id` (see `PRD.md` NFR-6).
+**Deferred, and marked `[open]` where it is described:** ancestor scoping for an ambiguous role+name
+(§12). Not built, and the spec no longer reads as though it were.
+
+**Release blocker:** none outstanding. The AMO `gecko.id` is recorded and guarded (see `RELEASE-PLAN.md`).

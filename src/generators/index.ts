@@ -62,8 +62,13 @@ export function canGenerate(frameworkId: string): boolean {
   return shapesFor(frameworkId).length > 0;
 }
 
-/** `shapeId` defaults to the framework's first shape. */
-export function generateCode(model: TabModel, shapeId?: string): string {
+/**
+ * `shapeId` defaults to the framework's first shape. `className` overrides the
+ * one derived from the URL, which is a guess — `/checkout/step2` yields
+ * `Step2Page` — and only ever appears in generated code, so correcting it
+ * afterwards means correcting it again on every regeneration (SPEC §12).
+ */
+export function generateCode(model: TabModel, shapeId?: string, className?: string): string {
   const shapes = shapesFor(model.frameworkId);
   if (shapes.length === 0) {
     // Better to say which target is missing than to show an empty dialog.
@@ -71,5 +76,5 @@ export function generateCode(model: TabModel, shapeId?: string): string {
     return `// ${frameworkById(model.frameworkId).label} is not generated yet.\n// Available so far: ${done}.`;
   }
   const shape = shapes.find((s) => s.id === shapeId) ?? shapes[0];
-  return shape.generate(model);
+  return shape.generate(className?.trim() ? { ...model, className: className.trim() } : model);
 }

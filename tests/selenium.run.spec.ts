@@ -122,6 +122,38 @@ test('the generated Selenium finds every element it describes', async ({ page })
   // (SPEC §11) and nothing reaches them, so breaking those would not fail this.
 });
 
+test('the generated Selenium moves a slider to the value asked for', async ({ page }) => {
+  test.skip(!ready && !REQUIRE_FULL_SUITE, 'run `npm run fetch:test-deps` for the Python venv');
+  expect(ready, 'PM_REQUIRE_FULL_SUITE is set but .test-venv is missing').toBe(true);
+
+  // A range is not a text field, whatever its value looks like. Selenium's
+  // text setter calls clear(), which moves a range to the MIDDLE of its span
+  // and says nothing, then send_keys, which does nothing — so it lands on a
+  // number nobody asked for and reports success. Hence its own bucket, driven
+  // by the keyboard, and hence this: the only way to know it works is to watch
+  // the value change.
+  const url = `http://localhost:${PORT}/widgets.html`;
+  await page.goto(url);
+  await page.addScriptTag({ path: resolve('.test-dist/engine.global.js') });
+
+  const result = await page.$eval(
+    '[data-spike="volume-slider"]',
+    (el) => (window as unknown as { __spike: { generate: (e: Element) => ElementResult } }).__spike.generate(el)
+  );
+  expect(result.role, 'the fixture really is a slider').toBe('slider');
+
+  const model = emptyModel('selenium-python');
+  model.elements.push({
+    ...result,
+    id: 'volume-slider',
+    name: 'Volume',
+    selectedIndex: chooseCandidate(result.candidates, 'selenium-python'),
+  } as ModelElement);
+
+  const out = runInPythonSlider(generateSeleniumPython(model), url);
+  expect(out.trim(), 'the generated slider methods did not behave').toBe('');
+});
+
 test('the generated Selenium switches into frames and back out (SPEC §16)', async ({ page }) => {
   test.skip(!ready && !REQUIRE_FULL_SUITE, 'run `npm run fetch:test-deps` for the Python venv');
   expect(ready, 'PM_REQUIRE_FULL_SUITE is set but .test-venv is missing').toBe(true);
@@ -196,6 +228,8 @@ function readCall(el: ModelElement, snake: (s: string) => string): string | null
       return `get_${n}_text()`;
     case 'multiSelect':
       return `get_${n}_texts()`;
+    case 'slider':
+      return `get_${n}()`;
     case 'static':
       return isImage(el) ? `get_${n}_alt_text()` : `get_${n}()`;
     // Clicking is the only thing an actionable element offers, and it navigates.
@@ -269,6 +303,71 @@ function runInSelenium(
             `        failures.append("${name}: " + type(e).__name__ + " " + str(e).split(chr(10))[0])`,
           ]
     ),
+    'finally:',
+    '    driver.quit()',
+    '',
+    'print("\\n".join(failures))',
+    'sys.exit(0)',
+  ].join('\n');
+
+  writeFileSync(file, source);
+  try {
+    return execFileSync(VENV_PY, [file], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch (e) {
+    const err = e as { stdout?: string; stderr?: string };
+    return `harness failed:\n${err.stdout ?? ''}${err.stderr ?? ''}`;
+  }
+}
+
+/**
+ * Drive the generated slider methods and report anything that did not do what
+ * it says. Its own harness because a slider is the one bucket whose methods
+ * are only meaningful by their effect.
+ */
+function runInPythonSlider(generated: string, url: string): string {
+  const dir = mkdtempSync(join(tmpdir(), 'pm-slider-'));
+  const file = join(dir, 'check.py');
+  const source = [
+    'import sys',
+    'from selenium import webdriver',
+    'from selenium.webdriver.chrome.options import Options',
+    'from selenium.webdriver.common.by import By',
+    'from selenium.webdriver.common.keys import Keys',
+    'from selenium.webdriver.support.ui import Select',
+    '',
+    'options = Options()',
+    'options.add_argument("--headless=new")',
+    'options.add_argument("--no-sandbox")',
+    'driver = webdriver.Chrome(options=options)',
+    'failures = []',
+    'def check(what, actual, wanted):',
+    '    if str(actual) != str(wanted):',
+    '        failures.append(what + ": " + str(actual) + ", wanted " + str(wanted))',
+    'try:',
+    `    driver.get(${JSON.stringify(url)})`,
+    '',
+    ...generated.split('\n').map((line) => (line ? `    ${line}` : line)),
+    '',
+    // The fixture is min 0, max 10, step 1, starting at 3.
+    '    check("initial", get_volume(), 3)',
+    '    increment_volume()',
+    '    check("after increment", get_volume(), 4)',
+    '    decrement_volume()',
+    '    check("after decrement", get_volume(), 3)',
+    '    set_volume_to_max()',
+    '    check("after to_max", get_volume(), 10)',
+    '    set_volume_to_min()',
+    '    check("after to_min", get_volume(), 0)',
+    // Upwards, downwards, and a target it is already on.
+    '    set_volume("7")',
+    '    check("set to 7 from 0", get_volume(), 7)',
+    '    set_volume("2")',
+    '    check("set to 2 from 7", get_volume(), 2)',
+    '    set_volume("2")',
+    '    check("set to 2 again", get_volume(), 2)',
+    // Beyond the end: it clamps rather than looping forever.
+    '    set_volume("99")',
+    '    check("set beyond max", get_volume(), 10)',
     'finally:',
     '    driver.quit()',
     '',
