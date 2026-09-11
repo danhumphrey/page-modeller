@@ -27,6 +27,11 @@ export type PanelToContent =
   // A frame was asked to scan itself and never answered — there is no content
   // script inside it. Silence is indistinguishable from a bug, so it is said.
   | { type: 'FRAME_UNREADABLE'; sandboxed: boolean }
+  // A scan met web components whose shadow roots are closed, so their contents
+  // could not be collected (SPEC §19). Reported for the same reason an
+  // unreadable frame is: a scan that quietly returns less looks like a scan
+  // that found less, which is how the whole shadow DOM gap was first reported.
+  | { type: 'SHADOW_UNREADABLE'; count: number }
   | { type: 'OVERLAY_SHOWN'; token: string }
   | { type: 'OVERLAY_OWNER'; token: string }
   // Walk the pick target up or down the DOM (SPEC §4). Sent by the panel

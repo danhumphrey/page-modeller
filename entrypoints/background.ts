@@ -182,6 +182,7 @@ export default defineBackground(() => {
         return;
       }
       case 'FRAME_UNREADABLE':
+      case 'SHADOW_UNREADABLE':
       case 'HIGHLIGHT_RESULT': {
         const tabId = sender.tab?.id;
         if (tabId == null) return;

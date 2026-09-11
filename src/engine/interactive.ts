@@ -109,13 +109,19 @@ export function collectInteractive(root: Element | ShadowRoot, includeHidden: bo
  * there was nothing to collect from it either way.
  */
 function isClosedHost(el: Element): boolean {
+  // A hyphen is what makes a tag name a custom element.
+  //
+  // NOT `customElements.get()`, which is the obvious check and does not work
+  // where this runs: a content script lives in an isolated world with its own
+  // registry, so an element the PAGE defined is absent from it and every
+  // closed root read as an ordinary unknown tag. The engine's own spec did not
+  // catch that, because it injects into the main world — the extension E2E
+  // did.
   if (!el.localName.includes('-')) return false;
   if (el.childElementCount > 0 || el.textContent?.trim()) return false;
-  try {
-    if (!el.ownerDocument.defaultView?.customElements.get(el.localName)) return false;
-  } catch {
-    return false;
-  }
+  // Rendering a box with no light DOM to explain it: the content is coming
+  // from somewhere unreachable. An undefined custom element is an inline box
+  // with no content and no size, so it does not qualify.
   const box = el.getBoundingClientRect();
   return box.width > 0 && box.height > 0;
 }

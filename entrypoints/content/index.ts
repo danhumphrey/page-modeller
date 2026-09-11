@@ -1,6 +1,6 @@
 import { frameStepFor, generate, resolveCandidate, setTestIdAttribute } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
-import { collectInteractive } from '@/src/engine/interactive';
+import { collectClosedHosts, collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
 import { frameSelector } from '@/src/locators/frames';
 import type { FrameStep } from '@/src/engine/types';
@@ -177,12 +177,14 @@ export default defineContentScript({
       ensureOverlay();
       const r = el.getBoundingClientRect();
       Object.assign(box!.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-      const unreadable = isFrame(el) && !isReadableFrame(el);
-      setTone(unreadable);
+      const frameUnreadable = isFrame(el) && !isReadableFrame(el);
+      // A closed root renders content no script can reach — the same situation
+      // as a sandboxed frame, drawn the same way (SPEC §19).
+      const closedRoot = !frameUnreadable && isClosedShadowHost(el);
+      setTone(frameUnreadable || closedRoot);
       renderBreadcrumb(el);
-      if (unreadable) {
-        const warn = crumb('cannot be read \u2014 sandboxed', true);
-        label!.appendChild(warn);
+      if (frameUnreadable || closedRoot) {
+        label!.appendChild(crumb(closedRoot ? 'cannot be read \u2014 closed shadow root' : 'cannot be read \u2014 sandboxed', true));
       }
       label!.style.left = `${r.left}px`;
       label!.style.top = `${Math.max(0, r.top - 18)}px`;
@@ -343,6 +345,14 @@ export default defineContentScript({
     const onOver = (e: MouseEvent) => onMove(e);
 
     const isFrame = (el: Element) => el.localName === 'iframe' || el.localName === 'frame';
+
+    /**
+     * Whether THIS element is a closed shadow host. Asked of the element's own
+     * parent so the collector's rule is not duplicated: one definition of what
+     * counts, used both for the overlay and for what a scan reports.
+     */
+    const isClosedShadowHost = (el: Element) =>
+      el.parentElement != null && collectClosedHosts(el.parentElement).includes(el);
 
     /**
      * Marks the one message this script accepts from another frame. Isolated
@@ -506,12 +516,24 @@ export default defineContentScript({
      * Each frame reports its own haul, so the model simply gains rows as they
      * arrive; nothing has to be collected back up the tree.
      */
+    /**
+     * Say what a scan could not read. A closed root holds real controls and no
+     * script can reach them, so the alternative is a scan that returns fewer
+     * rows than the page has and gives no reason — which is exactly how this
+     * whole area came to be looked at.
+     */
+    function reportClosedRoots(root: Element) {
+      const count = collectClosedHosts(root).length;
+      if (count > 0) browser.runtime.sendMessage({ type: 'SHADOW_UNREADABLE', count }).catch(() => {});
+    }
+
     function scanDocument() {
       const root = document.body ?? document.documentElement;
       const results = collectInteractive(root, includeHidden).map((el) => generate(el, myPath));
       const nested = Array.from(document.querySelectorAll('iframe, frame'));
       stop({ notify: false });
       if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+      reportClosedRoots(root);
       for (const frame of nested) delegateScan(frame);
     }
 
@@ -553,6 +575,7 @@ export default defineContentScript({
 
       // Scan takes the container's interactive descendants, never the container
       // itself: you are modelling what is inside the section you chose.
+      if (mode === 'scan') reportClosedRoots(target);
       const message =
         mode === 'scan'
           ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map((el) => generate(el, myPath)) }

@@ -285,6 +285,18 @@ function onRuntimeMessage(msg: unknown) {
         color: 'negative',
       });
     }
+    else if (m.type === 'SHADOW_UNREADABLE') {
+      // Plural handled by hand: `count` is the number of components skipped,
+      // and "1 web components" would undercut the message it is carrying.
+      notice('shadow-unreadable', {
+        message:
+          m.count === 1
+            ? 'One web component has a closed shadow root and could not be read.'
+            : `${m.count} web components have closed shadow roots and could not be read.`,
+        icon: 'block',
+        color: 'warning',
+      });
+    }
     else if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
     else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count, m.hidden);
   }
