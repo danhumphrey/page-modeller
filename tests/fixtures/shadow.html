@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Shadow DOM</title></head>
+<body>
+  <nav aria-label="Fixtures" style="font: 12px/1.6 ui-monospace, monospace; padding: 6px 8px; border-bottom: 1px solid #ddd; margin-bottom: 12px">
+    fixtures: <a href="login.html">login</a> · <a href="widgets.html">widgets</a> · <a href="edgecases.html">edgecases</a> ·
+    <a href="ambiguous.html">ambiguous</a> · <a href="frames.html">frames</a> · <a href="frameset.html">frameset</a> ·
+    <strong>shadow</strong>
+  </nav>
+  <main style="font: 14px/1.5 system-ui, sans-serif; padding: 0 8px; max-width: 46rem">
+    <h1 data-spike="top-heading">Shadow DOM</h1>
+
+    <!-- The control: the same accessible name as the Submit inside every
+         component below, so a locator that ignores the shadow path is
+         ambiguous and one that respects it is not. -->
+    <button data-spike="top-submit">Submit</button>
+
+    <h2>Open root, attributes mirrored onto the host</h2>
+    <!-- The Etsy shape, and the reason the bug was survivable there: the host
+         carries `name` and `placeholder`, so picking the HOST rather than the
+         inner input still produced a working locator. A component that does
+         not mirror them is the next case. -->
+    <mirrored-field name="email" placeholder="Enter your email" label="Email address"></mirrored-field>
+
+    <h2>Open root, nothing mirrored</h2>
+    <!-- The honest case. Nothing on the host identifies the control, so a
+         locator can only come from inside the shadow root. -->
+    <plain-field></plain-field>
+
+    <h2>Nested open roots</h2>
+    <!-- Two boundaries between the document and the input, so the path has two
+         steps and a one-step implementation passes the case above and fails
+         this one. -->
+    <outer-panel></outer-panel>
+
+    <h2>Two components that look alike</h2>
+    <!-- Same tag, same internals. They must be distinguishable, which means
+         the host selector has to pick one — the frames fixture has the same
+         trap for the same reason. -->
+    <plain-field class="twin" id="twin-one"></plain-field>
+    <plain-field class="twin" id="twin-two"></plain-field>
+
+    <h2>Closed root</h2>
+    <!-- `element.shadowRoot` is null and there is no way in. Must be reported,
+         never silently skipped (SPEC §19). -->
+    <closed-field></closed-field>
+
+    <h2>An iframe inside a shadow root</h2>
+    <!-- framePath and shadowPath have to compose, in both directions. -->
+    <frame-host></frame-host>
+
+    <h2>Slotted light DOM</h2>
+    <!-- The button is an ordinary child of the host in the light DOM; only its
+         *rendering* moves into the shadow root. So it needs NO shadow path,
+         and an implementation that walks the flat tree will wrongly give it
+         one. -->
+    <slotting-panel><button data-spike="slotted-button">Slotted action</button></slotting-panel>
+  </main>
+
+  <script>
+    // Components are defined here rather than inline so the markup above stays
+    // readable. Each attaches its root in the mode its name says.
+
+    customElements.define('mirrored-field', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `
+          <label style="display:block">
+            <span>${this.getAttribute('label') ?? ''}</span>
+            <input data-spike="mirrored-input" name="${this.getAttribute('name') ?? ''}"
+                   placeholder="${this.getAttribute('placeholder') ?? ''}">
+          </label>
+          <button data-spike="mirrored-submit">Submit</button>`;
+      }
+    });
+
+    customElements.define('plain-field', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        // Carries one of every identifier a Selenium strategy can use, so the
+        // probe can establish which of them survive a shadow boundary.
+        root.innerHTML = `
+          <label style="display:block">
+            <span>Coupon code</span>
+            <input data-spike="plain-input" id="coupon-field" class="coupon-input"
+                   name="coupon" placeholder="Enter a coupon">
+          </label>
+          <a href="#terms" data-spike="plain-link">Coupon terms</a>
+          <button data-spike="plain-submit">Submit</button>`;
+      }
+    });
+
+    customElements.define('outer-panel', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `<inner-field id="inner"></inner-field>`;
+      }
+    });
+
+    customElements.define('inner-field', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `
+          <label style="display:block">
+            <span>Postcode</span>
+            <input data-spike="nested-input" name="postcode" placeholder="Enter a postcode">
+          </label>
+          <button data-spike="nested-submit">Submit</button>`;
+      }
+    });
+
+    customElements.define('closed-field', class extends HTMLElement {
+      connectedCallback() {
+        // No reference kept: this really is unreachable from outside.
+        const root = this.attachShadow({ mode: 'closed' });
+        root.innerHTML = `<input name="secret" placeholder="Unreachable"><button>Submit</button>`;
+      }
+    });
+
+    customElements.define('frame-host', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `
+          <iframe id="in-shadow" title="In shadow" width="440" height="80"
+            srcdoc="&lt;body style=&quot;font:14px system-ui&quot;&gt;&lt;input name=&quot;giftcard&quot; placeholder=&quot;Enter a gift card&quot; data-spike=&quot;shadow-frame-input&quot;&gt;&lt;button&gt;Submit&lt;/button&gt;&lt;/body&gt;"></iframe>`;
+      }
+    });
+
+    customElements.define('slotting-panel', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `<div style="border:1px solid #ccc;padding:8px"><slot></slot></div>`;
+      }
+    });
+  </script>
+</body>
+</html>

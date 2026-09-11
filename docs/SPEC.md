@@ -929,6 +929,8 @@ a page cannot read the nonce. Not by "is this frame still armed", which was the 
 cascading scan reaches frames after the background has disarmed everyone, and a frame that refused then
 would be a hole in the middle of the tree.
 
+Shadow roots are the same problem in a different shape, and are specified in §19.
+
 **A scan never crosses a frame boundary on its own.** Scanning a container that happens to hold frames
 gets that document's controls and stops. A frame's contents come only when the scan is rooted at that
 frame — the frame element, or its document — and then everything below it is in scope. **[settled]**
@@ -1038,3 +1040,96 @@ rather than confirmed, flagged so they are visible rather than silent:
 (§12). Not built, and the spec no longer reads as though it were.
 
 **Release blocker:** none outstanding. The AMO `gecko.id` is recorded and guarded (see `RELEASE-PLAN.md`).
+
+## 19. Shadow DOM
+
+New in v3. Numbered here rather than beside §16 only because §17 is referenced from seven places in
+the code; read it as the sibling of Frames, because it is the same problem in a different shape.
+
+**Web components hide their controls.** Etsy's sign-up form is `<clg-text-input>` elements whose real
+`<input>` lives in an open shadow root. `querySelectorAll('*')` does not cross that boundary, so a scan
+of the dialog returned the four buttons around the form and none of the form. It read as the tool
+being broken, which is how it was reported.
+
+An element records its **shadow path**: the hosts between its document and itself, outermost first,
+each located by its own generated selector — exactly as `framePath` records the frames (§16). The two
+compose; an element can be inside a frame inside a shadow root.
+
+**Hosts are located by css only.** A shadow root is entered through its host element, and every API
+that does so takes a CSS selector — `>>>` in Puppeteer, `.shadow_root` in Selenium. `cssFor` already
+prefers a test id, then a name, then a non-generated id (§7), so little is lost.
+
+**The element's own locator is relative to its shadow root.** Ids are scoped to a shadow root, so a
+`>` path anchored inside one is shorter and more stable than a document-wide path would have been.
+
+### What each framework can express **[settled]**
+
+Measured, not read off the documentation — `tests/shadow.probe.spec.ts` asserts every row against a
+real engine, because six generators are built to this table and a wrong assumption in it propagates
+everywhere. Three of the first draft's rows were wrong.
+
+| | Crosses an open shadow root |
+|---|---|
+| Playwright `getByRole` / `getByLabel` / `getByPlaceholder` / `getByText` / `getByAltText` / `getByTitle` / `getByTestId` | **yes**, natively |
+| Playwright css | yes |
+| Playwright xpath | **no** |
+| Puppeteer css | only through the `>>>` deep combinator — but **one `>>>` spans any depth**, so only the outermost host is needed |
+| Selenium, from the host's `shadowRoot` | `name`, `id`, `linkText`, `partialLinkText`, `css`, `className` **all work** |
+| Selenium `xpath` and `tagName`, from a `shadowRoot` | **no** — `invalid locator` |
+| Selenium, from the document | nothing reaches in; the chain is always required |
+
+So **xpath is the only thing v3 generates that cannot cross a boundary**, and it is excluded for a
+shadow element in every framework rather than only in Playwright. Everything else needs no change to
+the locator itself:
+
+- **Playwright** needs nothing at all. Its engines pierce, so a locator generated as though the page
+  were flat already resolves. The path is still recorded, because it is what scopes one of two
+  identical components.
+- **Puppeteer** joins the outermost host to the element's css with `>>>`.
+- **Selenium** walks the chain, one `shadowRoot` at a time, the same shape as its `switchTo().frame()`
+  chain — and the element it arrives at is an ordinary `WebElement`: `send_keys`, `click`,
+  `get_property` and `is_displayed` all work through a boundary.
+
+### The eye must agree with the framework **[settled]**
+
+The in-page resolver does not pierce today, so a shadow element reports *0 elements match* even where
+the generated locator is correct. Making it always pierce would be worse: with Selenium selected it
+would report *1 element matches* for a locator Selenium cannot resolve at all.
+
+So the resolver pierces **when the target framework does**, which is the rule §7 already states —
+*"a green tick on a locator that cannot exist in the target framework is worse than no check at all"*.
+
+### Picking **[settled]**
+
+`event.target` is retargeted to the host for any listener outside the shadow tree, so picking inside a
+web component selected the component, not the control. It happened to work on Etsy because that
+component mirrors `name` and `placeholder` onto its host; a component that does not would have yielded
+a locator for a wrapper. `composedPath()[0]` is the real target.
+
+The ↑/↓ walk (§4) steps out through `getRootNode().host` at a shadow boundary, rather than stopping at
+a `parentElement` of `null`. The breadcrumb marks the crossing, so it is visible that the element is
+inside a component rather than a plain `<div>`.
+
+### Closed roots cannot be read **by us** **[settled]**
+
+`element.shadowRoot` is `null` for a closed root, and the picker is JavaScript in the page, so there is
+nothing to pick and nothing to generate.
+
+Worth recording that this is *our* limit and not the ecosystem's: **WebDriver reads closed roots
+perfectly well** — `shadow_root` returns one and finds inside it — because it uses the element's
+internal slot rather than the JS accessor. Playwright cannot. So a Selenium locator for a closed-root
+element is a thing that could exist; we simply cannot see the element to write one. Nothing to build,
+but it is the answer to "why not just support it".
+
+Hovering one during Add or Scan shows the same red dashed treatment a sandboxed frame gets (§16),
+labelled *cannot be read — closed shadow root*, and a scan that skips one says so rather than silently
+returning less. Silence is indistinguishable from a bug — which is exactly how this whole section came
+to be written.
+
+### Verification
+
+The same three layers frames got: fixtures in `tests/fixtures/`, every expression resolved in real
+Playwright and real Puppeteer by the fidelity specs, and the generated Python **run** in a real browser
+by `selenium.run.spec.ts` and `playwright-python.run.spec.ts`. Nothing here is believed until it has
+resolved against a real engine — Selenium's "css only from a shadow root" restriction included, which
+the run spec is the arbiter of.
