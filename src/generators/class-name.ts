@@ -16,19 +16,20 @@ export function classNameFor(url: string | null): string {
   let path: string;
   try {
     const parsed = new URL(url);
-    // The last meaningful path segment: /shop/checkout/ → checkout. Failing
-    // that the host, so example.com becomes ExampleComPage rather than nothing.
-    const segments = parsed.pathname.split('/').filter(Boolean);
-    path = segments.at(-1) ?? parsed.hostname;
+    // The last meaningful path segment: /shop/checkout/ → checkout.
+    const segment = parsed.pathname.split('/').filter(Boolean).at(-1);
+    path = segment
+      ? // Drop a file extension: checkout.html → checkout.
+        segment.replace(/\.[a-z0-9]+$/i, '')
+      : // No path at all, so name it after the site. `www` is noise nobody
+        // would put in a class name — the login page of www.facebook.com came
+        // out as WwwFacebookPage — and the TLD is no better.
+        parsed.hostname.replace(/^www\./i, '').replace(/\.[a-z0-9]+$/i, '');
   } catch {
     return FALLBACK;
   }
 
-  // Drop a file extension: checkout.html → checkout.
-  const words = path
-    .replace(/\.[a-z0-9]+$/i, '')
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean);
+  const words = path.split(/[^a-zA-Z0-9]+/).filter(Boolean);
   if (words.length === 0) return FALLBACK;
 
   const name = words.map((w) => w[0].toUpperCase() + w.slice(1)).join('');
