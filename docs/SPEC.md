@@ -569,10 +569,15 @@ EDIT (type = role)          EDIT (type = css)
 
 Selenium is unaffected — all its types stay single-field.
 
-### Disambiguation **[settled]**
+### Disambiguation — deferred, not built **[open]**
 
-When role+name matches more than one element, **scope under an ancestor** — Playwright's own idiom, and
-far more durable than a positional index or a generated CSS path.
+**What happens today:** a role+name that matches more than one element simply loses to the next
+candidate that *is* unique, which is almost always css. Two "About" links give
+`locator('a[href="/about"]')`. Unique, resolves, and brittle in exactly the way the idea below exists to
+avoid.
+
+**The idea, for after release.** Scope under an ancestor — Playwright's own idiom, and far more durable
+than a positional index or a generated CSS path:
 
 ```js
 // Two "About" links — nav and footer
@@ -580,10 +585,11 @@ page.getByRole('navigation').getByRole('link', { name: 'About', exact: true })
 page.getByRole('contentinfo').getByRole('link', { name: 'About', exact: true })
 ```
 
-The engine walks up to the nearest landmark or uniquely-identifiable ancestor and verifies that ancestor
-is itself unique. Scoping cannot save a genuinely repeated element — the delete button in the third table
-row — so the full chain is **scope → `.nth()` within the scope → CSS/XPath**, the tail being
-**[inferred]**.
+It is the largest behavioural change left: the IR needs a chained candidate, and the engine needs to
+find a scoping ancestor and verify that the ancestor is itself unique. Scoping cannot save a genuinely
+repeated element — the delete button in the third table row — so a full chain would be
+**scope → `.nth()` within the scope → CSS/XPath**, and whether `.nth()` belongs there at all is part of
+what is deferred.
 
 ### XPath needs its prefix **[settled]**
 
@@ -1006,8 +1012,11 @@ rather than confirmed, flagged so they are visible rather than silent:
 
 | § | Inferred |
 |---|---|
-| 12 | `.nth()` as the tail of the disambiguation chain |
+| 11 | The shape choice is not remembered between openings of the code dialog |
+| 12 | Class name taken from the last path segment of the URL |
 | 13 | Truncation at a word boundary |
-| 17 | Wrapper constructor shape; class name prefilled from title/URL |
 
-**Release blocker, unrelated to behaviour:** the real AMO `gecko.id` (see `PRD.md` NFR-6).
+**Deferred, and marked `[open]` where it is described:** ancestor scoping for an ambiguous role+name
+(§12). Not built, and the spec no longer reads as though it were.
+
+**Release blocker:** none outstanding. The AMO `gecko.id` is recorded and guarded (see `RELEASE-PLAN.md`).
