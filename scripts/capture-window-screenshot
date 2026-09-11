@@ -1,0 +1,65 @@
+#!/bin/sh
+# Capture a window and normalise it to a store screenshot. macOS only.
+#
+#   scripts/capture-window-screenshot model-chrome
+#     → click the window → ~/Desktop/model-chrome.png at 1280x800
+#
+#   scripts/capture-window-screenshot model-chrome "#ffffff"
+#     → same, on a white background instead of the default dark
+#
+# 1280x800 suits both stores: Chrome requires it (or 640x400) and caps a
+# listing at five screenshots; AMO takes it as its maximum and otherwise wants
+# the same 1.6:1 ratio. So one capture serves both, though the two listings
+# should show their own browser.
+#
+# Set the window to 1.6:1 first — `setup-chrome-for-screenshots` does — and it
+# fills the frame exactly. The script says how much of the frame was filled.
+#
+# Why not `sips -z 800 1280`: that forces the dimensions and DISTORTS anything
+# that is not already 1.6:1. A 1000x650 window came out squashed about 4%
+# vertically, which is invisible until you compare two captures side by side.
+# This scales to fit and centres on a filled canvas instead.
+#
+# The canvas also settles Chrome's "square corners, no padding (full bleed)"
+# rule: a macOS window grab is a rounded rectangle on transparency, which is
+# neither. Compositing onto an opaque background drops the alpha channel too.
+set -e
+name="${1:-1}"
+bg="${2:-#1e1e22}"
+out="${SHOT_DIR:-$HOME/Desktop}/$name.png"
+raw="$(mktemp -t pm-shot).png"
+
+python3 -c 'import PIL' 2>/dev/null || {
+  echo "This needs Pillow: python3 -m pip install --user Pillow" >&2
+  exit 1
+}
+
+# -o drops the drop shadow, so the capture is exactly the window.
+screencapture -o -w "$raw"
+
+python3 - "$bg" "$out" "$raw" <<'PY'
+import sys
+from PIL import Image
+
+_, bg, out, raw = sys.argv
+W, H = 1280, 800
+
+src = Image.open(raw)
+# Scale to fit inside the frame, preserving aspect.
+scale = min(W / src.width, H / src.height)
+size = (round(src.width * scale), round(src.height * scale))
+src = src.convert('RGBA').resize(size, Image.LANCZOS)
+
+canvas = Image.new('RGB', (W, H), bg)
+# `src` as its own mask composites the rounded corners onto the background
+# rather than pasting black squares where the alpha was.
+canvas.paste(src, ((W - size[0]) // 2, (H - size[1]) // 2), src)
+canvas.save(out)
+
+fill = 100 * (size[0] * size[1]) / (W * H)
+print(f'{W}x{H}  window fills {fill:.0f}%  ->  {out}')
+if fill < 85:
+    print('  ^ a lot of background. Size the window to 1.6:1 and it fills the frame.')
+PY
+
+rm -f "$raw"

@@ -50,6 +50,37 @@ on a machine that has it, which hides exactly the version problems `minimum_chro
 catch. Set `CHROME_PATH` to override. The profile lives under `.wxt/` rather than being thrown away,
 so settings and logins survive a restart; delete `.wxt/chrome-profile` to start clean.
 
+## Store screenshots
+
+macOS only. Three scripts, because doing this by hand goes wrong in ways that are invisible until the
+images are side by side.
+
+```sh
+npm run build                             # or build:firefox
+scripts/setup-chrome-for-screenshots      # or setup-firefox-for-screenshots
+scripts/capture-window-screenshot model-chrome
+```
+
+The setup scripts launch the browser on a **dedicated profile**, so no bookmarks bar, other extensions,
+profile avatar or omnibox history reach the frame — and size the window to 1000×625, which is 1.6:1.
+Load the built extension by hand as above: Chrome shows a yellow *"unsupported command-line flag"*
+infobar if `--load-extension` is used, and it lands in every capture.
+
+`capture-window-screenshot` grabs the window you click and writes a 1280×800 PNG to the Desktop
+(`SHOT_DIR` to change that). It scales to fit and composites onto an opaque canvas rather than
+stretching, because:
+
+- `sips -z 800 1280` forces the dimensions and **distorts** anything not already 1.6:1 — a 1000×650
+  window came out squashed about 4%, invisible until two captures are compared;
+- a macOS window grab is a rounded rectangle on transparency, and Chrome's rule is *square corners, no
+  padding (full bleed)*. Compositing drops the alpha with it.
+
+1280×800 serves both stores — Chrome requires it and caps a listing at **five**; AMO takes it as its
+maximum and otherwise wants the same 1.6:1. Each store should still show **its own** browser.
+
+The window is small to work in. Build the model in a full-size window and resize just before capturing;
+the model lives in `storage.session` and survives it.
+
 ## Verification
 
 **Automated tests are a net, not the criterion for done.** Nothing is complete until it has been
