@@ -82,6 +82,12 @@ exploited.
   Firefox's `match_about_blank` only injects where the principal is *inherited*, and it has no
   equivalent of Chrome's `match_origin_as_fallback`. Nothing to fix — but it works on Chrome, so a
   Chrome-only hand-test will not show it. `tests/fixtures/frames.html` has one to check against.
+- **If the `npm run dev` server stops, the extension keeps running and quietly stops working.** In dev
+  the manifest has *no* `content_scripts`: WXT registers them at runtime, and the background bundle
+  holds none of the data — no `matches`, no `allFrames`, not even the script path. It fetches all of it
+  from the dev server. Kill the server and every page reports *"Page Modeller can't reach this page"*,
+  and reloading the tab cannot help, because nothing is missing from the tab. Check the dev server is
+  still up before believing the extension is broken.
 - **`browser.tabs` is undefined in a Firefox DevTools panel.** A devtools page is granted only
   `devtools.*`, `runtime.*` and a few others. Chrome tolerates the direct call, so a regression is
   invisible on Chrome and in every test we can run. The panel goes through the background relay
