@@ -34,9 +34,9 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-async function render(model: TabModel, shape?: string) {
+async function render(model: TabModel, shape?: string, className?: string) {
   wrapper = mount(CodeDialog, {
-    props: { model, shape },
+    props: { model, shape, className },
     global: {
       plugins: [Quasar],
       // `v-close-popup` is a Quasar directive, and registering the components
@@ -111,6 +111,33 @@ describe('CodeDialog', () => {
     // would be worse than one opening on its default.
     await render(modelWith('playwright-ts', { name: 'Email' }), 'methods');
     expect(codeText()).toContain('export class');
+  });
+
+  it('names the class from the URL, and lets you say otherwise', async () => {
+    // `/checkout/step2` yields `Step2Page`, and the name only ever appears in
+    // generated code — so correcting it afterwards means correcting it again
+    // on every regeneration.
+    const model = modelWith('playwright-ts', { name: 'Email' });
+    model.url = 'https://example.com/account/login.html';
+    await render(model);
+    expect(codeText()).toContain('export class LoginPage {');
+
+    // QDialog teleports, so a second mount would sit alongside the first.
+    wrapper!.unmount();
+    document.body.innerHTML = '';
+    await render(model, undefined, 'CheckoutPage');
+    expect(codeText()).toContain('export class CheckoutPage {');
+    // The model is untouched: this is about the code being read, not the
+    // elements captured.
+    expect(model.className).toBeUndefined();
+  });
+
+  it('offers no name where no class is emitted', async () => {
+    const model = modelWith('playwright-ts', { name: 'Email' });
+    await render(model);
+    expect(document.body.querySelector('[data-testid="code-class-name"]')).not.toBeNull();
+    await chooseShape('Locators only');
+    expect(document.body.querySelector('[data-testid="code-class-name"]')).toBeNull();
   });
 
   it('switches shape without touching the model', async () => {

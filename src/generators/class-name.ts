@@ -5,6 +5,11 @@
 // afterwards; being roughly right beats being blank.
 const FALLBACK = 'GeneratedPage';
 
+/** The override if there is one, otherwise derived from the URL. */
+export function classNameOf(model: { url: string | null; className?: string }): string {
+  return model.className?.trim() || classNameFor(model.url);
+}
+
 export function classNameFor(url: string | null): string {
   if (!url) return FALLBACK;
 

@@ -6,14 +6,14 @@
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { playwrightPyExpr } from '../locators/display';
 import { playwrightPyFramePrefix } from '../locators/frames';
-import { classNameFor } from './class-name';
+import { classNameOf } from './class-name';
 import { pythonName, snake } from './names';
 
 const expr = (el: ModelElement) =>
   `page.${playwrightPyFramePrefix(el.framePath)}${playwrightPyExpr(activeCandidate(el))}`;
 
 export function generatePlaywrightPythonPageObject(model: TabModel): string {
-  const className = classNameFor(model.url);
+  const className = classNameOf(model);
   const head = (locatorImport: boolean) => [
     `from playwright.sync_api import ${locatorImport ? 'Locator, Page' : 'Page'}`,
     '',

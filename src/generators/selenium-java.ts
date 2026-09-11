@@ -7,7 +7,7 @@ import type { LocatorCandidate } from '../engine/types';
 import { classify, isImage } from './classify';
 import { javaMethod, javaName, lowerCamel } from './names';
 import { doubleQuoted } from '../quote';
-import { classNameFor } from './class-name';
+import { classNameOf } from './class-name';
 import { frameContext, frameNote, isOpaque } from '../locators/frames';
 import type { FrameStep } from '../engine/types';
 
@@ -231,7 +231,7 @@ export function generateSeleniumJavaPageObject(model: TabModel): string {
     'org.openqa.selenium.WebElement',
     ...(buckets.has('select') || buckets.has('multiSelect') ? ['org.openqa.selenium.support.ui.Select'] : []),
   ];
-  const className = classNameFor(model.url);
+  const className = classNameOf(model);
 
   return [
     ...imports.map((i) => `import ${i};`),

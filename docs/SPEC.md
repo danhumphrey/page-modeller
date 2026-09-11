@@ -639,8 +639,14 @@ Field names are the element name, lower-camel. Assignment reads the constructor 
 not `this.page`: the parameter property is not assigned until the constructor body completes.
 
 Class name comes from the last path segment of the model's URL — `/account/login.html` → `LoginPage`,
-`facebook.com` → `FacebookPage`, no URL → `GeneratedPage`. Rename it; the tool cannot know what you call
-the page. **[inferred]**
+`facebook.com` → `FacebookPage`, no URL → `GeneratedPage`.
+
+**It is editable in the code dialog**, because the derivation is a guess: `/checkout/step2` yields
+`Step2Page` and `/p/B08N5WRWNW` yields worse. The name only ever appears in generated code, so
+correcting it after copying means correcting it again on every regeneration. The field shows the
+derived name as its placeholder — that is what typing nothing gives you — and is offered only by the
+shapes that emit a class. Held for the panel session like the shape, and not on the model: it belongs
+to the code being read, not to the elements captured. **[settled]**
 
 No banner comments. Field names carry the same information in a fifth of the lines.
 
@@ -1005,8 +1011,7 @@ reviewer notices.
 unchanged. Python does not: every definition gains `self` and every call site a `self.` prefix, so the
 generator is receiver-aware rather than wrapped. **[settled]**
 
-Class name is derived as it is for Playwright (§12). Making it an **editable field** in the dialog is
-the obvious next step and is not built. **[open]**
+Class name is derived as it is for Playwright (§12), and editable in the dialog the same way.
 
 ## 18. Still open
 
@@ -1015,7 +1020,6 @@ rather than confirmed, flagged so they are visible rather than silent:
 
 | § | Inferred |
 |---|---|
-| 12 | Class name taken from the last path segment of the URL |
 | 13 | Truncation at a word boundary |
 
 **Deferred, and marked `[open]` where it is described:** ancestor scoping for an ambiguous role+name

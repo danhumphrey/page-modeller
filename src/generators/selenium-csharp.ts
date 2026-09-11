@@ -9,7 +9,7 @@ import { byParts, type ByKind } from './selenium';
 import { classify, isImage } from './classify';
 import { underscoreCamel } from './names';
 import { doubleQuoted } from '../quote';
-import { classNameFor } from './class-name';
+import { classNameOf } from './class-name';
 import { frameContext, frameNote, isOpaque } from '../locators/frames';
 import type { FrameStep } from '../engine/types';
 
@@ -189,7 +189,7 @@ export function generateSeleniumCSharpPageObject(model: TabModel): string {
     'OpenQA.Selenium',
     ...(buckets.has('select') || buckets.has('multiSelect') ? ['OpenQA.Selenium.Support.UI'] : []),
   ];
-  const className = classNameFor(model.url);
+  const className = classNameOf(model);
 
   return [
     ...usings.map((u) => `using ${u};`),

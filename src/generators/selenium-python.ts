@@ -9,7 +9,7 @@ import { byParts, type ByKind } from './selenium';
 import { classify, isImage } from './classify';
 import { snake, upperSnake } from './names';
 import { doubleQuoted } from '../quote';
-import { classNameFor } from './class-name';
+import { classNameOf } from './class-name';
 import { frameContext, frameNote, isOpaque } from '../locators/frames';
 import type { FrameStep } from '../engine/types';
 
@@ -221,7 +221,7 @@ export function generateSeleniumPythonPageObject(model: TabModel): string {
     ...imports,
     '',
     '',
-    `class ${classNameFor(model.url)}:`,
+    `class ${classNameOf(model)}:`,
     '    def __init__(self, driver):',
     '        self.driver = driver',
     // One blank line between methods, per PEP 8 — two is for top level.
