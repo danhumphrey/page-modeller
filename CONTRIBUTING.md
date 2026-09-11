@@ -50,28 +50,6 @@ on a machine that has it, which hides exactly the version problems `minimum_chro
 catch. Set `CHROME_PATH` to override. The profile lives under `.wxt/` rather than being thrown away,
 so settings and logins survive a restart; delete `.wxt/chrome-profile` to start clean.
 
-## Hand-testing several branches at once
-
-```sh
-scripts/build-rc                    # every open PR against v3-rewrite
-scripts/build-rc v3-foo v3-bar      # just these
-```
-
-Merges the branches onto `v3-rewrite` in a throwaway worktree, builds both
-browsers, runs the manifest checks, and writes `rc/chrome` and `rc/firefox` —
-both gitignored. Load those unpacked.
-
-Worth it because the manual gate is per *combination*, not per branch: several
-PRs are usually open at once, and on Firefox and the Chromium forks there is no
-automation at all. A conflict aborts the build and names the branch, which is
-itself a useful signal — it means two open PRs disagree.
-
-Whatever you have checked out is untouched.
-
-> **Remove and re-add the extension rather than reloading it.** Chromium's
-> extension error list is sticky: old errors survive a reload and read as new
-> ones, which is how a fixed problem looked unfixed for half an hour.
-
 ## Store screenshots
 
 macOS only. Three scripts, because doing this by hand goes wrong in ways that are invisible until the

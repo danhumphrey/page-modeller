@@ -30,9 +30,3 @@ node_modules
 # upload the listing points at; the source file is a recording-session
 # artifact, and an 11 MB mp4 in git is permanent.
 media/*.mp4
-
-# Release-candidate builds from `scripts/build-rc`: several open branches
-# merged and built together for a hand-test, plus the throwaway worktree the
-# merge happens in.
-/rc
-/.rc-build
