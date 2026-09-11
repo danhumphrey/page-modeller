@@ -46,9 +46,16 @@ test('the generated Playwright Python resolves every element it describes', asyn
   test.skip(!ready && !REQUIRE_FULL_SUITE, 'run `npm run fetch:test-deps` for the Python venv');
   expect(ready, 'PM_REQUIRE_FULL_SUITE is set but .test-venv is missing').toBe(true);
 
-  const fixtures = ['login.html', 'widgets.html', 'ambiguous.html', 'edgecases.html'];
+  // shadow.html included because Playwright's own engines pierce, so the chain
+  // this generator emits is not what makes the element reachable — it is what
+  // scopes one of two identical components, and nothing but a real run proves
+  // it scopes to the right one (SPEC §19).
+  const fixtures = ['login.html', 'widgets.html', 'ambiguous.html', 'edgecases.html', 'shadow.html'];
   const failures: string[] = [];
   const exercised = new Set<string>();
+  // Counted so a model that quietly stopped containing shadow elements cannot
+  // pass this by containing fewer things (SPEC §19).
+  let shadowElements = 0;
 
   for (const fixture of fixtures) {
     const url = `http://localhost:${PORT}/${fixture}`;
@@ -76,6 +83,7 @@ test('the generated Playwright Python resolves every element it describes', asyn
       } as ModelElement);
     }
     for (const el of model.elements) exercised.add(el.candidates[el.selectedIndex].candidate.kind);
+    shadowElements += model.elements.filter((el) => (el.shadowPath?.length ?? 0) > 0).length;
 
     const out = runInPython(generatePlaywrightPythonPageObject(model), expected, url);
     if (out.trim()) failures.push(`${fixture}\n${out.trim()}`);
@@ -97,6 +105,7 @@ test('the generated Playwright Python resolves every element it describes', asyn
   }
 
   expect(failures.join('\n\n'), 'generated Playwright Python did not resolve as promised').toBe('');
+  expect(shadowElements, 'elements reached through a shadow root').toBeGreaterThan(4);
 
   // What this actually proved, so "verified" cannot quietly come to mean less.
   expect([...exercised].sort(), 'locator types exercised against a real browser').toEqual([
