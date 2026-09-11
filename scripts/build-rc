@@ -1,0 +1,87 @@
+#!/bin/sh
+# Build a release candidate: v3-rewrite with open work merged on top.
+#
+#   scripts/build-rc                        # every open PR against v3-rewrite
+#   scripts/build-rc v3-foo v3-bar          # just these branches
+#
+# Writes rc/chrome and rc/firefox, both gitignored. Load those unpacked to
+# hand-test several in-flight branches together — which is the only way to test
+# a combination before merging, and the only way to test at all on a browser no
+# automation here can drive.
+#
+# The merge happens in a throwaway worktree under .rc-build, so whatever you
+# have checked out is untouched. A conflict aborts and says which branch caused
+# it; that is a real signal, since it means two open PRs disagree.
+set -e
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+work="$root/.rc-build"
+out="$root/rc"
+base="${PM_RC_BASE:-origin/v3-rewrite}"
+
+cd "$root"
+git fetch origin --quiet
+
+branches="$*"
+if [ -z "$branches" ]; then
+  command -v gh >/dev/null 2>&1 || {
+    echo "No branches given and gh is not installed. Pass branch names." >&2
+    exit 1
+  }
+  branches=$(gh pr list --base "${base#origin/}" --state open --json headRefName --jq '.[].headRefName' | tr '\n' ' ')
+  [ -n "$branches" ] || echo "No open PRs against ${base#origin/}; building the base alone."
+fi
+
+# A worktree from a previous run would still be on the old commits.
+git worktree remove --force "$work" 2>/dev/null || true
+rm -rf "$work"
+git worktree add -B rc-build "$work" "$base" >/dev/null
+
+merged=""
+for b in $branches; do
+  ref="origin/$b"
+  git -C "$work" rev-parse --verify --quiet "$ref" >/dev/null || {
+    echo "No such branch: $ref" >&2
+    git worktree remove --force "$work"
+    exit 1
+  }
+  if git -C "$work" merge --no-edit "$ref" >/dev/null 2>&1; then
+    merged="$merged $b"
+  else
+    echo "Conflict merging $b — two open branches disagree. Resolve before shipping." >&2
+    git -C "$work" merge --abort || true
+    git worktree remove --force "$work"
+    exit 1
+  fi
+done
+
+# WXT needs node_modules beside the sources; sharing the real one beats a
+# second install of the same tree.
+ln -sfn "$root/node_modules" "$work/node_modules"
+
+cd "$work"
+npx wxt prepare >/dev/null 2>&1
+npx wxt build >/dev/null
+npx wxt build -b firefox >/dev/null
+npm run check:manifests
+
+rm -rf "$out"
+mkdir -p "$out"
+cp -R "$work/.output/chrome-mv3" "$out/chrome"
+cp -R "$work/.output/firefox-mv3" "$out/firefox"
+
+cd "$root"
+git worktree remove --force "$work"
+
+version=$(node -p "require('./package.json').version")
+cat <<EOF
+
+Release candidate $version — $base +${merged:- nothing}
+
+  Chrome   chrome://extensions → Developer mode → Load unpacked → $out/chrome
+  Firefox  about:debugging#/runtime/this-firefox → Load Temporary Add-on →
+           $out/firefox/manifest.json
+
+Remove and re-add rather than reloading: Chromium's extension error list is
+sticky, so old errors survive a reload and look like new ones.
+EOF
