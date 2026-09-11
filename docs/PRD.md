@@ -95,7 +95,7 @@ Models — with first-class modern **Playwright accessibility locators**. Determ
   live. Both are the highest floor anything in v3 needs — MV3 itself is Chrome 88 / Firefox 109, and
   `menus` with `contexts: ['action']` is Chrome 85 / Firefox 109. Shipped source uses no JavaScript newer
   than `??=` and `replaceChildren` (2020).
-- NFR-6 Ship as in-place update to existing CWS + AMO listings; preserve extension IDs (CWS item `ejgkdhekcepfgdghejpkmbfjgnioejak`, AMO `gecko.id` — **not yet recorded, read it off the AMO Developer Hub**; `v3/wxt.config.ts` carries a placeholder). MV3 on both browsers, as v2.5.1 already ships. User storage persists across upgrade.
+- NFR-6 Ship as in-place update to existing CWS + AMO listings; preserve extension IDs (CWS item `ejgkdhekcepfgdghejpkmbfjgnioejak`, AMO `gecko.id` `{1e34b9b3-8f45-415e-9586-c7d5de0d0aff}`, both now in `wxt.config.ts` and guarded by `scripts/check-manifests.mjs`). MV3 on both browsers, as v2.5.1 already ships. User storage persists across upgrade.
 
 ## 6. Out of scope (v1)
 Action recording/replay · LLM-assisted naming · **user-editable code templates** · object-repository /

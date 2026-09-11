@@ -1,7 +1,0 @@
-/tests/compile/lib
-/tests/compile/csharp/obj
-/tests/compile/csharp/bin
-/tests/compile/ts/*.ts
-/tests/compile/csharp/Generated.cs
-/tests/compile/csharp/GeneratedPageObject.cs
-/.test-venv

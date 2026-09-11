@@ -7,59 +7,18 @@ on:
 
 jobs:
   test:
-    name: Test with coverage
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - run: npm ci
-
-      - run: npm run lint
-
-      - run: npm run prettier:check
-
-      - run: npm run test:coverage
-
-      - run: npm run build
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage/
-          retention-days: 14
-
-  v3:
-    # The v3 rewrite has its own tree, package.json and toolchain (CLAUDE.md).
-    # It runs here because this is the only CI: `v3/.github/` would be ignored,
-    # GitHub reads workflows from the repo root only.
-    #
-    # No `paths:` filter on purpose. A skipped job reports as neither passing
-    # nor failing, which is exactly the ambiguity a required check should not
-    # have — and the job is a few minutes.
-    name: v3
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: v3
-    steps:
-      - uses: actions/checkout@v4
-
-      # 24, not the 20 the v2.5.1 job uses. jsdom's bundled undici calls
-      # `webidl.util.markAsUncloneable`, which is not there on the runner's
-      # Node 20, and every jsdom component test fails to start. 24 is also what
-      # v3 is developed against, so CI and the desk agree.
+      # jsdom's bundled undici calls
+      # `webidl.util.markAsUncloneable`, which is not there on Node 20, and
+      # every jsdom component test fails to start.
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: v3/package-lock.json
 
       # javac and dotnet compile the generated Selenium against the real
       # libraries; python3 parses the generated Python. Pinned rather than
@@ -82,7 +41,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('v3/package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       # chromium only: the extension E2E and the Puppeteer fidelity spec both
       # drive it, and Firefox cannot be automated here at all (SPIKE6).
@@ -104,7 +63,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: v3-playwright-report
+          name: playwright-report
           path: |
-            v3/test-results/
+            test-results/
           retention-days: 14
