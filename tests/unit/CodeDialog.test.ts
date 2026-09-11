@@ -34,9 +34,9 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-async function render(model: TabModel) {
+async function render(model: TabModel, shape?: string) {
   wrapper = mount(CodeDialog, {
-    props: { model },
+    props: { model, shape },
     global: {
       plugins: [Quasar],
       // `v-close-popup` is a Quasar directive, and registering the components
@@ -91,6 +91,26 @@ describe('CodeDialog', () => {
     // No framework has one today; the row must still not appear if one does.
     await render(modelWith('selenium-java', { name: 'Email' }));
     expect(document.body.querySelectorAll('[data-testid="code-shape"]').length).toBe(1);
+  });
+
+  it('reopens on the shape last chosen', async () => {
+    // Someone who works in locators-only should not pick it every time.
+    await render(modelWith('selenium-java', { name: 'Email' }));
+    await chooseShape('Locators only');
+    expect(wrapper!.emitted('update:shape')?.at(-1)).toEqual(['locators']);
+
+    // What the panel hands back next time.
+    wrapper!.unmount();
+    document.body.innerHTML = '';
+    await render(modelWith('selenium-java', { name: 'Email' }), 'locators');
+    expect(codeText()).toContain('private final By email');
+  });
+
+  it('falls back when the remembered shape is not on offer', async () => {
+    // `methods` means nothing to Playwright, and a dialog opening on nothing
+    // would be worse than one opening on its default.
+    await render(modelWith('playwright-ts', { name: 'Email' }), 'methods');
+    expect(codeText()).toContain('export class');
   });
 
   it('switches shape without touching the model', async () => {

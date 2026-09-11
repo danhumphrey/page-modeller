@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="open" @hide="$emit('close')">
+  <q-dialog v-model="open" @hide="emit('close')">
     <q-card class="code-card">
       <q-toolbar class="dialog-header">
         <q-toolbar-title class="text-subtitle1">{{ frameworkLabel }}</q-toolbar-title>
@@ -36,25 +36,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { frameworkById } from '@/src/frameworks';
 import { generateCode, shapesFor } from '@/src/generators';
 import type { TabModel } from '@/src/model';
 
-const props = defineProps<{ model: TabModel }>();
-defineEmits<{ close: [] }>();
+const props = defineProps<{ model: TabModel; shape?: string }>();
+const emit = defineEmits<{ close: []; 'update:shape': [id: string] }>();
 
 const $q = useQuasar();
 const open = ref(true);
 
 const frameworkLabel = computed(() => frameworkById(props.model.frameworkId).label);
 
-// Dialog-local, not stored on the model: which shape you want to read is a
-// property of this glance at the code, not of the elements you have captured.
+// Not stored on the model: which shape you want to read is a property of this
+// glance at the code, not of the elements you have captured. Handed up to the
+// panel so it survives closing the dialog — someone who works in locators-only
+// should not re-pick it every time — but not to settings: it lasts as long as
+// the panel does, and no longer.
 const shapes = computed(() => shapesFor(props.model.frameworkId));
 const shapeOptions = computed(() => shapes.value.map((s) => ({ label: s.label, value: s.id })));
-const shapeId = ref(shapes.value[0]?.id);
+const shapeId = ref(
+  // A remembered shape the current framework does not offer falls back to its
+  // first: `methods` means nothing to Playwright.
+  shapes.value.some((s) => s.id === props.shape) ? (props.shape as string) : shapes.value[0]?.id
+);
+watch(shapeId, (id) => id && emit('update:shape', id));
 
 const code = computed(() => generateCode(props.model, shapeId.value));
 

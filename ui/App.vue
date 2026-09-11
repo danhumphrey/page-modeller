@@ -39,7 +39,13 @@
           @remove="removeElement"
         />
 
-        <CodeDialog v-if="showCode" :model="model" @close="showCode = false" />
+        <CodeDialog
+          v-if="showCode"
+          :model="model"
+          :shape="codeShape"
+          @update:shape="codeShape = $event"
+          @close="showCode = false"
+        />
 
         <PickingHelpDialog
           v-if="helpMode"
@@ -102,6 +108,8 @@ const isScanning = ref(false);
 const isAdding = ref(false);
 const editing = ref<ModelElement | undefined>();
 const showCode = ref(false);
+/** Survives closing the dialog, not reloading the panel (SPEC §11). */
+const codeShape = ref<string | undefined>();
 
 const rows = computed<ModelRow[]>(() =>
   model.value.elements.map((el) => ({

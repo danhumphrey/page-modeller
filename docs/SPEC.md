@@ -362,8 +362,11 @@ Puppeteer's page object is TypeScript, emitted by the same code as Playwright's 
 the selector syntax differ. Puppeteer ships its own types and its docs are TS-first; a JS user deletes
 the annotations. **[settled]**
 
-Shape ids are shared, so `Locators only` means the same thing in every framework. The choice is not
-remembered between openings of the dialog. **[inferred]**
+Shape ids are shared, so `Locators only` means the same thing in every framework — and the choice is
+**remembered for as long as the panel lives**, so someone who works in locators-only does not re-pick
+it every time. Not a setting: it lasts the session and no longer. A remembered shape the current
+framework does not offer falls back to that framework's first, since `methods` means nothing to
+Playwright. **[settled]**
 
 **Locators only** exists for every framework: locator declarations and nothing else, for the many teams
 with their own page-object conventions. Our locators, none of our opinions — and the one output still
@@ -1012,7 +1015,6 @@ rather than confirmed, flagged so they are visible rather than silent:
 
 | § | Inferred |
 |---|---|
-| 11 | The shape choice is not remembered between openings of the code dialog |
 | 12 | Class name taken from the last path segment of the URL |
 | 13 | Truncation at a word boundary |
 
