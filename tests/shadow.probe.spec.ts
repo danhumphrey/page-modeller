@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import puppeteer from 'puppeteer-core';
-import { chromium } from '@playwright/test';
+import { launchPuppeteer } from './puppeteer-browser';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -81,7 +80,7 @@ test.describe('Playwright: what pierces an open shadow root', () => {
 test('Puppeteer: plain css does not pierce, >>> does', async () => {
   // Driven through Playwright's bundled Chromium so this needs no separate
   // browser download, the same arrangement puppeteer.fidelity.spec.ts uses.
-  const browser = await puppeteer.launch({ executablePath: chromium.executablePath(), headless: true });
+  const browser = await launchPuppeteer();
   try {
     const page = await browser.newPage();
     await page.goto(FIXTURE);

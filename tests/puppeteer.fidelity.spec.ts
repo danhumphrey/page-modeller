@@ -1,5 +1,6 @@
-import { test, expect, chromium } from '@playwright/test';
-import puppeteer, { type Browser } from 'puppeteer-core';
+import { test, expect } from '@playwright/test';
+import { type Browser } from 'puppeteer-core';
+import { launchPuppeteer } from './puppeteer-browser';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { puppeteerSelector } from '../src/locators/display';
@@ -22,13 +23,7 @@ const PUPPETEER_KINDS = new Set(frameworkById('puppeteer').locatorTypes);
 test('Puppeteer resolves every selector we generate for it', async () => {
   let browser: Browser | undefined;
   try {
-    browser = await puppeteer.launch({
-      executablePath: chromium.executablePath(),
-      headless: true,
-      // Chrome's sandbox needs kernel privileges a CI container does not grant.
-      // Playwright passes this for us; puppeteer-core does not.
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    browser = await launchPuppeteer();
   } catch (e) {
     const why = `puppeteer-core could not launch chromium: ${String(e).split('\n')[0]}`;
     // Silently skipping is how this check stops running without anyone
