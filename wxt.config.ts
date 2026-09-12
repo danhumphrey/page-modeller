@@ -61,7 +61,10 @@ export default defineConfig({
     // Shown under the icon in the Chrome store, where the full name will not
     // fit. Carried over from v2.5.1 unchanged.
     short_name: 'PageModeller',
-    description: 'Pick a DOM element and generate a verified Playwright Page Object Model.',
+    // Shown in both stores and in about:addons, so it is the store summary
+    // verbatim (docs/STORE-LISTING.md) rather than a second wording to keep in
+    // step. Chrome caps this at 132 characters.
+    description: 'Browser DevTools extension for modelling web pages for automation.',
     // `sidePanel` is Chromium-only and is rejected by Firefox; WXT adds it to
     // the Chrome build itself when it sees the sidepanel entrypoint.
     // The side panel API is Chrome 114+, and it is the highest floor anything
