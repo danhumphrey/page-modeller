@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { baseName, uniqueName } from '../../src/engine/naming';
+import { safeName } from '../../src/engine/candidates';
 
 let used: Set<string>;
 beforeEach(() => {
@@ -130,5 +131,43 @@ describe('uniqueName', () => {
   it('reserves the name it returns', () => {
     uniqueName('About', used);
     expect(used.has('About')).toBe(true);
+  });
+});
+
+describe('a validity marker in the label (SPEC §13)', () => {
+  it('is dropped from the derived name', () => {
+    // Etsy's labels are `Email address*`, where the asterisk carries an
+    // accessible "Required" — so every required field on the form came out as
+    // SomethingRequired.
+    expect(baseName(el('<label>Email address<span aria-label="Required">*</span><input data-t></label>'))).toBe(
+      'EmailAddress'
+    );
+  });
+
+  it('does not change the accessible name the locator uses', () => {
+    // The whole reason this is safe: the name is an identifier a user can
+    // rename, the locator is not. getByLabel has to keep the word to match.
+    const input = el('<label>Email address<span aria-label="Required">*</span><input data-t></label>');
+    // Concatenated without a space here because the markup has none between
+    // them — which is the point: the marker is in the accessible name however
+    // it is spaced, and only the derived name drops it.
+    expect(safeName(input)).toBe('Email addressRequired');
+  });
+
+  it('keeps a name that is only the marker', () => {
+    // Nothing left to call it otherwise, and `Element` would say less.
+    expect(baseName(el('<label>Required<input data-t></label>'))).toBe('Required');
+  });
+
+  it('drops one marker, not a run of them', () => {
+    expect(baseName(el('<label>Password Required Required<input data-t></label>'))).toBe('PasswordRequired');
+  });
+
+  it('leaves the word alone anywhere but the end', () => {
+    expect(baseName(el('<label>Required fields notice<input data-t></label>'))).toBe('RequiredFieldsNotice');
+  });
+
+  it('handles Optional the same way', () => {
+    expect(baseName(el('<label>Company name (optional)<input data-t></label>'))).toBe('CompanyName');
   });
 });

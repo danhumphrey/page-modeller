@@ -684,6 +684,15 @@ Four agreed changes: **[settled]**
 Keep v2.5.1's **plain names** by default — `About`, not `AboutLink`. The user can rename before
 exporting.
 
+**A trailing validity marker is dropped.** Etsy's sign-in labels are `Email address*`, where the
+asterisk carries an accessible *"Required"* — so the accname is literally "Email address Required" and
+every required field on the form was named `SomethingRequired`. One trailing `Required` or `Optional`
+comes off, and only when something is left to be called: a field genuinely labelled *Required* keeps
+its name. **[settled]**
+
+The **accessible name is untouched**, because `getByLabel('Email address Required')` has to keep the
+word to match anything. The name is an identifier the user can rename; the locator is not.
+
 **`appendTypeToName`** (§14, off by default) turns the suffix on: `FeelTheMagic` becomes
 `FeelTheMagicLink`. The vocabulary is the one test authors use rather than raw ARIA — `textbox`
 and `searchbox` become `Input`, `combobox` and `listbox` become `Select`, `img` becomes `Image` — since

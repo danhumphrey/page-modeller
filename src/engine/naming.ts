@@ -115,6 +115,32 @@ function toPascalCase(raw: string): string {
   return words.map((w) => w[0].toUpperCase() + w.slice(1)).join('');
 }
 
+/**
+ * Validity markers a form puts in its label, which the accessible name picks up
+ * and nobody wants in an identifier (SPEC §13).
+ *
+ * Etsy's sign-in labels are `Email address*`, where the asterisk carries an
+ * accessible "Required" — so the accname is literally "Email address Required"
+ * and the field was named `EmailAddressRequired`. The same markup gives every
+ * required field on a form the same suffix, which is noise on all of them.
+ *
+ * Stripped from the NAME only. The accessible name is unchanged, because
+ * `getByLabel('Email address Required')` has to keep the word to match — the
+ * name is an identifier the user can rename, the locator is not.
+ */
+const VALIDITY_SUFFIX = /(Required|Optional)$/;
+
+/**
+ * Drop one trailing marker, and only when something is left to be called.
+ *
+ * One, not all: a field genuinely called "Required" keeps its name, and
+ * "PasswordRequiredRequired" is a doubled marker rather than a word.
+ */
+function dropValiditySuffix(name: string): string {
+  const stripped = name.replace(VALIDITY_SUFFIX, '');
+  return stripped === '' ? name : stripped;
+}
+
 /** Truncate at a word boundary rather than mid-word (SPEC §13). */
 function truncate(name: string): string {
   if (name.length <= MAX_NAME_LENGTH) return name;
@@ -132,7 +158,7 @@ function clean(raw: string): string {
   // Defensive: accname already normalises whitespace, so this only bites on a
   // raw attribute (placeholder, name, id) that contains a newline.
   const firstLine = raw.split(/\r\n|\r|\n/)[0];
-  let name = toPascalCase(firstLine);
+  let name = dropValiditySuffix(toPascalCase(firstLine));
   if (!name) return '';
   // Identifiers cannot start with a digit.
   if (/^\d/.test(name)) {
