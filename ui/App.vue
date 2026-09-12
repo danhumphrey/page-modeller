@@ -514,7 +514,7 @@ function notYet(what: string) {
   flex-wrap: wrap;
   padding: 6px 12px;
   font-size: 12px;
-  color: var(--pm-muted);
+  color: var(--pm-text-muted);
   border-bottom: 1px solid var(--pm-rule);
 }
 

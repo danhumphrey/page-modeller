@@ -134,7 +134,7 @@ function onHide() {
 
 .keys dd {
   margin: 0;
-  color: var(--pm-muted);
+  color: var(--pm-text-muted);
   line-height: 1.5;
 }
 

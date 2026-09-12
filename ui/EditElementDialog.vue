@@ -21,14 +21,14 @@
              it is found within that frame. Editing it would be editing the
              page. Shown because two elements can otherwise look identical
              (SPEC §16). -->
-        <div v-if="framePath.length" class="frame-row" data-testid="edit-frame">
-          <span class="frame-label">Frame</span>
-          <span class="frame-chain">
+        <div v-if="framePath.length" class="meta-field" data-testid="edit-frame">
+          <div class="meta-label">Frame</div>
+          <div class="meta-value">
             <template v-for="(step, i) in framePath" :key="i">
-              <span v-if="i > 0" class="frame-sep">›</span>
+              <span v-if="i > 0" class="meta-sep">›</span>
               <code>{{ step }}</code>
             </template>
-          </span>
+          </div>
         </div>
         <div v-if="frameOpaque" class="frame-warn" data-testid="edit-frame-opaque">
           A frame above this one is cross-origin, so the chain starts inside it.
@@ -39,14 +39,14 @@
              component, so editing it would be editing the page. Shown because
              it IS part of the generated locator, and until this the only way
              to discover that was to open the code dialog (SPEC §19). -->
-        <div v-if="shadowPath.length" class="frame-row" data-testid="edit-shadow">
-          <span class="frame-label">Shadow</span>
-          <span class="frame-chain">
+        <div v-if="shadowPath.length" class="meta-field" data-testid="edit-shadow">
+          <div class="meta-label">Shadow</div>
+          <div class="meta-value">
             <template v-for="(step, i) in shadowPath" :key="i">
-              <span v-if="i > 0" class="frame-sep">›</span>
+              <span v-if="i > 0" class="meta-sep">›</span>
               <code>{{ step }}</code>
             </template>
-          </span>
+          </div>
         </div>
 
         <div class="locator-row">
@@ -193,24 +193,41 @@ function save() {
 </script>
 
 <style scoped>
-.frame-row {
+/* A read-only field, styled to match the Quasar inputs beside it.
+   The numbers are Quasar's own: `.q-field__label` is 16px scaled by 0.75 when
+   floated, which is the 12px the Name and Type labels render at, and
+   `.q-field` sets the 14px the values render at. Copied rather than
+   approximated, so a read-only row reads as a field rather than as a caption
+   somebody added. */
+.meta-field {
   display: flex;
-  gap: 8px;
-  align-items: baseline;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meta-label {
   font-size: 12px;
+  line-height: 1.25;
+  font-weight: 400;
+  letter-spacing: 0.00937em;
+  color: var(--pm-text-muted);
 }
 
-.frame-label {
-  color: var(--pm-muted);
+.meta-value {
+  font-size: 14px;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.frame-chain code {
-  font: 12px/1.5 ui-monospace, SFMono-Regular, monospace;
+.meta-value code {
+  font: 13px/1.5 ui-monospace, SFMono-Regular, monospace;
 }
 
-.frame-sep {
-  margin: 0 4px;
-  color: var(--pm-muted);
+.meta-sep {
+  margin: 0 6px;
+  color: var(--pm-text-muted);
 }
 
 .frame-warn {
