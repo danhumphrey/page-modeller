@@ -27,8 +27,7 @@ code enters the frames to reach it: `frameLocator` chains for Playwright, a `swi
 for Selenium. Cross-origin, `srcdoc` and sandboxed frames included.
 
 **Elements inside shadow DOM.** Web components keep their real controls in a shadow root, where an
-ordinary DOM walk cannot see them. Page Modeller now scans into open shadow roots and records the
-components and generates locator that reach it: `page.locator('my-field').locator(...)`,
+ordinary DOM walk cannot see them. Page Modeller now scans into open shadow roots and generates locators that reach it: `page.locator('my-field').locator(...)`,
 Puppeteer's `>>>`, Selenium's `getShadowRoot()` chain.
 
 **Alternate code generation styles by framework and language** generate a full page object, methods or just the locators.
@@ -58,8 +57,8 @@ Removed: Robot Framework and Protractor, neither of which is maintained upstream
   <img src="media/browsers.png" width="504" alt="Chrome, Firefox, Brave, Opera, Vivaldi" />
 </p>
 
-Chrome 114+ and Firefox 115+, on Manifest V3. Page Modeller runs as a **side panel** (When supported) or
-**sidebar** (When supported) or as a **DevTools panel**.
+Chrome 114+ and Firefox 115+, on Manifest V3. Page Modeller runs as a **side panel** or
+**sidebar** (when supported) or as a **DevTools panel** in all browsers.
 
 Other Chromium browsers install from the Chrome Web Store listing. Brave and Vivaldi have the side
 panel and work exactly as Chrome does. **Opera has no extension side panel API** so the DevTools panel must be used in Opera.
