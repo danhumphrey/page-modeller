@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { buildLocator } from './pw-builder';
-import type { ElementResult, ShadowStep } from '../src/engine/types';
+import './spike';
 
 // The engine against real web components (SPEC §19).
 //
@@ -16,19 +16,6 @@ import type { ElementResult, ShadowStep } from '../src/engine/types';
 const FIXTURE = pathToFileURL(resolve('tests/fixtures/shadow.html')).href;
 const ENGINE = resolve('.test-dist/engine.global.js');
 
-type Spike = {
-  generate: (el: Element) => ElementResult;
-  resolveCandidate: (root: Document | ShadowRoot, c: unknown) => Element[];
-  shadowPathOf: (el: Element) => ShadowStep[];
-  shadowSelector: (step: ShadowStep) => string;
-  collectInteractive: (root: Element, includeHidden: boolean) => Element[];
-  collectClosedHosts: (root: Element) => Element[];
-};
-declare global {
-  interface Window {
-    __spike: Spike;
-  }
-}
 
 test.beforeEach(async ({ page }) => {
   await page.goto(FIXTURE);
@@ -109,8 +96,8 @@ test('every shadow host selector resolves to exactly one element', async ({ page
       .shadowRoot!.querySelector('inner-field')!
       .shadowRoot!.querySelector('[data-spike="nested-input"]')!;
     const path = spike.shadowPathOf(input).map(spike.shadowSelector);
-    const outer = document.querySelectorAll(path[0]).length;
-    const inner = document.querySelector(path[0])!.shadowRoot!.querySelectorAll(path[1]).length;
+    const outer = document.querySelectorAll(path[0]!).length;
+    const inner = document.querySelector(path[0]!)!.shadowRoot!.querySelectorAll(path[1]!).length;
     return { path, outer, inner };
   });
 
@@ -146,8 +133,9 @@ test('candidates for a shadow element are scoped to its root, and exclude xpath'
   // components share this placeholder, but only one is in THIS root.
   expect(kinds).toContain('placeholder');
   expect(kinds).toContain('name');
-  const placeholder = result.candidates.find((c) => c.candidate.kind === 'placeholder')!;
-  expect(placeholder.predictedCount, 'counted within the shadow root, not the document').toBe(1);
+  const placeholder = result.candidates.find((c) => c.candidate.kind === 'placeholder');
+  expect(placeholder, 'a placeholder candidate').toBeDefined();
+  expect(placeholder!.predictedCount, 'counted within the shadow root, not the document').toBe(1);
 });
 
 test('a shadow element scoped by its host resolves uniquely in real Playwright', async ({ page }) => {
@@ -158,7 +146,7 @@ test('a shadow element scoped by its host resolves uniquely in real Playwright',
     const result = spike.generate(input);
     return {
       host: spike.shadowPathOf(input).map(spike.shadowSelector).join(' '),
-      candidate: result.candidates[result.preferredIndex].candidate,
+      candidate: result.candidates[result.preferredIndex]!.candidate,
     };
   });
 
@@ -213,6 +201,6 @@ test('a host that mirrors an attribute does not double the count', async ({ page
   // selector, because `cssFor` prefers `[name]` over the tag and which one it
   // picks is its business, not this test's.
   expect(counts.path).toHaveLength(1);
-  await expect(page.locator(counts.path[0])).toHaveCount(1);
-  await expect(page.locator(counts.path[0])).toHaveJSProperty('localName', 'mirrored-field');
+  await expect(page.locator(counts.path[0]!)).toHaveCount(1);
+  await expect(page.locator(counts.path[0]!)).toHaveJSProperty('localName', 'mirrored-field');
 });

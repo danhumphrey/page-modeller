@@ -181,3 +181,64 @@ describe('EditElementDialog', () => {
     expect(vm(w).candidate).toEqual({ kind: 'css', value: 'button.draft' });
   });
 });
+
+describe('the shadow host chain (SPEC §19)', () => {
+  const inShadow = (hosts: string[]): ModelElement =>
+    ({
+      ...element,
+      shadowPath: hosts.map((value) => ({ host: { kind: 'css' as const, value } })),
+    }) as ModelElement;
+
+  /**
+   * Mount and wait for the dialog to appear.
+   *
+   * QDialog renders through a portal, which lands in the document rather than
+   * in the wrapper and not until a tick has passed — which is why every test
+   * above reads the vm instead. These are about markup, so they have to wait
+   * for it, and unmount afterwards or the next query finds the last one's
+   * dialog still in the body.
+   */
+  async function open(el?: ModelElement) {
+    const w = el ? render({ element: el }) : render();
+    await w.vm.$nextTick();
+    await new Promise((r) => setTimeout(r, 0));
+    return {
+      row: () => document.querySelector('[data-testid="edit-shadow"]'),
+      inputs: () => document.querySelectorAll('.q-dialog input'),
+      done: () => w.unmount(),
+    };
+  }
+
+  it('is shown, because it is part of the generated locator', async () => {
+    // Until this, the only way to discover that an element was inside a web
+    // component was to open the code dialog: the table and this dialog both
+    // showed the element's own locator and nothing else.
+    const d = await open(inShadow(['clg-text-input[name="email"]']));
+    expect(d.row()).not.toBeNull();
+    expect(d.row()!.textContent).toContain('clg-text-input[name="email"]');
+    d.done();
+  });
+
+  it('shows every host, outermost first', async () => {
+    const d = await open(inShadow(['outer-panel', 'inner-field']));
+    const text = d.row()!.textContent ?? '';
+    expect(text.indexOf('outer-panel')).toBeLessThan(text.indexOf('inner-field'));
+    d.done();
+  });
+
+  it('is read-only, like the frame chain', async () => {
+    // A host is where the element IS, not how it is found within the
+    // component, so editing it would be editing the page. The element's own
+    // locator stays editable, which is the part a user can meaningfully change.
+    const d = await open(inShadow(['clg-text-input']));
+    expect(d.row()!.querySelectorAll('input')).toHaveLength(0);
+    expect(d.inputs().length, 'the element locator is still editable').toBeGreaterThan(0);
+    d.done();
+  });
+
+  it('is absent for an element in the light DOM', async () => {
+    const d = await open();
+    expect(d.row()).toBeNull();
+    d.done();
+  });
+});

@@ -6,6 +6,7 @@ import { playwrightExpr } from '../src/locators/display';
 import { playwrightShadowPrefix } from '../src/locators/shadow';
 import { frameworkById } from '../src/frameworks';
 import type { ElementResult } from '../src/engine/types';
+import './spike';
 
 const PLAYWRIGHT_KINDS = new Set(frameworkById('playwright-ts').locatorTypes);
 
@@ -110,7 +111,7 @@ test('locator engine matches real Playwright resolution', async ({ page }) => {
         failures.push(`${fixture}/${spikeId}: no unique candidate`);
         continue;
       }
-      const preferred = result.candidates[result.preferredIndex].candidate;
+      const preferred = result.candidates[result.preferredIndex]!.candidate;
       const loc = buildLocator(scope, preferred);
       const count = await loc.count();
       const sid = count === 1 ? await loc.getAttribute('data-spike') : null;
@@ -122,9 +123,3 @@ test('locator engine matches real Playwright resolution', async ({ page }) => {
 
   expect(failures, 'engine/Playwright divergences').toEqual([]);
 });
-
-declare global {
-  interface Window {
-    __spike: { generate(el: Element): ElementResult };
-  }
-}

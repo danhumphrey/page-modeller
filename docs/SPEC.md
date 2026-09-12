@@ -1108,6 +1108,34 @@ A per-framework resolver would be exact, and is not worth what it costs: the fra
 picking starts (§3), so it could be threaded through, but the divergence only appears when identical
 content exists both inside and outside a component on the same page.
 
+### The chain is visible, and locked **[settled]**
+
+Exactly as a frame chain is (§16), and for exactly the same reason: a shadow host is **where the
+element is**, not part of how it is found within that component, so editing it would be editing the
+page.
+
+Until this it was neither. The table's Locator column and the Edit dialog both showed the element's
+own locator, and the host chain appeared for the first time in the generated code — so the line a user
+read in the table was not the line they were going to get, and someone overriding a locator could not
+see, let alone manage, the part of it that reached the component.
+
+So the chain is shown wherever the locator is shown: in the table row, and as a read-only **Shadow**
+row in the Edit dialog beside **Frame**. The element's own locator stays fully editable, which is the
+part a user can meaningfully change.
+
+The row reads as the target writes it, so the table is the generated line:
+
+| | |
+|---|---|
+| Playwright | `locator('#join_neu_email_field').locator('[name="email"]')` |
+| Puppeteer | `locator('#join_neu_email_field >>> [name="email"]')` |
+| Selenium | `#join_neu_email_field › css: [name="email"]` — neither chain is expressible in a `By`, so both read as the path they are |
+
+One consequence worth stating: **the table and the generated code are built by the same code**.
+`display.ts` already owned the locator spelling for that reason, and the Puppeteer generator had grown
+its own copy of the `>>>` join — which is how the two came to disagree in the first place. It defers
+again.
+
 ### Uniqueness is asked the way the frameworks ask it **[settled]**
 
 Both halves of this were wrong in the first implementation, in the same way and

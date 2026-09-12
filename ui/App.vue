@@ -118,7 +118,7 @@ const rows = computed<ModelRow[]>(() =>
   model.value.elements.map((el) => ({
     id: el.id,
     name: el.name,
-    locator: displayElementLocator(activeCandidate(el), model.value.frameworkId, el.framePath),
+    locator: displayElementLocator(activeCandidate(el), model.value.frameworkId, el.framePath, el.shadowPath),
   }))
 );
 

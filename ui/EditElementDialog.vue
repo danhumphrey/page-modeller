@@ -34,6 +34,21 @@
           A frame above this one is cross-origin, so the chain starts inside it.
         </div>
 
+        <!-- Read-only for the same reason the frame chain is: a shadow host is
+             where the element IS, not part of how it is found inside that
+             component, so editing it would be editing the page. Shown because
+             it IS part of the generated locator, and until this the only way
+             to discover that was to open the code dialog (SPEC §19). -->
+        <div v-if="shadowPath.length" class="frame-row" data-testid="edit-shadow">
+          <span class="frame-label">Shadow</span>
+          <span class="frame-chain">
+            <template v-for="(step, i) in shadowPath" :key="i">
+              <span v-if="i > 0" class="frame-sep">›</span>
+              <code>{{ step }}</code>
+            </template>
+          </span>
+        </div>
+
         <div class="locator-row">
           <q-select
             v-model="kind"
@@ -96,6 +111,7 @@ import { activeCandidate, type ModelElement } from '@/src/model';
 import { buildCandidate, fieldsFor, isComplete, valuesOf, type LocatorKind } from '@/src/locators/fields';
 import type { LocatorCandidate } from '@/src/engine/types';
 import { frameSelector, isOpaque } from '@/src/locators/frames';
+import { shadowSelector } from '@/src/locators/shadow';
 
 const props = defineProps<{
   showTooltips: boolean;
@@ -125,6 +141,10 @@ const framePath = computed(() =>
   (props.element.framePath ?? []).filter((s) => !s.opaque).map((s) => frameSelector(s))
 );
 const frameOpaque = computed(() => isOpaque(props.element.framePath));
+
+// The hosts between the element's document and the element. Always css, so
+// unlike a frame step there is no prose case to handle.
+const shadowPath = computed(() => (props.element.shadowPath ?? []).map((step) => shadowSelector(step)));
 
 const typeOptions = computed(() => frameworkById(props.frameworkId).locatorTypes.map((t) => ({ label: t, value: t })));
 
