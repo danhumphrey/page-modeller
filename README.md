@@ -27,7 +27,7 @@ code enters the frames to reach it: `frameLocator` chains for Playwright, a `swi
 for Selenium. Cross-origin, `srcdoc` and sandboxed frames included.
 
 **Elements inside shadow DOM.** Web components keep their real controls in a shadow root, where an
-ordinary DOM walk cannot see them. Page Modeller now scans into open shadow roots and generates locators that reach it: `page.locator('my-field').locator(...)`,
+ordinary DOM walk cannot see them. Page Modeller now scans into open shadow roots and generates locators that reach them: `page.locator('my-field').locator(...)`,
 Puppeteer's `>>>`, Selenium's `getShadowRoot()` chain.
 
 **Alternate code generation styles by framework and language** generate a full page object, methods or just the locators.
