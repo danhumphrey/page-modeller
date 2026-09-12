@@ -22,8 +22,10 @@ AMO, which allows more:
 > Page Modeller enables developers to scan a web page and generate page object style code for various
 > tools, languages and frameworks.
 
-Both keep today's wording. **One thing to settle:** Chrome currently says *modeling*, AMO says
-*modelling*. They should agree — the extension is called Page Modeller, so UK spelling throughout.
+Both keep today's wording. **Settled: UK spelling throughout** — *modelling*, *modeller*. The two
+listings disagree today, Chrome saying *modeling*, and the extension is called Page Modeller, so
+Chrome's is the one that changes. Worth checking on submission, since it is the kind of edit a store
+form quietly keeps from the previous version.
 
 ## Description
 
@@ -53,9 +55,10 @@ Shared by both stores.
 > Suggestions and bug reports are welcome on GitHub:
 > https://github.com/danhumphrey/page-modeller/issues
 
-**To settle:** today's listings both say "actively developed and is considered a beta release". After
-a rewrite released as 3.0.0, that reads as less confidence than the work deserves — suggest dropping
-it. Kept out of the draft above.
+**Settled: the beta line goes.** Today's listings both say the extension "is actively developed and is
+considered a beta release". After a rewrite released as 3.0.0 that reads as less confidence than the
+work deserves, and it is already absent from the draft above — so this is a deletion to make on the
+store forms, not a change to the copy here.
 
 ## What's new (3.0.0)
 

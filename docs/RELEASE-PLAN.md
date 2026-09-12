@@ -49,8 +49,10 @@ v3 moves to the root and v2.5.1 retires. Do this first: everything else touches 
     rather than hand-cropped. You approve them.
 12. **Promo tiles.** CWS requires a 440×280 small tile; the 1400×560 marquee is optional. AMO needs
     none. `media/promo_*.png` are v2.5.1's — reuse or redraw is yours.
-13. **Listing copy.** Name, 132-character summary, description, category, and the justification CWS
-    demands for `<all_urls>`. I draft, you edit.
+13. ✅ **Listing copy** drafted and settled in `STORE-LISTING.md`: name, summary, description,
+    categories, and the justification CWS demands for `<all_urls>`. Two decisions recorded there that
+    are edits to the STORE FORMS rather than to the copy — UK spelling throughout, so Chrome's
+    *modeling* changes; and the "considered a beta release" line comes off both listings.
 
 ## Phase 4 — Docs
 
