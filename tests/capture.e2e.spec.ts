@@ -1316,3 +1316,69 @@ test('a hidden match is marked on its nearest visible ancestor', async () => {
     )
     .toBe(1);
 });
+
+test('a scan says what it could not read: a closed shadow root (SPEC §19)', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'closed-shadow', 'shadow.html');
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  await panel.evaluate(
+    (id) =>
+      chrome.runtime.sendMessage({
+        type: 'RELAY_TO_TAB',
+        tabId: id,
+        message: { type: 'START_PICKING', mode: 'scan', includeHidden: false },
+      }),
+    tabId
+  );
+
+  // Scan the whole page: <body> is the one container that holds every kind of
+  // component in the fixture.
+  const label = page.locator('[data-page-modeller="label"]');
+  await page.getByRole('heading', { name: 'Shadow DOM' }).hover();
+  for (let i = 0; i < 8 && !/(^|› )body$/.test((await label.textContent()) ?? ''); i++) {
+    await page.keyboard.press('ArrowUp');
+  }
+  // No `›` before it: at <body> the ancestor chain is empty, because the
+  // breadcrumb stops short of <html>.
+  await expect(label).toHaveText(/(^|› )body$/);
+  await page.keyboard.press('Enter');
+
+  const messages = async () =>
+    (await panel.evaluate(
+      () => (window as unknown as { __msgs: { type: string; message?: { type: string; count?: number } }[] }).__msgs
+    )).filter((m) => m.type === 'FROM_TAB');
+
+  // The controls inside the OPEN roots arrive — the bug this all started from.
+  await expect
+    .poll(async () =>
+      (await panel.evaluate(
+        () => (window as unknown as { __msgs: { type: string; model?: { elements: unknown[] } }[] }).__msgs
+      ))
+        .filter((m) => m.type === 'MODEL')
+        .at(-1)?.model?.elements.length
+    )
+    .toBeGreaterThan(8);
+
+  // And the one it could NOT read is named rather than silently dropped.
+  await expect
+    .poll(async () => (await messages()).filter((m) => m.message?.type === 'SHADOW_UNREADABLE').length)
+    .toBeGreaterThan(0);
+  const report = (await messages()).find((m) => m.message?.type === 'SHADOW_UNREADABLE')!;
+  expect(report.message?.count, 'exactly the one closed component, not every custom element').toBe(1);
+});

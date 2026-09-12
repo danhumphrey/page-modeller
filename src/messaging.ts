@@ -1,4 +1,4 @@
-import type { ElementResult, FrameStep, LocatorCandidate } from './engine/types';
+import type { ElementResult, FrameStep, LocatorCandidate, ShadowStep } from './engine/types';
 import type { TabModel } from './model';
 
 // Messages panel → content (sent via browser.tabs.sendMessage to the active tab).
@@ -27,6 +27,11 @@ export type PanelToContent =
   // A frame was asked to scan itself and never answered — there is no content
   // script inside it. Silence is indistinguishable from a bug, so it is said.
   | { type: 'FRAME_UNREADABLE'; sandboxed: boolean }
+  // A scan met web components whose shadow roots are closed, so their contents
+  // could not be collected (SPEC §19). Reported for the same reason an
+  // unreadable frame is: a scan that quietly returns less looks like a scan
+  // that found less, which is how the whole shadow DOM gap was first reported.
+  | { type: 'SHADOW_UNREADABLE'; count: number }
   | { type: 'OVERLAY_SHOWN'; token: string }
   | { type: 'OVERLAY_OWNER'; token: string }
   // Walk the pick target up or down the DOM (SPEC §4). Sent by the panel
@@ -39,7 +44,12 @@ export type PanelToContent =
   // reply — see the note on ContentToPanel below.
   // framePath says WHICH document to resolve in: every frame hears this, and
   // the one whose own path matches is the one that answers (SPEC §16).
-  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate; framePath?: FrameStep[] }
+  // shadowPath says which ROOT to resolve in, for the same reason framePath
+  // says which document. Without it the eye resolves against the page: Etsy's
+  // <clg-text-input> mirrors `name` onto its host, so `[name=password]` found
+  // the host AND the input inside it and reported 2 for a locator the model
+  // had counted as unique (SPEC §19).
+  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate; framePath?: FrameStep[]; shadowPath?: ShadowStep[] }
   // Clear the highlight early — the user dismissed the match count.
   | { type: 'CLEAR_HIGHLIGHT' };
 

@@ -89,7 +89,7 @@ import { activeCandidate, emptyModel, type ModelElement, type TabModel } from '@
 import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, type PanelToContent, type PickMode } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 import { applyTheme } from './theme';
-import type { FrameStep, LocatorCandidate } from '@/src/engine/types';
+import type { FrameStep, LocatorCandidate, ShadowStep } from '@/src/engine/types';
 import { defaultSettings, loadSettings, saveSettings, watchSettings } from '@/src/settings';
 
 // The panel is a VIEW. The background owns the model, one per tab (SPEC §5), so
@@ -118,7 +118,7 @@ const rows = computed<ModelRow[]>(() =>
   model.value.elements.map((el) => ({
     id: el.id,
     name: el.name,
-    locator: displayElementLocator(activeCandidate(el), model.value.frameworkId, el.framePath),
+    locator: displayElementLocator(activeCandidate(el), model.value.frameworkId, el.framePath, el.shadowPath),
   }))
 );
 
@@ -285,6 +285,18 @@ function onRuntimeMessage(msg: unknown) {
         color: 'negative',
       });
     }
+    else if (m.type === 'SHADOW_UNREADABLE') {
+      // Plural handled by hand: `count` is the number of components skipped,
+      // and "1 web components" would undercut the message it is carrying.
+      notice('shadow-unreadable', {
+        message:
+          m.count === 1
+            ? 'One web component has a closed shadow root and could not be read.'
+            : `${m.count} web components have closed shadow roots and could not be read.`,
+        icon: 'block',
+        color: 'warning',
+      });
+    }
     else if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
     else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count, m.hidden);
   }
@@ -405,12 +417,12 @@ function clearHighlight() {
 function highlight(id: string) {
   const el = model.value.elements.find((e) => e.id === id);
   if (!el) return;
-  highlightCandidate(activeCandidate(el), el.framePath);
+  highlightCandidate(activeCandidate(el), el.framePath, el.shadowPath);
 }
 
 /** The dialog tests a candidate against the element's own frame. */
 function highlightEdited(candidate: LocatorCandidate) {
-  highlightCandidate(candidate, editing.value?.framePath);
+  highlightCandidate(candidate, editing.value?.framePath, editing.value?.shadowPath);
 }
 
 /**
@@ -419,10 +431,10 @@ function highlightEdited(candidate: LocatorCandidate) {
  * document the element lives in, and testing it anywhere else answers a
  * different question (SPEC §16).
  */
-function highlightCandidate(candidate: LocatorCandidate, framePath?: FrameStep[]) {
+function highlightCandidate(candidate: LocatorCandidate, framePath?: FrameStep[], shadowPath?: ShadowStep[]) {
   if (tabId.value == null) return;
   // Fire and forget; the count arrives as HIGHLIGHT_RESULT.
-  send(tabId.value, { type: 'HIGHLIGHT', candidate, framePath });
+  send(tabId.value, { type: 'HIGHLIGHT', candidate, framePath, shadowPath });
 }
 
 function openEditor(id: string) {
@@ -502,7 +514,7 @@ function notYet(what: string) {
   flex-wrap: wrap;
   padding: 6px 12px;
   font-size: 12px;
-  color: var(--pm-muted);
+  color: var(--pm-text-muted);
   border-bottom: 1px solid var(--pm-rule);
 }
 

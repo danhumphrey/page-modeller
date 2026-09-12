@@ -95,6 +95,12 @@ exploited.
 - **`sender.tab` is not reliable in a Firefox DevTools page.** A content script's `runtime.sendMessage`
   arrives without it, so a `sender.tab.id === myTab` filter silently drops every message. The background
   always sees the sender, so it stamps the tab and re-broadcasts as `FROM_TAB`; panels filter on that.
+- **A content script cannot see the page's `customElements` registry.** An isolated world has its own,
+  and an element the page defined is simply absent from it — `customElements.get('my-widget')` returns
+  undefined for a component that plainly exists. The DOM is shared; the registry is not. Detection has
+  to work from the element itself. This passed every engine test, because those inject into the *main*
+  world via `addScriptTag`; only the extension E2E runs in an isolated one.
+
 - **Never send Vue reactive state through `tabs.sendMessage`.** Anything read out of a `ref` is a Proxy,
   and Firefox serialises messages with structured clone, which throws `DataCloneError` on a Proxy —
   Chrome's path tolerates it, so this fails on Firefox only and presents as an unreachable tab. `send()`

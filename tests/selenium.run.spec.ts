@@ -51,9 +51,18 @@ test('the generated Selenium finds every element it describes', async ({ page })
   test.skip(!ready && !REQUIRE_FULL_SUITE, 'run `npm run fetch:test-deps` for the Python venv');
   expect(ready, 'PM_REQUIRE_FULL_SUITE is set but .test-venv is missing').toBe(true);
 
-  const fixtures = ['login.html', 'widgets.html', 'ambiguous.html', 'edgecases.html'];
+  // shadow.html included because the host chain is the part of the generator
+  // that no compiler and no parser can check: `getShadowRoot()` exists whether
+  // or not the chain it is built from lands in the right tree (SPEC §19).
+  const fixtures = ['login.html', 'widgets.html', 'ambiguous.html', 'edgecases.html', 'shadow.html'];
   const failures: string[] = [];
   const exercised = new Set<string>();
+  // How many of the elements run here were reached through a shadow root. The
+  // suite would pass just as happily if none were — which is the whole risk
+  // with a fixture whose interesting content is invisible to an ordinary tree
+  // walk (SPEC §19).
+  let shadowElements = 0;
+  let deepestChain = 0;
 
   for (const fixture of fixtures) {
     const url = `http://localhost:${PORT}/${fixture}`;
@@ -84,6 +93,11 @@ test('the generated Selenium finds every element it describes', async ({ page })
     }
 
     for (const el of model.elements) exercised.add(activeCandidate(el).kind);
+    for (const el of model.elements) {
+      const depth = el.shadowPath?.length ?? 0;
+      if (depth > 0) shadowElements++;
+      deepestChain = Math.max(deepestChain, depth);
+    }
 
     const out = runInSelenium(generateSeleniumPython(model), [...expected], url, 'getter', model.elements);
     if (out.trim()) failures.push(`${fixture}\n${out.trim()}`);
@@ -120,6 +134,12 @@ test('the generated Selenium finds every element it describes', async ({ page })
   ]);
   // className, tagName and partialLinkText rank below css in Selenium's order
   // (SPEC §11) and nothing reaches them, so breaking those would not fail this.
+
+  // And that the shadow chain was genuinely walked, not skipped. An engine
+  // change that stopped collecting shadow content would leave every assertion
+  // above passing on a smaller model.
+  expect(shadowElements, 'elements reached through a shadow root').toBeGreaterThan(4);
+  expect(deepestChain, 'deepest host chain walked').toBeGreaterThanOrEqual(2);
 });
 
 test('the generated Selenium moves a slider to the value asked for', async ({ page }) => {

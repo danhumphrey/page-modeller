@@ -1,5 +1,5 @@
 import { computeAccessibleName, getRole } from 'dom-accessibility-api';
-import type { LocatorCandidate, ElementResult, FrameStep, RankedCandidate } from './types';
+import type { LocatorCandidate, ElementResult, FrameStep, RankedCandidate, ShadowStep } from './types';
 import { baseName, looksGenerated } from './naming';
 
 const norm = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
@@ -49,6 +49,29 @@ export function safeRole(el: Element): string | null {
   }
 }
 
+/**
+ * The Document or ShadowRoot an element is scoped to (SPEC §19).
+ *
+ * Everything that asks "is this selector unique?" has to ask it of the right
+ * tree. `ownerDocument` cannot see inside a shadow root at all, so every
+ * candidate for a shadow element was rejected as matching zero elements, and
+ * the `>` path then walked up to a `parentElement` of null and stopped
+ * mid-component.
+ *
+ * Scoping to the root is also what the generated locator does: a shadow
+ * element's locator is relative to its root, reached through the host chain.
+ * Ids are scoped to a shadow root, so a path anchored inside one is shorter
+ * and steadier than a document-wide path could be.
+ */
+export function isShadowRoot(node: Node): node is ShadowRoot {
+  return node.nodeType === 11 && 'host' in node;
+}
+
+export function rootOf(el: Element): Document | ShadowRoot {
+  const root = el.getRootNode();
+  return isShadowRoot(root) ? root : el.ownerDocument;
+}
+
 // ---- selector builders (deterministic fallbacks) ----
 
 /**
@@ -74,6 +97,46 @@ export function setTestIdAttribute(attr: string): void {
   testIdAttribute = attr.trim() || 'data-testid';
 }
 
+/**
+ * querySelectorAll, descending into open shadow roots.
+ *
+ * Playwright's engines pierce, and the eye reports what a Playwright test will
+ * get — so a resolver that stopped at the boundary under-counted. A plain
+ * `<button>Submit</button>` on a page of web components each containing their
+ * own Submit read as unique here and resolved to six in a real run.
+ *
+ * Piercing downward is right for every scope: a locator scoped to a shadow
+ * root still sees roots nested below it, both for us and for Playwright.
+ *
+ * Selenium does not pierce, so where the two differ this reports MORE matches
+ * than a Selenium run would. That direction is the safe one: an amber
+ * "6 elements match" sends the user to look, where a green tick on a locator
+ * that matches six would not (SPEC §7, §19).
+ */
+function pierce(root: Document | ShadowRoot | Element, sel: string): Element[] {
+  const out = Array.from(root.querySelectorAll(sel));
+  for (const el of Array.from(root.querySelectorAll('*'))) {
+    if (el.shadowRoot) out.push(...pierce(el.shadowRoot, sel));
+  }
+  return out;
+}
+
+/**
+ * Whether a selector singles this element out — asked the way the frameworks
+ * ask it, which means piercing (SPEC §19).
+ *
+ * A non-piercing check calls `[name="email"]` unique on Etsy's sign-in form,
+ * because `<clg-text-input name="email">` is the only match in the document.
+ * Playwright's css pierces and finds two: the host and the `<input name="email">`
+ * that the component mirrors the attribute onto. Emitting it produced a locator
+ * that resolved to two elements in the framework it was generated for.
+ *
+ * This is the same mistake the resolver made, one layer down.
+ */
+function unique(el: Element, sel: string): boolean {
+  return pierce(rootOf(el), sel).length === 1;
+}
+
 function attrSelector(el: Element, attr: string): string | null {
   const value = el.getAttribute(attr);
   if (!value) return null;
@@ -85,7 +148,7 @@ function attrSelector(el: Element, attr: string): string | null {
   // escaping. CSS.escape is for identifiers and would render `/forgot` as
   // `\/forgot` — still valid, but nobody writes that.
   const sel = `${prefix}[${attr}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
-  return el.ownerDocument.querySelectorAll(sel).length === 1 ? sel : null;
+  return unique(el, sel) ? sel : null;
 }
 
 /** `#id`, unless the id is framework-generated — same rule as the id candidate. */
@@ -93,7 +156,7 @@ function idSelector(el: Element): string | null {
   const id = el.getAttribute('id');
   if (!id || looksGenerated(id)) return null;
   const sel = `#${CSS.escape(id)}`;
-  return el.ownerDocument.querySelectorAll(sel).length === 1 ? sel : null;
+  return unique(el, sel) ? sel : null;
 }
 
 /**
@@ -120,7 +183,11 @@ function cssFor(el: Element): string {
 
   const parts: string[] = [];
   let cur: Element | null = el;
-  while (cur && cur.nodeType === 1 && cur !== cur.ownerDocument.documentElement) {
+  // Inside a shadow root the topmost element's `parentElement` is already
+  // null — its parent is the root, which is not an Element — so the walk stops
+  // at the boundary on its own, and the path is relative to the root.
+  const stopAt = isShadowRoot(rootOf(el)) ? null : el.ownerDocument.documentElement;
+  while (cur && cur.nodeType === 1 && cur !== stopAt) {
     // Anchoring the path on a generated id would defeat the point.
     const anchor = idSelector(cur);
     if (anchor) {
@@ -218,12 +285,34 @@ export function ariaHidden(el: Element): boolean {
   return false;
 }
 
-/** Every element the candidate matches, in document order. */
-export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] {
-  const all = () => Array.from(doc.querySelectorAll('*'));
+/**
+ * Every element the candidate matches, in tree order.
+ *
+ * `root` is a Document or a ShadowRoot (SPEC §19). A shadow element's locator
+ * is relative to its root, so the eye has to resolve it there — resolving in
+ * the document would report zero for a locator that works, and piercing from
+ * the document would report a count no framework will reproduce.
+ *
+ * A ShadowRoot is a DocumentFragment, so it has querySelectorAll but NOT
+ * getElementsByClassName, getElementsByTagName or evaluate. The first two have
+ * exact selector equivalents. The third does not, and does not need one: XPath
+ * cannot address a shadow tree in any engine — Playwright resolves zero,
+ * WebDriver answers `invalid locator` — which is why §19 excludes xpath for a
+ * shadow element rather than trying to emit one.
+ */
+/**
+ * Elements that render no text of their own. Playwright's text engine ignores
+ * them; ours counted `<title>` as a match for the page heading, because a
+ * document's title so often repeats it.
+ */
+const NON_RENDERED = new Set(['TITLE', 'SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'META', 'LINK']);
+
+export function resolveCandidate(root: Document | ShadowRoot, c: LocatorCandidate): Element[] {
+  const doc = root;
+  const all = () => pierce(doc, '*').filter((e) => !NON_RENDERED.has(e.tagName));
   switch (c.kind) {
     case 'testId':
-      return Array.from(doc.querySelectorAll(`[${testIdAttribute}="${CSS.escape(c.value)}"]`));
+      return pierce(doc, `[${testIdAttribute}="${CSS.escape(c.value)}"]`);
     case 'role':
       return all()
         .filter((e) => safeRole(e) === c.role && (c.name === undefined || matchesText(safeName(e), c.name, c.exact)))
@@ -231,7 +320,7 @@ export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] 
     case 'label':
       return all().filter((e) => LABEL_TARGETS.has(e.tagName) && matchesText(safeName(e), c.text, c.exact));
     case 'placeholder':
-      return Array.from(doc.querySelectorAll('[placeholder]')).filter((e) =>
+      return pierce(doc, '[placeholder]').filter((e) =>
         matchesText(e.getAttribute('placeholder') ?? '', c.text, c.exact)
       );
     case 'text': {
@@ -242,19 +331,21 @@ export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] 
       return hits.filter((e) => !hits.some((other) => other !== e && e.contains(other)));
     }
     case 'altText':
-      return Array.from(doc.querySelectorAll('img[alt], input[alt], area[alt]')).filter((e) =>
+      return pierce(doc, 'img[alt], input[alt], area[alt]').filter((e) =>
         matchesText(e.getAttribute('alt') ?? '', c.text, c.exact)
       );
     case 'title':
-      return Array.from(doc.querySelectorAll('[title]')).filter((e) => matchesText(e.getAttribute('title') ?? '', c.text, c.exact));
+      return pierce(doc, '[title]').filter((e) => matchesText(e.getAttribute('title') ?? '', c.text, c.exact));
     case 'css':
       // A hand-typed selector can be invalid; that is a miss, not a crash.
       try {
-        return Array.from(doc.querySelectorAll(c.value));
+        return pierce(doc, c.value);
       } catch {
         return [];
       }
     case 'xpath': {
+      // No engine can XPath into a shadow tree, so neither do we.
+      if (isShadowRoot(doc)) return [];
       try {
         const r = doc.evaluate(c.value, doc, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
         return Array.from({ length: r.snapshotLength }, (_, i) => r.snapshotItem(i) as Element);
@@ -265,19 +356,20 @@ export function resolveCandidate(doc: Document, c: LocatorCandidate): Element[] 
 
     // Selenium's By strategies, so the eye can test a hand-typed one.
     case 'id':
-      return c.value ? Array.from(doc.querySelectorAll(`#${CSS.escape(c.value)}`)) : [];
+      return c.value ? pierce(doc, `#${CSS.escape(c.value)}`) : [];
     case 'name':
-      return c.value ? Array.from(doc.querySelectorAll(`[name="${CSS.escape(c.value)}"]`)) : [];
+      return c.value ? pierce(doc, `[name="${CSS.escape(c.value)}"]`) : [];
     case 'className':
-      // By.className takes ONE class name, not a selector.
-      return c.value ? Array.from(doc.getElementsByClassName(c.value)) : [];
+      // By.className takes ONE class name, not a selector. Expressed as a
+      // selector because a ShadowRoot has no getElementsByClassName.
+      return c.value ? pierce(doc, `.${CSS.escape(c.value)}`) : [];
     case 'tagName':
-      return c.value ? Array.from(doc.getElementsByTagName(c.value)) : [];
+      return c.value ? pierce(doc, CSS.escape(c.value)) : [];
     case 'linkText':
       // Selenium matches links on their rendered text, trimmed.
-      return Array.from(doc.querySelectorAll('a')).filter((a) => norm(a.textContent) === norm(c.text));
+      return pierce(doc, 'a').filter((a) => norm(a.textContent) === norm(c.text));
     case 'partialLinkText':
-      return Array.from(doc.querySelectorAll('a')).filter((a) => norm(a.textContent).includes(norm(c.text)));
+      return pierce(doc, 'a').filter((a) => norm(a.textContent).includes(norm(c.text)));
   }
 }
 
@@ -354,6 +446,49 @@ export function frameStepFor(frame: Element): FrameStep {
   return { frame: best?.candidate ?? { kind: 'css', value: frame.localName } };
 }
 
+/**
+ * The chain of shadow hosts between this element's document and the element,
+ * outermost first (SPEC §19).
+ *
+ * Walked from the element outwards: each `getRootNode()` that is a ShadowRoot
+ * contributes its host, and the walk continues from that host — which may
+ * itself sit in another shadow root.
+ *
+ * Every host is located in ITS OWN tree, which `rankFor` already does via
+ * `rootOf`, so a component nested inside another component gets a selector
+ * that is unique where it is used rather than where it is read.
+ */
+export function shadowPathOf(el: Element): ShadowStep[] {
+  const path: ShadowStep[] = [];
+  let node: Node = el;
+
+  // Bounded, as framePathOf is: a malformed tree must not spin here.
+  for (let depth = 0; depth < 32; depth++) {
+    const root = node.getRootNode();
+    if (!isShadowRoot(root)) break;
+    const host = root.host;
+    path.unshift({ host: hostCandidate(host) });
+    node = host;
+  }
+  return path;
+}
+
+/**
+ * A host's selector. css only — `>>>` and `shadowRoot` both take one — and
+ * never xpath, which cannot address a shadow tree and so could not be used to
+ * reach a host nested inside one.
+ */
+function hostCandidate(host: Element): LocatorCandidate {
+  const ranked = rankFor(host, safeRole(host), safeName(host)).filter((c) => c.candidate.kind === 'css');
+  const best = ranked[chooseFirstUnique(ranked)] ?? ranked[0];
+  return best?.candidate ?? { kind: 'css', value: host.localName };
+}
+
+/** A selector string for a shadow step. */
+export function shadowSelector(step: ShadowStep): string {
+  return (step.host as { value: string }).value;
+}
+
 /** A selector string for a frame step, for the APIs that take one. */
 export function frameSelector(step: FrameStep): string {
   return step.frame.kind === 'xpath' ? `xpath=${step.frame.value}` : (step.frame as { value: string }).value;
@@ -365,7 +500,11 @@ export function frameSelector(step: FrameStep): string {
  * which needs exactly this for an `<iframe>` in its parent document.
  */
 function rankFor(el: Element, role: string | null, name: string): RankedCandidate[] {
-  const doc = el.ownerDocument;
+  // The element's own tree, which for shadow content is its root rather than
+  // the document (SPEC §19). Also what drops the xpath candidate for a shadow
+  // element without a special case: no engine can XPath into a shadow tree, so
+  // `resolveCandidate` finds nothing and the filter below removes it.
+  const doc = rootOf(el);
   const tag = el.tagName.toLowerCase();
   const out: LocatorCandidate[] = [];
 
@@ -466,5 +605,9 @@ export function generate(el: Element, framePath?: FrameStep[]): ElementResult {
     // caller, because only the top frame can see the whole chain — see
     // `frameStepFor` and the FRAME_PATH broadcast in the content script.
     framePath: framePath ?? framePathOf(el.ownerDocument.defaultView),
+    // And the chain of components around it, for the same reason (SPEC §19).
+    // Read here rather than supplied: unlike a frame chain, every host is
+    // visible from the element itself, so nothing has to be pushed down.
+    shadowPath: shadowPathOf(el),
   };
 }

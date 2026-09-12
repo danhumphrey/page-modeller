@@ -1,9 +1,9 @@
 import { frameStepFor, generate, resolveCandidate, setTestIdAttribute } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
-import { collectInteractive } from '@/src/engine/interactive';
+import { collectClosedHosts, collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
 import { frameSelector } from '@/src/locators/frames';
-import type { FrameStep } from '@/src/engine/types';
+import type { FrameStep, ShadowStep } from '@/src/engine/types';
 import { loadSettings, watchSettings } from '@/src/settings';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
@@ -112,23 +112,33 @@ export default defineContentScript({
      * Built as elements rather than innerHTML: the text comes from the page.
      */
     function renderBreadcrumb(el: Element) {
-      const chain: Element[] = [];
-      for (let cur: Element | null = el.parentElement; cur && cur !== document.documentElement; cur = cur.parentElement) {
-        chain.unshift(cur);
+      // Ancestors, and whether each step crossed a shadow boundary — the walk
+      // uses `parentOf`, so it steps out of a component instead of stopping at
+      // it (SPEC §19). The crossing is drawn, because "this element is inside a
+      // web component" changes what the locator will look like and there is
+      // nothing else on screen that says so.
+      const chain: { el: Element; crossed: boolean }[] = [];
+      for (let cur: Element | null = el; cur && cur !== document.documentElement; ) {
+        const up = parentOf(cur);
+        if (!up || up === document.documentElement) break;
+        chain.unshift({ el: up, crossed: cur.parentElement === null });
+        cur = up;
       }
       const shown = chain.slice(-CRUMB_DEPTH);
 
       label!.replaceChildren();
       if (chain.length > shown.length) label!.appendChild(crumb('…', false));
       for (const ancestor of shown) {
-        label!.appendChild(crumb(describeBrief(ancestor), false));
+        label!.appendChild(crumb(describeBrief(ancestor.el), false));
       }
-      label!.appendChild(crumb(describeElement(el), true));
+      label!.appendChild(crumb(describeElement(el), true, chain.at(-1)?.crossed ?? false));
     }
 
-    function crumb(text: string, isTarget: boolean): HTMLSpanElement {
+    function crumb(text: string, isTarget: boolean, inShadow = false): HTMLSpanElement {
       const span = document.createElement('span');
-      span.textContent = text;
+      // `⛉` marks a shadow boundary: everything after it lives inside a web
+      // component, which is why its locator will be scoped by the host.
+      span.textContent = inShadow ? `⛉ ${text}` : text;
       Object.assign(span.style, {
         opacity: isTarget ? '1' : '0.55',
         fontWeight: isTarget ? '600' : '400',
@@ -167,12 +177,14 @@ export default defineContentScript({
       ensureOverlay();
       const r = el.getBoundingClientRect();
       Object.assign(box!.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-      const unreadable = isFrame(el) && !isReadableFrame(el);
-      setTone(unreadable);
+      const frameUnreadable = isFrame(el) && !isReadableFrame(el);
+      // A closed root renders content no script can reach — the same situation
+      // as a sandboxed frame, drawn the same way (SPEC §19).
+      const closedRoot = !frameUnreadable && isClosedShadowHost(el);
+      setTone(frameUnreadable || closedRoot);
       renderBreadcrumb(el);
-      if (unreadable) {
-        const warn = crumb('cannot be read \u2014 sandboxed', true);
-        label!.appendChild(warn);
+      if (frameUnreadable || closedRoot) {
+        label!.appendChild(crumb(closedRoot ? 'cannot be read \u2014 closed shadow root' : 'cannot be read \u2014 sandboxed', true));
       }
       label!.style.left = `${r.left}px`;
       label!.style.top = `${Math.max(0, r.top - 18)}px`;
@@ -292,9 +304,27 @@ export default defineContentScript({
       return { hidden: placed.filter((p) => p.hidden).length };
     }
 
+    /**
+     * The element actually under the pointer (SPEC §19).
+     *
+     * `e.target` is RETARGETED to the host for any listener outside the shadow
+     * tree, so hovering a web component's input reports the component. On Etsy
+     * that still produced a working locator, because that component mirrors
+     * `name` and `placeholder` onto its host — a component that does not would
+     * have handed back a locator for a wrapper.
+     *
+     * `composedPath()[0]` is the innermost target, and stops at a closed root
+     * of its own accord: a closed tree is absent from the composed path, so
+     * this yields the host, which is the most specific thing there is.
+     */
+    const targetOf = (e: Event): Element | null => {
+      const first = e.composedPath()[0];
+      return first instanceof Element ? first : ((e.target as Element | null) ?? null);
+    };
+
     const onMove = (e: MouseEvent) => {
       if (!active) return;
-      const el = e.target as Element | null;
+      const el = targetOf(e);
       if (!el || el === hovered) return;
       // Moving the mouse abandons any arrow-key walk and starts again from
       // whatever is under the cursor.
@@ -315,6 +345,14 @@ export default defineContentScript({
     const onOver = (e: MouseEvent) => onMove(e);
 
     const isFrame = (el: Element) => el.localName === 'iframe' || el.localName === 'frame';
+
+    /**
+     * Whether THIS element is a closed shadow host. Asked of the element's own
+     * parent so the collector's rule is not duplicated: one definition of what
+     * counts, used both for the overlay and for what a scan reports.
+     */
+    const isClosedShadowHost = (el: Element) =>
+      el.parentElement != null && collectClosedHosts(el.parentElement).includes(el);
 
     /**
      * Marks the one message this script accepts from another frame. Isolated
@@ -478,12 +516,40 @@ export default defineContentScript({
      * Each frame reports its own haul, so the model simply gains rows as they
      * arrive; nothing has to be collected back up the tree.
      */
+    /**
+     * Walk a shadow path to the root it names, or the document when there is
+     * none. Null when a host along the way is missing — the page has changed
+     * since the element was captured, and reporting zero matches is the honest
+     * answer rather than resolving against the wrong tree.
+     */
+    function shadowRootFor(path: ShadowStep[] | undefined): Document | ShadowRoot | null {
+      let root: Document | ShadowRoot = document;
+      for (const step of path ?? []) {
+        const host: Element | null = root.querySelector((step.host as { value: string }).value);
+        if (!host?.shadowRoot) return null;
+        root = host.shadowRoot;
+      }
+      return root;
+    }
+
+    /**
+     * Say what a scan could not read. A closed root holds real controls and no
+     * script can reach them, so the alternative is a scan that returns fewer
+     * rows than the page has and gives no reason — which is exactly how this
+     * whole area came to be looked at.
+     */
+    function reportClosedRoots(root: Element) {
+      const count = collectClosedHosts(root).length;
+      if (count > 0) browser.runtime.sendMessage({ type: 'SHADOW_UNREADABLE', count }).catch(() => {});
+    }
+
     function scanDocument() {
       const root = document.body ?? document.documentElement;
       const results = collectInteractive(root, includeHidden).map((el) => generate(el, myPath));
       const nested = Array.from(document.querySelectorAll('iframe, frame'));
       stop({ notify: false });
       if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+      reportClosedRoots(root);
       for (const frame of nested) delegateScan(frame);
     }
 
@@ -525,6 +591,7 @@ export default defineContentScript({
 
       // Scan takes the container's interactive descendants, never the container
       // itself: you are modelling what is inside the section you chose.
+      if (mode === 'scan') reportClosedRoots(target);
       const message =
         mode === 'scan'
           ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map((el) => generate(el, myPath)) }
@@ -548,11 +615,25 @@ export default defineContentScript({
     };
 
     /** The child of `of` that contains `hovered`, for walking back down. */
+    /**
+     * The element above this one, crossing a shadow boundary where there is
+     * one (SPEC §19).
+     *
+     * `parentElement` is null at the top of a shadow tree — the parent is the
+     * root, which is not an Element — so the ↑ walk stopped dead inside a
+     * component instead of stepping out to it.
+     */
+    function parentOf(el: Element): Element | null {
+      if (el.parentElement) return el.parentElement;
+      const root = el.getRootNode();
+      return root instanceof ShadowRoot ? root.host : null;
+    }
+
     function childTowardsHovered(of: Element): Element | null {
       if (!hovered || of === hovered) return null;
       let cur: Element | null = hovered;
-      while (cur && cur.parentElement && cur.parentElement !== of) cur = cur.parentElement;
-      return cur?.parentElement === of ? cur : null;
+      while (cur && parentOf(cur) && parentOf(cur) !== of) cur = parentOf(cur);
+      return cur && parentOf(cur) === of ? cur : null;
     }
 
     /**
@@ -565,9 +646,11 @@ export default defineContentScript({
       if (!active || !current) return;
       const next =
         direction === 'up'
-          ? // Stop at <body>: <html> is never a useful target.
-            current.parentElement && current.parentElement !== document.documentElement
-            ? current.parentElement
+          ? // Stop at <body>: <html> is never a useful target. `parentOf`
+            // crosses a shadow boundary, so ↑ from a component's input steps
+            // out to the component rather than stopping.
+            parentOf(current) && parentOf(current) !== document.documentElement
+            ? parentOf(current)
             : null
           : childTowardsHovered(current);
       if (!next) return;
@@ -684,7 +767,12 @@ export default defineContentScript({
         // answering frame would forget.
         clearMarks();
         if (!samePath(myPath, m.framePath)) return;
-        const targets = resolveCandidate(document, m.candidate);
+        // Resolve where the generated locator resolves: inside the element's
+        // own shadow root, not the document (SPEC §19). A host that mirrors an
+        // attribute onto itself otherwise matches alongside the control inside
+        // it, and the eye contradicts the count the model was built with.
+        const root = shadowRootFor(m.shadowPath);
+        const targets = root ? resolveCandidate(root, m.candidate) : [];
         const { hidden } = highlightAll(targets);
         // Answered as a message, not a reply — sendResponse is not portable.
         browser.runtime.sendMessage({ type: 'HIGHLIGHT_RESULT', count: targets.length, hidden }).catch(() => {});

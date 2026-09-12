@@ -7,6 +7,8 @@ import type { LocatorCandidate } from '../engine/types';
 import { singleQuoted, doubleQuoted } from '../quote';
 import type { FrameStep } from '../engine/types';
 import { frameSelector, playwrightFramePrefix, playwrightPyFramePrefix } from './frames';
+import type { ShadowStep } from '../engine/types';
+import { playwrightPyShadowPrefix, playwrightShadowPrefix, puppeteerShadowSelector, shadowSelector } from './shadow';
 
 const q = singleQuoted;
 const qq = doubleQuoted;
@@ -103,8 +105,11 @@ export function puppeteerSelector(c: LocatorCandidate): string {
 }
 
 /** The Puppeteer call this candidate becomes. */
-export function puppeteerExpr(c: LocatorCandidate): string {
-  return `locator(${q(puppeteerSelector(c))})`;
+export function puppeteerExpr(c: LocatorCandidate, shadowPath?: ShadowStep[]): string {
+  // The hosts belong INSIDE the quoted selector, joined with `>>>` (SPEC §19).
+  // Prefixing the expression would give Playwright's `locator(a).locator(b)`
+  // shape, which does not pierce in Puppeteer.
+  return `locator(${q(puppeteerShadowSelector(shadowPath, puppeteerSelector(c)))})`;
 }
 
 /** `type: value`, for frameworks whose locators are a flat pair. */
@@ -141,11 +146,34 @@ export function typeValue(c: LocatorCandidate): string {
  * looking identical when only their frame differs — which is exactly what
  * happened before this existed.
  */
-export function displayElementLocator(c: LocatorCandidate, frameworkId: string, framePath?: FrameStep[]): string {
-  if (!framePath || framePath.length === 0) return displayLocator(c, frameworkId);
-  if (frameworkId === 'playwright-python') return playwrightPyFramePrefix(framePath) + playwrightPyExpr(c);
-  if (frameworkId.startsWith('playwright')) return playwrightFramePrefix(framePath) + playwrightExpr(c);
-  const chain = framePath.map(frameSelector).join(' › ');
+export function displayElementLocator(
+  c: LocatorCandidate,
+  frameworkId: string,
+  framePath?: FrameStep[],
+  shadowPath?: ShadowStep[]
+): string {
+  const frames = framePath ?? [];
+  const hosts = shadowPath ?? [];
+  if (frames.length === 0 && hosts.length === 0) return displayLocator(c, frameworkId);
+
+  // Playwright carries both chains inside the locator, so the row reads as the
+  // line that will be generated.
+  if (frameworkId === 'playwright-python') {
+    return playwrightPyFramePrefix(frames) + playwrightPyShadowPrefix(hosts) + playwrightPyExpr(c);
+  }
+  if (frameworkId.startsWith('playwright')) {
+    return playwrightFramePrefix(frames) + playwrightShadowPrefix(hosts) + playwrightExpr(c);
+  }
+  // Puppeteer puts the hosts inside its selector, so only the frames are a
+  // prefix — and a frame is not expressible there at all, hence ` › `.
+  if (frameworkId === 'puppeteer') {
+    const expr = puppeteerExpr(c, hosts);
+    return frames.length ? `${frames.map(frameSelector).join(' › ')} › ${expr}` : expr;
+  }
+  // Selenium expresses neither chain in the locator itself: both are steps the
+  // generated code takes before the `By` is used, so both read as the path
+  // they are.
+  const chain = [...frames.map(frameSelector), ...hosts.map(shadowSelector)].join(' › ');
   return `${chain} › ${displayLocator(c, frameworkId)}`;
 }
 

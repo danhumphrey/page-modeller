@@ -11,6 +11,7 @@ import { underscoreCamel } from './names';
 import { doubleQuoted } from '../quote';
 import { classNameOf } from './class-name';
 import { frameContext, frameNote, isOpaque } from '../locators/frames';
+import { seleniumShadowRoot, shadowContext, shadowNote } from '../locators/shadow';
 import type { FrameStep } from '../engine/types';
 
 const q = doubleQuoted;
@@ -37,11 +38,29 @@ const frameSwitch = (path: FrameStep[]) => [
   ...path.map((s) => `driver.SwitchTo().Frame(driver.FindElement(${by(s.frame)}));`),
 ];
 
+/**
+ * What a find runs against: the driver, or a chain of hosts ending in a
+ * `GetShadowRoot()` (SPEC §19), which returns an `ISearchContext` and so
+ * carries `FindElement` unchanged.
+ *
+ * Nothing is mutated, unlike a frame switch, so there is no try/finally here.
+ */
+function shadowRoot(el: ModelElement): string {
+  return seleniumShadowRoot(el.shadowPath, 'driver', (r, css) => `${r}.FindElement(By.CssSelector(${q(css)})).GetShadowRoot()`);
+}
+
+/** The element expression, host chain included. */
+function findIn(el: ModelElement): string {
+  return `${shadowRoot(el)}.FindElement(${by(activeCandidate(el))})`;
+}
+
 function banner(el: ModelElement): string {
   // The frame chain goes in the banner, where a reader is already looking to
   // see what this block is about (SPEC §16).
   // Context only: every method below switches for itself.
-  const frames = frameContext(el.framePath, '//').map((line) => ` * ${line.replace(/^\/\/ /, '')}`);
+  const frames = [...frameContext(el.framePath, '//'), ...shadowContext(el.shadowPath, '//')].map((line) =>
+    ` * ${line.replace(/^\/\/ /, '')}`
+  );
   return [`/*`, ` * ${el.name}`, ...frames, ` * ***************************************************************`, ` */`].join('\n');
 }
 
@@ -72,12 +91,12 @@ function methods(el: ModelElement): string[] {
 
   // No element getter for a framed element: an IWebElement goes stale the
   // moment the driver switches away (SPEC §16).
-  const elExpr = framed ? `driver.FindElement(${by(activeCandidate(el))})` : `Get${n}Element()`;
+  const elExpr = framed ? findIn(el) : `Get${n}Element()`;
   const selectExpr = framed ? `new SelectElement(${elExpr})` : `Get${n}Select()`;
 
   const out: string[] = framed
     ? []
-    : [`public IWebElement Get${n}Element()\n{\n    return driver.FindElement(${by(activeCandidate(el))});\n}`];
+    : [`public IWebElement Get${n}Element()\n{\n    return ${findIn(el)};\n}`];
 
   switch (classify(el)) {
     case 'actionable':
@@ -173,7 +192,12 @@ function methods(el: ModelElement): string[] {
 /** `By` fields to paste into your own page object. */
 export function generateSeleniumCSharpLocators(model: TabModel): string {
   return model.elements
-    .flatMap((el) => [...frameNote(el.framePath, '//', frameSwitch), `private readonly By ${underscoreCamel(el.name)} = ${by(activeCandidate(el))};`])
+    .flatMap((el) => [
+      ...frameNote(el.framePath, '//', frameSwitch),
+      // A `By` cannot carry the host chain, so the traversal is spelled out.
+      ...shadowNote(el.shadowPath, '//', () => [`${shadowRoot(el)}.FindElement(${underscoreCamel(el.name)})`]),
+      `private readonly By ${underscoreCamel(el.name)} = ${by(activeCandidate(el))};`,
+    ])
     .join('\n');
 }
 

@@ -11,6 +11,7 @@
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { puppeteerExpr } from '../locators/display';
 import { frameNote, frameSelector } from '../locators/frames';
+import { shadowContext } from '../locators/shadow';
 import type { FrameStep } from '../engine/types';
 import { singleQuoted as q } from '../quote';
 import { tsPageObject, tsLocators, type TsTarget } from './ts-page-object';
@@ -34,11 +35,15 @@ const frameSwitch = (path: FrameStep[]) => {
 
 const PUPPETEER: TsTarget = {
   module: 'puppeteer',
-  expr: (el: ModelElement) => puppeteerExpr(activeCandidate(el)),
+  // A shadow element is reached with `>>>`, Puppeteer's deep descendant
+  // combinator — its plain css does not pierce (SPEC §19). The selector goes
+  // through puppeteerExpr first so the table and the code cannot disagree
+  // about what the locator is, then the hosts are joined in front of it.
+  expr: (el: ModelElement) => puppeteerExpr(activeCandidate(el), el.shadowPath),
   // `page.locator` is page-scoped and Puppeteer has no frameLocator, so a
   // framed element needs `page.frames()` first. Said out loud, because the
   // locator is otherwise indistinguishable from a main-frame one (SPEC §16).
-  note: (el: ModelElement) => frameNote(el.framePath, '//', frameSwitch),
+  note: (el: ModelElement) => [...frameNote(el.framePath, '//', frameSwitch), ...shadowContext(el.shadowPath, '//')],
   // `Locator<T>` is generic over the node it yields — `page.locator('button')`
   // is a `Locator<HTMLButtonElement>`. Element is the common supertype, and
   // widening to it is what lets one field hold any of them.
