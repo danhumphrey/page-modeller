@@ -3,7 +3,7 @@ import { describeBrief, describeElement } from '@/src/engine/describe';
 import { collectClosedHosts, collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
 import { frameSelector } from '@/src/locators/frames';
-import type { FrameStep } from '@/src/engine/types';
+import type { FrameStep, ShadowStep } from '@/src/engine/types';
 import { loadSettings, watchSettings } from '@/src/settings';
 
 // Inspector overlay: highlight the element under the cursor (like DevTools) and,
@@ -517,6 +517,22 @@ export default defineContentScript({
      * arrive; nothing has to be collected back up the tree.
      */
     /**
+     * Walk a shadow path to the root it names, or the document when there is
+     * none. Null when a host along the way is missing — the page has changed
+     * since the element was captured, and reporting zero matches is the honest
+     * answer rather than resolving against the wrong tree.
+     */
+    function shadowRootFor(path: ShadowStep[] | undefined): Document | ShadowRoot | null {
+      let root: Document | ShadowRoot = document;
+      for (const step of path ?? []) {
+        const host: Element | null = root.querySelector((step.host as { value: string }).value);
+        if (!host?.shadowRoot) return null;
+        root = host.shadowRoot;
+      }
+      return root;
+    }
+
+    /**
      * Say what a scan could not read. A closed root holds real controls and no
      * script can reach them, so the alternative is a scan that returns fewer
      * rows than the page has and gives no reason — which is exactly how this
@@ -751,7 +767,12 @@ export default defineContentScript({
         // answering frame would forget.
         clearMarks();
         if (!samePath(myPath, m.framePath)) return;
-        const targets = resolveCandidate(document, m.candidate);
+        // Resolve where the generated locator resolves: inside the element's
+        // own shadow root, not the document (SPEC §19). A host that mirrors an
+        // attribute onto itself otherwise matches alongside the control inside
+        // it, and the eye contradicts the count the model was built with.
+        const root = shadowRootFor(m.shadowPath);
+        const targets = root ? resolveCandidate(root, m.candidate) : [];
         const { hidden } = highlightAll(targets);
         // Answered as a message, not a reply — sendResponse is not portable.
         browser.runtime.sendMessage({ type: 'HIGHLIGHT_RESULT', count: targets.length, hidden }).catch(() => {});

@@ -18,6 +18,7 @@ const ENGINE = resolve('.test-dist/engine.global.js');
 
 type Spike = {
   generate: (el: Element) => ElementResult;
+  resolveCandidate: (root: Document | ShadowRoot, c: unknown) => Element[];
   shadowPathOf: (el: Element) => ShadowStep[];
   shadowSelector: (step: ShadowStep) => string;
   collectInteractive: (root: Element, includeHidden: boolean) => Element[];
@@ -176,4 +177,42 @@ test('a closed root is reported, and nothing else is', async ({ page }) => {
   // would warn about every web component on the page and the warning would
   // mean nothing.
   expect(closed).toEqual(['closed-field']);
+});
+
+test('a host that mirrors an attribute does not double the count', async ({ page }) => {
+  // Etsy's shape, and the bug it caused: <clg-text-input name="password">
+  // carries `name` on the host AND on the <input> inside its shadow root, so
+  // `[name=password]` matches two elements from the document. The model
+  // counted the input within its own root and said 1; the eye resolved against
+  // the page and said 2, contradicting it on a locator that was fine.
+  const counts = await page.evaluate(() => {
+    const spike = window.__spike;
+    const host = document.querySelector('mirrored-field')!;
+    const input = host.shadowRoot!.querySelector('input')!;
+    const result = spike.generate(input);
+    const nameCandidate = result.candidates.find((c) => c.candidate.kind === 'name');
+    const c = nameCandidate!.candidate;
+    return {
+      // What the model records: counted inside the element's own root.
+      predicted: nameCandidate?.predictedCount ?? -1,
+      // What the eye reported before it was scoped — the resolver pierces, so
+      // from the document it finds the host AND the control inside it.
+      unscoped: spike.resolveCandidate(document, c).length,
+      // And what it reports now, resolved where the locator is relative to.
+      scoped: spike.resolveCandidate(host.shadowRoot!, c).length,
+      path: spike.shadowPathOf(input).map(spike.shadowSelector),
+    };
+  });
+
+  // The reported bug: two matches for a locator the model called unique.
+  expect(counts.unscoped, 'resolving from the document finds the host too').toBe(2);
+  // Both halves of the fix agree now.
+  expect(counts.predicted, 'counted within the shadow root').toBe(1);
+  expect(counts.scoped, 'the eye resolves in the same root').toBe(1);
+  // One host, and it resolves to the component — not asserted as a literal
+  // selector, because `cssFor` prefers `[name]` over the tag and which one it
+  // picks is its business, not this test's.
+  expect(counts.path).toHaveLength(1);
+  await expect(page.locator(counts.path[0])).toHaveCount(1);
+  await expect(page.locator(counts.path[0])).toHaveJSProperty('localName', 'mirrored-field');
 });

@@ -1,4 +1,4 @@
-import type { ElementResult, FrameStep, LocatorCandidate } from './engine/types';
+import type { ElementResult, FrameStep, LocatorCandidate, ShadowStep } from './engine/types';
 import type { TabModel } from './model';
 
 // Messages panel → content (sent via browser.tabs.sendMessage to the active tab).
@@ -44,7 +44,12 @@ export type PanelToContent =
   // reply — see the note on ContentToPanel below.
   // framePath says WHICH document to resolve in: every frame hears this, and
   // the one whose own path matches is the one that answers (SPEC §16).
-  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate; framePath?: FrameStep[] }
+  // shadowPath says which ROOT to resolve in, for the same reason framePath
+  // says which document. Without it the eye resolves against the page: Etsy's
+  // <clg-text-input> mirrors `name` onto its host, so `[name=password]` found
+  // the host AND the input inside it and reported 2 for a locator the model
+  // had counted as unique (SPEC §19).
+  | { type: 'HIGHLIGHT'; candidate: LocatorCandidate; framePath?: FrameStep[]; shadowPath?: ShadowStep[] }
   // Clear the highlight early — the user dismissed the match count.
   | { type: 'CLEAR_HIGHLIGHT' };
 

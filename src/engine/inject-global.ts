@@ -1,4 +1,4 @@
-import { generate, shadowPathOf, shadowSelector } from './candidates';
+import { generate, resolveCandidate, shadowPathOf, shadowSelector } from './candidates';
 import { collectInteractive, collectClosedHosts } from './interactive';
 
 // Test-only entry: exposes the engine on window.__spike so the fidelity harness
@@ -12,10 +12,11 @@ import { collectInteractive, collectClosedHosts } from './interactive';
   window as unknown as {
     __spike: {
       generate: typeof generate;
+      resolveCandidate: typeof resolveCandidate;
       shadowPathOf: typeof shadowPathOf;
       shadowSelector: typeof shadowSelector;
       collectInteractive: typeof collectInteractive;
       collectClosedHosts: typeof collectClosedHosts;
     };
   }
-).__spike = { generate, shadowPathOf, shadowSelector, collectInteractive, collectClosedHosts };
+).__spike = { generate, resolveCandidate, shadowPathOf, shadowSelector, collectInteractive, collectClosedHosts };

@@ -89,7 +89,7 @@ import { activeCandidate, emptyModel, type ModelElement, type TabModel } from '@
 import { isMessage, PANEL_PORT, type BackgroundToPanel, type PanelToBackground, type PanelToContent, type PickMode } from '@/src/messaging';
 import { hostKey } from '@/host/types';
 import { applyTheme } from './theme';
-import type { FrameStep, LocatorCandidate } from '@/src/engine/types';
+import type { FrameStep, LocatorCandidate, ShadowStep } from '@/src/engine/types';
 import { defaultSettings, loadSettings, saveSettings, watchSettings } from '@/src/settings';
 
 // The panel is a VIEW. The background owns the model, one per tab (SPEC §5), so
@@ -417,12 +417,12 @@ function clearHighlight() {
 function highlight(id: string) {
   const el = model.value.elements.find((e) => e.id === id);
   if (!el) return;
-  highlightCandidate(activeCandidate(el), el.framePath);
+  highlightCandidate(activeCandidate(el), el.framePath, el.shadowPath);
 }
 
 /** The dialog tests a candidate against the element's own frame. */
 function highlightEdited(candidate: LocatorCandidate) {
-  highlightCandidate(candidate, editing.value?.framePath);
+  highlightCandidate(candidate, editing.value?.framePath, editing.value?.shadowPath);
 }
 
 /**
@@ -431,10 +431,10 @@ function highlightEdited(candidate: LocatorCandidate) {
  * document the element lives in, and testing it anywhere else answers a
  * different question (SPEC §16).
  */
-function highlightCandidate(candidate: LocatorCandidate, framePath?: FrameStep[]) {
+function highlightCandidate(candidate: LocatorCandidate, framePath?: FrameStep[], shadowPath?: ShadowStep[]) {
   if (tabId.value == null) return;
   // Fire and forget; the count arrives as HIGHLIGHT_RESULT.
-  send(tabId.value, { type: 'HIGHLIGHT', candidate, framePath });
+  send(tabId.value, { type: 'HIGHLIGHT', candidate, framePath, shadowPath });
 }
 
 function openEditor(id: string) {

@@ -1108,6 +1108,24 @@ A per-framework resolver would be exact, and is not worth what it costs: the fra
 picking starts (§3), so it could be threaded through, but the divergence only appears when identical
 content exists both inside and outside a component on the same page.
 
+### Uniqueness is asked the way the frameworks ask it **[settled]**
+
+Both halves of this were wrong in the first implementation, in the same way and
+one layer apart.
+
+**The eye** resolved against the document. Etsy's `<clg-text-input name="password">` mirrors `name`
+onto its host, so `[name=password]` found the host *and* the control inside it and reported *2 elements
+match* for a locator the model had counted as unique. The eye now resolves in the root the locator is
+relative to, so `HIGHLIGHT` carries the shadow path exactly as it carries the frame path.
+
+**The selector builder** then made the same mistake about the host itself. `cssFor` called
+`[name="email"]` unique because it is the only match a plain `querySelectorAll` finds — and Playwright,
+whose css pierces, resolves two. A host selector that is not unique in the framework consuming it
+produces a strict-mode violation from a locator we called good.
+
+So every uniqueness check pierces, because every framework that consumes the answer does. Selenium does
+not, and over-counting is the safe direction (see above).
+
 ### Picking **[settled]**
 
 `event.target` is retargeted to the host for any listener outside the shadow tree, so picking inside a

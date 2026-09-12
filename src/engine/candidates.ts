@@ -97,6 +97,46 @@ export function setTestIdAttribute(attr: string): void {
   testIdAttribute = attr.trim() || 'data-testid';
 }
 
+/**
+ * querySelectorAll, descending into open shadow roots.
+ *
+ * Playwright's engines pierce, and the eye reports what a Playwright test will
+ * get — so a resolver that stopped at the boundary under-counted. A plain
+ * `<button>Submit</button>` on a page of web components each containing their
+ * own Submit read as unique here and resolved to six in a real run.
+ *
+ * Piercing downward is right for every scope: a locator scoped to a shadow
+ * root still sees roots nested below it, both for us and for Playwright.
+ *
+ * Selenium does not pierce, so where the two differ this reports MORE matches
+ * than a Selenium run would. That direction is the safe one: an amber
+ * "6 elements match" sends the user to look, where a green tick on a locator
+ * that matches six would not (SPEC §7, §19).
+ */
+function pierce(root: Document | ShadowRoot | Element, sel: string): Element[] {
+  const out = Array.from(root.querySelectorAll(sel));
+  for (const el of Array.from(root.querySelectorAll('*'))) {
+    if (el.shadowRoot) out.push(...pierce(el.shadowRoot, sel));
+  }
+  return out;
+}
+
+/**
+ * Whether a selector singles this element out — asked the way the frameworks
+ * ask it, which means piercing (SPEC §19).
+ *
+ * A non-piercing check calls `[name="email"]` unique on Etsy's sign-in form,
+ * because `<clg-text-input name="email">` is the only match in the document.
+ * Playwright's css pierces and finds two: the host and the `<input name="email">`
+ * that the component mirrors the attribute onto. Emitting it produced a locator
+ * that resolved to two elements in the framework it was generated for.
+ *
+ * This is the same mistake the resolver made, one layer down.
+ */
+function unique(el: Element, sel: string): boolean {
+  return pierce(rootOf(el), sel).length === 1;
+}
+
 function attrSelector(el: Element, attr: string): string | null {
   const value = el.getAttribute(attr);
   if (!value) return null;
@@ -108,7 +148,7 @@ function attrSelector(el: Element, attr: string): string | null {
   // escaping. CSS.escape is for identifiers and would render `/forgot` as
   // `\/forgot` — still valid, but nobody writes that.
   const sel = `${prefix}[${attr}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
-  return rootOf(el).querySelectorAll(sel).length === 1 ? sel : null;
+  return unique(el, sel) ? sel : null;
 }
 
 /** `#id`, unless the id is framework-generated — same rule as the id candidate. */
@@ -116,7 +156,7 @@ function idSelector(el: Element): string | null {
   const id = el.getAttribute('id');
   if (!id || looksGenerated(id)) return null;
   const sel = `#${CSS.escape(id)}`;
-  return rootOf(el).querySelectorAll(sel).length === 1 ? sel : null;
+  return unique(el, sel) ? sel : null;
 }
 
 /**
@@ -260,30 +300,6 @@ export function ariaHidden(el: Element): boolean {
  * WebDriver answers `invalid locator` — which is why §19 excludes xpath for a
  * shadow element rather than trying to emit one.
  */
-/**
- * querySelectorAll, descending into open shadow roots.
- *
- * Playwright's engines pierce, and the eye reports what a Playwright test will
- * get — so a resolver that stopped at the boundary under-counted. A plain
- * `<button>Submit</button>` on a page of web components each containing their
- * own Submit read as unique here and resolved to six in a real run.
- *
- * Piercing downward is right for every scope: a locator scoped to a shadow
- * root still sees roots nested below it, both for us and for Playwright.
- *
- * Selenium does not pierce, so where the two differ this reports MORE matches
- * than a Selenium run would. That direction is the safe one: an amber
- * "6 elements match" sends the user to look, where a green tick on a locator
- * that matches six would not (SPEC §7, §19).
- */
-function pierce(root: Document | ShadowRoot | Element, sel: string): Element[] {
-  const out = Array.from(root.querySelectorAll(sel));
-  for (const el of Array.from(root.querySelectorAll('*'))) {
-    if (el.shadowRoot) out.push(...pierce(el.shadowRoot, sel));
-  }
-  return out;
-}
-
 /**
  * Elements that render no text of their own. Playwright's text engine ignores
  * them; ours counted `<title>` as a match for the page heading, because a
