@@ -46,9 +46,9 @@ Shared by both stores.
 > Each target offers a full page object or just the locators, so it fits whatever conventions your
 > project already has.
 >
-> Version 3 is a complete rewrite. It runs in Chrome and Firefox, works inside iframes, prefers
-> accessible roles and names over brittle CSS paths, and checks that every locator it gives you
-> actually resolves to the element you picked.
+> Version 3 is a complete rewrite. It runs in Chrome and Firefox, reaches elements inside iframes and
+> inside a web component's shadow DOM, prefers accessible roles and names over brittle CSS paths, and
+> checks that every locator it gives you actually resolves to the element you picked.
 >
 > Suggestions and bug reports are welcome on GitHub:
 > https://github.com/danhumphrey/page-modeller/issues
@@ -64,6 +64,9 @@ it. Kept out of the draft above.
 > - **Playwright support**, TypeScript and Python, generating role- and label-based locators
 > - **Selenium WebDriver Python**, alongside Java and C#
 > - **Works inside iframes**, including cross-origin and sandboxed ones
+> - **Works inside shadow DOM.** Web components keep their controls in a shadow root, where an
+>   ordinary DOM walk cannot see them — so a scan of a modern sign-up form used to find the buttons
+>   around it and none of the fields. The generated locator walks the components to reach the element
 > - **Two output shapes** per framework: a full page object, or locators only
 > - **Firefox support** alongside Chrome
 > - Locators are checked against the page as they are generated, and the eye shows you what a locator
