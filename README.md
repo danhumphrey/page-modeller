@@ -16,36 +16,29 @@ Supported tools and languages are:
 - Selenium WebDriver Python
 - Puppeteer
 
-## What's new in 3.0
+## What's new in 3.0 
 
-A complete rewrite. Version 2 modelled the parts of a page that a `document.querySelector` could
-reach; version 3 models the page.
+A complete rewrite!
 
-**Playwright**, in TypeScript and Python, generating role- and label-based locators — the thing most
-teams moved to since v2 shipped.
+**Playwright**, in TypeScript and Python, generating role- and label-based locators.
 
 **Elements inside iframes.** The frame an element lives in is part of its locator, so the generated
 code enters the frames to reach it: `frameLocator` chains for Playwright, a `switchTo().frame()` chain
-for Selenium. Cross-origin, `srcdoc` and sandboxed frames included — and a frame that genuinely cannot
-be read says so rather than quietly returning nothing.
+for Selenium. Cross-origin, `srcdoc` and sandboxed frames included.
 
 **Elements inside shadow DOM.** Web components keep their real controls in a shadow root, where an
-ordinary DOM walk cannot see them — so a scan of a modern sign-up form used to return the buttons
-around it and none of the fields. Page Modeller now scans into open shadow roots and records the
-components an element sits inside, so the generated locator reaches it: `page.locator('my-field').locator(...)`,
+ordinary DOM walk cannot see them. Page Modeller now scans into open shadow roots and records the
+components and generates locator that reach it: `page.locator('my-field').locator(...)`,
 Puppeteer's `>>>`, Selenium's `getShadowRoot()` chain.
 
-**Two output shapes per framework** — a full page object, or the locators on their own for teams with
-their own conventions.
+**Alternate code generation styles by framework and language** generate a full page object, methods or just the locators.
 
-**Firefox**, alongside Chrome, and a side panel rather than only a DevTools panel.
+**New side panel**, in addition to the existing DevTools panel.
 
-**Every locator is checked against the page as it is generated**, and the eye shows what one matches
-before you trust it — counted the way the framework you picked counts, which is not always the way the
-browser does.
+**Framework aware locators**, and match validation within the browser - the way the framework locates elements, not the
+browser.
 
-Removed: Robot Framework and Protractor, neither of which is maintained upstream. Your options carry
-over.
+Removed: Robot Framework and Protractor, neither of which is maintained upstream.
 
 ## Contents
 
@@ -65,13 +58,11 @@ over.
   <img src="media/browsers.png" width="504" alt="Chrome, Firefox, Brave, Opera, Vivaldi" />
 </p>
 
-Chrome 114+ and Firefox 115+, on Manifest V3. Page Modeller runs as a **side panel** (Chrome) or
-**sidebar** (Firefox), and as a **DevTools panel** on both.
+Chrome 114+ and Firefox 115+, on Manifest V3. Page Modeller runs as a **side panel** (When supported) or
+**sidebar** (When supported) or as a **DevTools panel**.
 
 Other Chromium browsers install from the Chrome Web Store listing. Brave and Vivaldi have the side
-panel and work exactly as Chrome does. **Opera has no extension side panel API**, so the toolbar
-button explains that and Page Modeller runs in its DevTools panel instead — everything works there,
-it is simply the only surface Opera offers.
+panel and work exactly as Chrome does. **Opera has no extension side panel API** so the DevTools panel must be used in Opera.
 
 ## Installation
 
@@ -106,20 +97,13 @@ generated code walks the chain to reach it — you do not have to know it is the
 
 ## Output
 
-Every framework offers a full page object or **locators only** — the locator declarations and nothing
-else, for teams with their own page-object conventions. Selenium also offers its **methods** shape,
+Every framework generates a full page object or **locators only**. Selenium also offers its **methods** shape,
 the getters and interaction methods v2.5.1 generated.
 
-Locators are computed from the page itself: the accessible role and name first, then the attributes a
-person actually wrote, and a structural CSS or XPath path only as a last resort. Every candidate is
-checked against the page before it is offered, so a locator that matches nothing — or matches five
-things — is never presented as though it matched one.
-
-That check is made the way the **chosen framework** would make it, which is not always the way the
+Locators are computed from the page itself: the accessible role and name first, then the attributes and a structural CSS or XPath path only as a last resort. Every candidate locator is
+checked against the page before it is used, in the way the **chosen framework** would make it, which is not always the way the
 browser would. Playwright's own engines see inside web components and Selenium's do not, so the same
-page can hold a button that is unique to one and ambiguous to the other. A locator Selenium cannot
-express is never offered for Selenium, and a count that would differ is reported rather than
-flattered.
+page can hold a button that is unique to one framework and ambiguous to another.
 
 It is all deterministic and entirely offline. No LLM, no network requests, nothing leaves the browser.
 
