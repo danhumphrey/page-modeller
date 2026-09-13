@@ -450,7 +450,8 @@ was requested, and a setting nobody can change is not a feature; building the me
 been the alternative.
 
 **Release blocker:** `browser_specific_settings.gecko.id` is a placeholder. The real AMO id must replace
-it or an upload creates a second listing instead of updating the existing one (NFR-6).
+it or an upload creates a second listing instead of updating the existing one
+(CONSTRAINTS.md, NFR-6).
 
 > Frame support (§13) is not a standalone phase — it threads through Phase 1 (picker injects into all
 > frames; IR carries `framePath`) and the generators (Phase 2). Spike #5 gates the cross-origin part.

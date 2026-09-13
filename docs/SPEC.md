@@ -1,8 +1,7 @@
 # Page Modeller v3 — Behavioural Spec
 
 Owns **what the tool does**. Derived from v2.5.1's shipped behaviour, walked through with the author
-2026-09-08. Supersedes the behavioural half of `PRD.md`, which was generated from a locator spike and is
-not authoritative.
+2026-09-08. The constraints it must not contradict are in `CONSTRAINTS.md`.
 
 Status key: **[settled]** confirmed by the author · **[inferred]** my reading, not yet reviewed ·
 **[open]** not yet decided.
