@@ -21,12 +21,10 @@ only your own commits.
 ## The docs
 
 Read `docs/SPEC.md` (owns *what the tool does*) before changing behaviour, and `docs/REWRITE-PLAN.md`
-(owns *how*) before changing architecture. `docs/RELEASE-PLAN.md` is what stands between here and the
-stores. `docs/SESSION-CONTEXT.md` is history. Spike evidence is in `docs/spikes/`.
-
-**`docs/PRD.md` is not authoritative for behaviour** — it was generated from the locator spike before
-anyone wrote down what the tool does, and several of its FR-* items describe functionality that does not
-exist (FR-G2's class generation, most obviously). Its NFRs and store/release constraints still hold.
+(owns *how*) before changing architecture. `docs/CONSTRAINTS.md` is the short list neither of them may
+quietly contradict — browser floors, the in-place upgrade, what is deliberately out of scope.
+`docs/RELEASE-PLAN.md` is what stands between here and the stores. Spike evidence is in
+`docs/spikes/`.
 
 **Status:** the host-agnostic shell is built and hand-verified on both browsers. Behaviour was specced
 from scratch with the author on 2026-09-08 (`SPEC.md`, 18 sections). **Next is stripping the spike UI**,

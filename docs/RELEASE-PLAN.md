@@ -60,8 +60,11 @@ v3 moves to the root and v2.5.1 retires. Do this first: everything else touches 
     now `MANUAL-VERIFICATION.md`, updated to current behaviour; the stale "Phase 1 — Playwright Page
     Object Model" description in `package.json` and the **manifest** is now the store summary.
     **Outstanding:** a screenshot for the top of the README, once the store captures are chosen.
-15. Prune: `PRD.md` is explicitly not authoritative (SPEC.md supersedes it) and
-    `SESSION-CONTEXT.md` is history. Keep SPEC and this plan.
+15. ✅ Pruned. `PRD.md` became `CONSTRAINTS.md` — its `FR-*` items described functionality that was
+    never built, so they are gone rather than left to read as a specification, and the NFRs and
+    out-of-scope list that were always true are kept, numbering included, because shipped code cites
+    NFR-6. `SESSION-CONTEXT.md` is deleted: everything current in it lives in CLAUDE.md or SPEC.md,
+    and one row of it had gone stale (it said Firefox was DevTools-only).
 
 ## Phase 5 — Submit
 

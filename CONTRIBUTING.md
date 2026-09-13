@@ -114,12 +114,12 @@ for the frame cases. They are bare markup, so do a pass on a real site too.
 | [`docs/SPEC.md`](docs/SPEC.md) | **What the tool does.** Read before changing behaviour |
 | [`docs/REWRITE-PLAN.md`](docs/REWRITE-PLAN.md) | **How.** Read before changing architecture |
 | [`docs/MANUAL-VERIFICATION.md`](docs/MANUAL-VERIFICATION.md) | The completion gate |
+| [`docs/CONSTRAINTS.md`](docs/CONSTRAINTS.md) | Browser floors, the in-place upgrade, what is out of scope |
 | [`docs/RELEASE-PLAN.md`](docs/RELEASE-PLAN.md) | What stands between here and the stores |
 | [`docs/spikes/`](docs/spikes/) | Evidence behind the decisions |
 
-`docs/PRD.md` predates the spec and is **not authoritative for behaviour**; `docs/SESSION-CONTEXT.md`
-is history. Version 2.5.1 — the Vue 2 / Webpack extension v3 replaces — is at the `v2.5.1-final` tag,
-and nothing in this tree builds it.
+Version 2.5.1 — the Vue 2 / Webpack extension v3 replaces — is at the `v2.5.1-final` tag, and nothing
+in this tree builds it.
 
 ## Pull requests
 
