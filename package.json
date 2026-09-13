@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "private": true,
   "type": "module",
-  "description": "Phase 1 \u2014 pick a DOM element and generate a verified Playwright Page Object Model.",
+  "description": "Browser DevTools extension for modelling web pages for automation.",
   "scripts": {
     "postinstall": "wxt prepare",
     "dev": "wxt",

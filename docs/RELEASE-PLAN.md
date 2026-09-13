@@ -9,7 +9,7 @@ independently mergeable.
 |---|---|
 | **The AMO add-on id** | ✅ `{1e34b9b3-8f45-415e-9586-c7d5de0d0aff}` — found on the public AMO search API, not supplied by hand. Now in `wxt.config.ts`, and `check-manifests.mjs` rejects a placeholder so it cannot regress. |
 | **The CWS item id** | `ejgkdhekcepfgdghejpkmbfjgnioejak`, from the store URL. |
-| **The version number** | ✅ `3.0.0`. Both stores reject an upload that is not higher than the published 2.5.1; the manifest check now enforces it at build time. |
+| **The version number** | ✅ `3.0.0`. Both stores reject an upload that is not higher than what is published — CWS has 2.5.1, **AMO is still on 2.1.0**. The manifest check enforces the floor at build time. |
 | **Listing copy and branding** | I can draft; the words and the artwork are a product decision. |
 
 **Credentials are not on this list, and must never be.** The store API keys go straight into GitHub
@@ -49,12 +49,17 @@ v3 moves to the root and v2.5.1 retires. Do this first: everything else touches 
     rather than hand-cropped. You approve them.
 12. **Promo tiles.** CWS requires a 440×280 small tile; the 1400×560 marquee is optional. AMO needs
     none. `media/promo_*.png` are v2.5.1's — reuse or redraw is yours.
-13. **Listing copy.** Name, 132-character summary, description, category, and the justification CWS
-    demands for `<all_urls>`. I draft, you edit.
+13. ✅ **Listing copy** drafted and settled in `STORE-LISTING.md`: name, summary, description,
+    categories, and the justification CWS demands for `<all_urls>`. Two decisions recorded there that
+    are edits to the STORE FORMS rather than to the copy — UK spelling throughout, so Chrome's
+    *modeling* changes; and the "considered a beta release" line comes off both listings.
 
 ## Phase 4 — Docs
 
-14. Rewrite `README.md` — it describes v2.5.1.
+14. ✅ Rewrite `README.md` — it described Phase 1 of the rewrite. The manual checklist buried in it is
+    now `MANUAL-VERIFICATION.md`, updated to current behaviour; the stale "Phase 1 — Playwright Page
+    Object Model" description in `package.json` and the **manifest** is now the store summary.
+    **Outstanding:** a screenshot for the top of the README, once the store captures are chosen.
 15. Prune: `PRD.md` is explicitly not authoritative (SPEC.md supersedes it) and
     `SESSION-CONTEXT.md` is history. Keep SPEC and this plan.
 

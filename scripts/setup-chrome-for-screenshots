@@ -1,0 +1,46 @@
+#!/bin/sh
+# A clean Chrome for store screenshots. macOS only.
+#
+#   npm run build
+#   scripts/setup-chrome-for-screenshots
+#   scripts/setup-chrome-for-screenshots 1200 750   # bigger, same 1.6:1
+#
+# A dedicated profile means no bookmarks bar, no other extensions, no profile
+# avatar and no history in the omnibox — none of which belong in a store
+# screenshot. It persists, so the extension only has to be loaded once:
+#
+#   chrome://extensions → Developer mode → Load unpacked → .output/chrome-mv3
+#
+# NOT `--load-extension`: recent Chrome puts a yellow "You are using an
+# unsupported command-line flag" infobar at the top of the window for it, which
+# lands in every capture. Loading by hand avoids the bar entirely, and the flags
+# below are all ones Chrome does not consider unsupported.
+#
+# 1000x625 is 1.6:1, the ratio both stores want, so the window fills a 1280x800
+# frame exactly. It is small to work in — build the model in a big window first,
+# then resize to capture. The model lives in storage.session and survives it.
+set -e
+w="${1:-1000}"
+h="${2:-625}"
+profile="${PM_SHOT_PROFILE:-${TMPDIR:-/tmp}/pm-shot-profile}"
+chrome="${CHROME_PATH:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
+ext="$(cd "$(dirname "$0")/.." && pwd)/.output/chrome-mv3"
+
+[ -x "$chrome" ] || { echo "Chrome not found at $chrome — set CHROME_PATH." >&2; exit 1; }
+[ -d "$ext" ] || echo "Note: $ext does not exist yet. Run 'npm run build' first." >&2
+
+"$chrome" \
+  --user-data-dir="$profile" \
+  --no-first-run \
+  --no-default-browser-check \
+  --hide-crash-restore-bubble \
+  --window-position=0,25 \
+  --window-size="$w,$h" \
+  >/dev/null 2>&1 &
+
+cat <<EOF
+Chrome up on a clean profile ($profile) at ${w}x${h}.
+First run only: chrome://extensions → Developer mode → Load unpacked →
+  $ext
+Then: scripts/capture-window-screenshot <name>
+EOF

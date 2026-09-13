@@ -22,8 +22,10 @@ AMO, which allows more:
 > Page Modeller enables developers to scan a web page and generate page object style code for various
 > tools, languages and frameworks.
 
-Both keep today's wording. **One thing to settle:** Chrome currently says *modeling*, AMO says
-*modelling*. They should agree — the extension is called Page Modeller, so UK spelling throughout.
+Both keep today's wording. **Settled: UK spelling throughout** — *modelling*, *modeller*. The two
+listings disagree today, Chrome saying *modeling*, and the extension is called Page Modeller, so
+Chrome's is the one that changes. Worth checking on submission, since it is the kind of edit a store
+form quietly keeps from the previous version.
 
 ## Description
 
@@ -43,19 +45,20 @@ Shared by both stores.
 > - Selenium WebDriver Python
 > - Puppeteer
 >
-> Each target offers a full page object or just the locators, so it fits whatever conventions your
-> project already has.
+> Each target offers a full page object or just the locators, and Selenium also generates methods —
+> so it fits whatever conventions your project already has.
 >
-> Version 3 is a complete rewrite. It runs in Chrome and Firefox, works inside iframes, prefers
-> accessible roles and names over brittle CSS paths, and checks that every locator it gives you
-> actually resolves to the element you picked.
+> Version 3 is a complete rewrite. It runs in Chrome and Firefox, reaches elements inside iframes and
+> inside a web component's shadow DOM, prefers accessible roles and names over brittle CSS paths, and
+> checks that every locator it gives you actually resolves to the element you picked.
 >
 > Suggestions and bug reports are welcome on GitHub:
 > https://github.com/danhumphrey/page-modeller/issues
 
-**To settle:** today's listings both say "actively developed and is considered a beta release". After
-a rewrite released as 3.0.0, that reads as less confidence than the work deserves — suggest dropping
-it. Kept out of the draft above.
+**Settled: the beta line goes.** Today's listings both say the extension "is actively developed and is
+considered a beta release". After a rewrite released as 3.0.0 that reads as less confidence than the
+work deserves, and it is already absent from the draft above — so this is a deletion to make on the
+store forms, not a change to the copy here.
 
 ## What's new (3.0.0)
 
@@ -64,7 +67,11 @@ it. Kept out of the draft above.
 > - **Playwright support**, TypeScript and Python, generating role- and label-based locators
 > - **Selenium WebDriver Python**, alongside Java and C#
 > - **Works inside iframes**, including cross-origin and sandboxed ones
-> - **Two output shapes** per framework: a full page object, or locators only
+> - **Works inside shadow DOM.** Web components keep their controls in a shadow root, where an
+>   ordinary DOM walk cannot see them — so a scan of a modern sign-up form used to find the buttons
+>   around it and none of the fields. The generated locator walks the components to reach the element
+> - **A choice of output style**: a full page object, or locators only — and for Selenium, the
+>   methods Page Modeller has always generated
 > - **Firefox support** alongside Chrome
 > - Locators are checked against the page as they are generated, and the eye shows you what a locator
 >   matches before you trust it
