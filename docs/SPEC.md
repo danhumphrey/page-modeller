@@ -1197,3 +1197,36 @@ Playwright and real Puppeteer by the fidelity specs, and the generated Python **
 by `selenium.run.spec.ts` and `playwright-python.run.spec.ts`. Nothing here is believed until it has
 resolved against a real engine — Selenium's "css only from a shadow root" restriction included, which
 the run spec is the arbiter of.
+
+## 20. Telling a version 2 user what happened
+
+**Once, in a tab, on 2.x → 3.x.** **[settled]**
+
+Mozilla documents this as *upboarding* and asks for it. Chrome documents the same pattern for a first
+install and asks only that extensions cause minimal distraction. Neither forbids it; only one endorses
+it.
+
+**A tab, because the alternatives cost more than they are worth.** `action.openPopup()` is Chrome 127+
+against a declared floor of 114, is rejected for an unfocused window, and is undocumented from
+`onInstalled` — where there may be no focused window and the worker is still starting. A notification
+needs the `notifications` permission, and adding a required permission on an **update** makes Chrome
+disable the extension until the user re-accepts it: paying for a what's-new with "your extension is
+switched off" is a bad trade.
+
+**Its first job is not the feature list.** The surfaces moved: version 2 was DevTools-only and version
+3 adds a side panel. Someone opening DevTools finds it changed whether or not we say anything, so the
+page leads with *where to find it* and only then says what is new. That is also what makes the tab
+defensible rather than promotional — it answers a question the user is about to have.
+
+**Gated on the major version changing**, which is what keeps it honest. Three things follow, and each
+is a bug without the gate:
+
+| | |
+|---|---|
+| Reloading an unpacked extension fires `update` | with the same version, on every rebuild in dev — Chrome documents this |
+| A patch or minor release | 3.0.1 does not earn a tab |
+| A fresh install | is not an upgrade and has nothing to catch up on, so `install` is not handled at all — the store listing is the onboarding |
+
+`previousVersion` comes from the browser, so nothing has to be stored and nothing can be left behind
+to fire a second time. `scripts/check-manifests.mjs` asserts the page is actually emitted: a wrong
+path would open an error page on the one occasion this ever runs, and nothing else would notice.

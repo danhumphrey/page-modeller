@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>What's new in Page Modeller 3.0</title>
+    <!--
+      Shown once, in a tab, when a 2.x install updates to 3.x (SPEC §20).
+      Mozilla calls this upboarding and documents it; Chrome documents the same
+      pattern for a first install and asks only that extensions avoid
+      distracting people. Opening a tab is the one approach that works on both
+      browsers at our declared floors and needs no new permission — a
+      notification would need `notifications`, and adding a required permission
+      on an update makes Chrome DISABLE the extension until the user re-accepts.
+
+      Its first job is not the feature list: it is to answer "where did
+      everything go?", because the surfaces moved. A 2.5.1 user opens DevTools
+      and finds it changed whether or not we say anything.
+
+      Static, and no framework: it renders once, has no state, and loading Vue
+      and Quasar to show a list would be the only reason either is in this
+      bundle.
+    -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1f2328;
+        --muted: #656d76;
+        --rule: #d8dce0;
+        --accent: #1f6feb;
+        --card: #f6f8fa;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1e1f22;
+          --fg: #e6e6e6;
+          --muted: #9aa0a6;
+          --rule: #3c4043;
+          --accent: #8ab4f8;
+          --card: #2b2d31;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 48px 24px 64px;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+      }
+      .eyebrow {
+        color: var(--muted);
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin: 0 0 8px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        line-height: 1.2;
+        font-weight: 650;
+      }
+      .lede {
+        margin: 0 0 32px;
+        color: var(--muted);
+        font-size: 17px;
+      }
+      h2 {
+        font-size: 17px;
+        margin: 32px 0 12px;
+        font-weight: 650;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin: 0 0 28px;
+      }
+      .card h2 {
+        margin-top: 0;
+      }
+      dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px 16px;
+        align-items: baseline;
+      }
+      dt {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      dd {
+        margin: 0;
+        color: var(--muted);
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      li {
+        margin: 0 0 10px;
+      }
+      li:last-child {
+        margin-bottom: 0;
+      }
+      li b {
+        font-weight: 600;
+      }
+      kbd {
+        padding: 1px 6px;
+        border: 1px solid var(--rule);
+        border-radius: 4px;
+        background: var(--bg);
+        font: 13px/1.4 ui-monospace, SFMono-Regular, monospace;
+      }
+      code {
+        font: 13px/1.4 ui-monospace, SFMono-Regular, monospace;
+      }
+      a {
+        color: var(--accent);
+      }
+      footer {
+        margin-top: 36px;
+        padding-top: 20px;
+        border-top: 1px solid var(--rule);
+        color: var(--muted);
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Page Modeller</p>
+      <h1>Version 3 is here</h1>
+      <p class="lede">A complete rewrite, and the first thing to say is where everything went.</p>
+
+      <div class="card">
+        <h2>Where to find it</h2>
+        <dl>
+          <dt>Side panel</dt>
+          <dd>Click the Page Modeller toolbar icon. This is new — in version 2 there was only DevTools.</dd>
+          <dt>DevTools</dt>
+          <dd>Press <kbd>F12</kbd> and choose <strong>Page Modeller</strong>, exactly as before.</dd>
+          <dt>Options</dt>
+          <dd>Right-click the toolbar icon. Your existing settings have carried over.</dd>
+        </dl>
+      </div>
+
+      <h2>What's new</h2>
+      <ul>
+        <li>
+          <b>Playwright</b>, in TypeScript and Python, generating role- and label-based locators.
+          <b>Selenium WebDriver Python</b> joins Java and C#.
+        </li>
+        <li>
+          <b>Elements inside iframes.</b> The frame an element lives in is part of its locator, so the
+          generated code enters the frames to reach it — cross-origin, <code>srcdoc</code> and sandboxed
+          frames included.
+        </li>
+        <li>
+          <b>Elements inside shadow DOM.</b> Web components keep their real controls in a shadow root,
+          where an ordinary DOM search cannot see them. Page Modeller now scans into open shadow roots
+          and generates locators that reach them.
+        </li>
+        <li>
+          <b>A choice of output style</b> per framework: a full page object, locators only, or — for
+          Selenium — the methods Page Modeller has always generated.
+        </li>
+        <li>
+          <b>Locators are checked as they are generated</b>, and the eye shows you what one matches
+          before you trust it — counted the way your chosen framework counts, which is not always the
+          way the browser does.
+        </li>
+      </ul>
+
+      <h2>Two things that have gone</h2>
+      <ul>
+        <li>
+          <b>Robot Framework and Protractor</b> are no longer generated. Neither is maintained
+          upstream.
+        </li>
+        <li>
+          <b>Images no longer get a click method.</b> Elements are classified by their accessibility
+          role now rather than their tag, which is more accurate nearly everywhere — and means an
+          <code>&lt;img&gt;</code> is treated as static unless it genuinely has a button role.
+        </li>
+      </ul>
+
+      <footer>
+        Everything still runs entirely in your browser: no network requests, no accounts, nothing
+        leaves the page. Found a problem, or want a framework we do not generate?
+        <a href="https://github.com/danhumphrey/page-modeller/issues" target="_blank" rel="noreferrer"
+          >Let me know on GitHub</a
+        >.
+      </footer>
+    </main>
+  </body>
+</html>

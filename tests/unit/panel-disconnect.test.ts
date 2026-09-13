@@ -26,7 +26,11 @@ interface FakePort {
 
 const listeners = {
   connect: [] as Listener[],
+  installed: [] as Listener[],
 };
+
+/** Tabs the background opened of its own accord. */
+const tabsCreated: string[] = [];
 
 const sentToTabs: Array<{ tabId: number; message: { type: string } }> = [];
 
@@ -41,9 +45,10 @@ vi.mock('wxt/browser', () => ({
     runtime: {
       onConnect: { addListener: (cb: Listener) => listeners.connect.push(cb) },
       onMessage: { addListener: () => {} },
-      onInstalled: { addListener: () => {} },
+      onInstalled: { addListener: (cb: Listener) => listeners.installed.push(cb) },
       sendMessage: () => Promise.resolve(),
       getURL: (path: string) => `chrome-extension://test${path}`,
+      getManifest: () => ({ version: manifestVersion }),
     },
     tabs: {
       sendMessage: (tabId: number, message: { type: string }) => {
@@ -53,7 +58,10 @@ vi.mock('wxt/browser', () => ({
       onRemoved: { addListener: () => {} },
       onUpdated: { addListener: () => {} },
       query: () => Promise.resolve([]),
-      create: () => Promise.resolve({}),
+      create: (opts: { url?: string }) => {
+        tabsCreated.push(opts?.url ?? '');
+        return Promise.resolve({});
+      },
     },
     action: { onClicked: { addListener: () => {} } },
     contextMenus: { create: () => {}, onClicked: { addListener: () => {} }, removeAll: () => Promise.resolve() },
@@ -77,6 +85,9 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
+/** What `runtime.getManifest().version` answers; a test may move it. */
+let manifestVersion = '3.0.0';
+
 /** WXT injects this; outside the build it has to be supplied. */
 vi.stubGlobal('defineBackground', (fn: () => void) => fn);
 
@@ -97,7 +108,10 @@ function connectPanel(): FakePort {
 /** Fresh module state per test — the background holds its ports in a closure. */
 async function startBackground() {
   listeners.connect.length = 0;
+  listeners.installed.length = 0;
   sentToTabs.length = 0;
+  tabsCreated.length = 0;
+  manifestVersion = '3.0.0';
   for (const key of Object.keys(sessionStore)) delete sessionStore[key];
   vi.resetModules();
   const mod = await import('@/entrypoints/background');
@@ -153,5 +167,57 @@ describe('closing the last panel on a tab', () => {
     panel.disconnect();
 
     expect(sentToTabs).toHaveLength(0);
+  });
+});
+
+describe("the what's new tab (SPEC §20)", () => {
+  beforeEach(startBackground);
+
+  const install = (reason: string, previousVersion?: string) => {
+    for (const cb of listeners.installed) cb({ reason, previousVersion });
+  };
+
+  it('opens once when the major version goes up', () => {
+    install('update', '2.5.1');
+    expect(tabsCreated).toEqual(['chrome-extension://test/whatsnew.html']);
+  });
+
+  it('stays shut for a minor or patch release', () => {
+    // 3.0.1 has nothing a user needs to be told in a tab, and a tab per patch
+    // is how an extension earns a one-star review.
+    install('update', '3.0.0');
+    manifestVersion = '3.1.0';
+    install('update', '3.0.0');
+    expect(tabsCreated).toEqual([]);
+  });
+
+  it('stays shut when an unpacked extension is reloaded', () => {
+    // Chrome fires `update` with the SAME version on every reload, which is
+    // every rebuild in dev. Ungated this opens a tab on every save.
+    install('update', '3.0.0');
+    expect(tabsCreated).toEqual([]);
+  });
+
+  it('stays shut on a fresh install', () => {
+    // Nothing to catch up on, and no previousVersion to compare. The store
+    // listing is the onboarding.
+    install('install', undefined);
+    expect(tabsCreated).toEqual([]);
+  });
+
+  it('stays shut for a browser update', () => {
+    install('chrome_update', '3.0.0');
+    expect(tabsCreated).toEqual([]);
+  });
+
+  it('does not trip over a version it cannot parse', () => {
+    install('update', 'not-a-version');
+    expect(tabsCreated).toEqual([]);
+  });
+
+  it('does not fire on a downgrade', () => {
+    manifestVersion = '2.5.1';
+    install('update', '3.0.0');
+    expect(tabsCreated).toEqual([]);
   });
 });
