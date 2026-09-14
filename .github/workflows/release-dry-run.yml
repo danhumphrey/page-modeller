@@ -47,38 +47,43 @@ jobs:
           ls -la .output/*.zip
           echo "manifest version: $(node -p "require('./package.json').version")"
 
-      # The same command release.yml runs, with --dry-run in front of it. If
-      # this passes and the real one fails, the difference is the upload
-      # itself, not the credentials.
-      - name: Authenticate against both stores
+      # The same command release.yml runs, with --dry-run in front. If this
+      # passes and the real one fails, the difference is the upload itself and
+      # not the credentials.
+      - name: Authenticate against AMO
         run: |
           npx wxt submit --dry-run \
-            --chrome-zip .output/*-chrome.zip \
             --firefox-zip .output/*-firefox.zip \
             --firefox-sources-zip .output/*-sources.zip
+        env:
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+
+      # Only if they exist. Chrome is uploaded by hand until they do, so their
+      # absence is a stated position rather than something to report as broken.
+      - name: Authenticate against the Chrome Web Store
+        if: ${{ secrets.CHROME_CLIENT_ID != '' }}
+        run: npx wxt submit --dry-run --chrome-zip .output/*-chrome.zip
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
-          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
-          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
 
       - name: Which secrets are missing
         if: failure()
         run: |
           echo "A dry run fails for two reasons: a secret is absent, or a secret is wrong."
           echo "Absent ones are listed below; anything not listed was present and the store rejected it."
-          for name in CHROME_EXTENSION_ID CHROME_CLIENT_ID CHROME_CLIENT_SECRET CHROME_REFRESH_TOKEN \
-                      FIREFOX_EXTENSION_ID FIREFOX_JWT_ISSUER FIREFOX_JWT_SECRET; do
+          for name in FIREFOX_EXTENSION_ID FIREFOX_JWT_ISSUER FIREFOX_JWT_SECRET; do
             eval "value=\${$name}"
             [ -n "$value" ] || echo "  missing: $name"
           done
           echo
-          echo "npx wxt submit init walks through creating them. The Chrome three need a"
-          echo "Google Cloud project with the Chrome Web Store API enabled; the Firefox two"
-          echo "are the AMO key and secret from the Developer Hub."
+          echo "These three are all a release needs: the AMO key and secret from the"
+          echo "Developer Hub, and the gecko id. Chrome is uploaded by hand from the"
+          echo "release-zips artifact, so its secrets are optional." "
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
