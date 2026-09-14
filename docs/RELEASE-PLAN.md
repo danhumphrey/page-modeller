@@ -68,7 +68,25 @@ v3 moves to the root and v2.5.1 retires. Do this first: everything else touches 
 
 ## Phase 5 — Submit
 
-16. Secrets, tag, push. Both stores gate on review; AMO will also review the sources.
+16. **Secrets: three, all of which you already have.** In
+    `Settings → Secrets and variables → Actions`: `FIREFOX_JWT_ISSUER` and `FIREFOX_JWT_SECRET` (the
+    AMO key and secret) and `FIREFOX_EXTENSION_ID` (`{1e34b9b3-8f45-415e-9586-c7d5de0d0aff}`).
+
+    **Chrome is uploaded by hand**, from the `release-zips` artifact the workflow keeps — the same
+    drag-and-drop 2.5.1 used, two minutes, a few times a year. Its API is not worth the setup: V1
+    wants a Google Cloud project, an OAuth consent screen, a client and a refresh token that expires
+    after seven days unless the consent screen is published — and **V1 is retired on 15 October
+    2026**, so all of that buys about a month. V2 replaces it with a service account and no consent
+    screen, which is genuinely simpler and worth doing *later*, on its own time. The workflow already
+    submits to Chrome automatically the moment `CHROME_CLIENT_ID` exists, so nothing has to change
+    when it does.
+17. **Rehearse.** Run the **Release dry run** workflow from the Actions tab. It builds the same zips
+    and runs the same submit command with `--dry-run`: authentication only, nothing uploaded. Do this
+    before tagging — otherwise the first time the credentials are exercised is on a tag that has
+    already been pushed.
+18. **Tag and push.** `v3.0.0`. The workflow runs the full suite with `PM_REQUIRE_FULL_SUITE=1`,
+    checks the tag agrees with `package.json`, zips, and submits to both stores. Submitting is not
+    publishing: both gate on review, and AMO reviews the sources zip as well.
 
 ## Risks worth naming now
 

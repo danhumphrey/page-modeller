@@ -52,16 +52,45 @@ jobs:
 
       - run: npm run zip
 
-      - name: Submit to both stores
-        run: npx wxt submit --chrome-zip .output/*-chrome.zip --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
+      # Firefox is submitted automatically; Chrome only if its secrets exist.
+      #
+      # AMO hands you a key and a secret on the Developer Hub and that is the
+      # whole setup. Chrome's V1 API wants a Google Cloud project, an OAuth
+      # consent screen, a client, and a refresh token that expires after seven
+      # days unless the consent screen is published — and V1 is retired on
+      # 15 October 2026, so that ceremony buys a month. V2 replaces it with a
+      # service account, which is genuinely simpler, but it is not set up here
+      # yet and a release should not wait on it.
+      #
+      # So the Chrome zip is built, checked and kept as an artifact, and
+      # uploaded by hand on the Developer Dashboard — which is what 2.5.1 did,
+      # takes two minutes, and happens a few times a year. When the Chrome
+      # secrets are added this step starts including it with no further change.
+      - name: Is Chrome automated?
+        id: chrome
+        run: |
+          if [ -n "${{ secrets.CHROME_CLIENT_ID }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Chrome secrets are not set, so only Firefox is submitted. Download release-zips below and upload the -chrome.zip on the Developer Dashboard."
+          fi
+
+      - name: Submit to Firefox
+        run: npx wxt submit --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip
+        env:
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+
+      - name: Submit to Chrome
+        if: steps.chrome.outputs.enabled == 'true'
+        run: npx wxt submit --chrome-zip .output/*-chrome.zip
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
-          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
-          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
 
       - name: Keep the artifacts that were submitted
         if: always()
