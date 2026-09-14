@@ -1440,21 +1440,25 @@ test('scanning a container scans the frames inside it (SPEC §16)', async () => 
   await expect(label).toHaveText(/› main$/);
   await page.keyboard.press('Enter');
 
-  // The frames answer separately, so rows arrive over several messages.
+  // Rows arrive over several messages, and a nested frame is a second
+  // round-trip: the child scans itself, then delegates to ITS child. So the
+  // deepest condition is the one to wait for — polling for any framed element
+  // and then asserting the deep one immediately is a race, and it passed
+  // locally and failed on CI, which is the usual way round.
   await expect
-    .poll(async () => (await model())?.elements.filter((e) => (e.framePath?.length ?? 0) > 0).length, { timeout: 5000 })
+    .poll(async () => (await model())?.elements.filter((e) => (e.framePath?.length ?? 0) > 1).length, { timeout: 10_000 })
     .toBeGreaterThan(0);
 
   const elements = (await model())!.elements;
 
-  // The container's own control is still there — cascading must not replace
-  // the scan, only extend it.
-  expect(elements.some((e) => (e.framePath?.length ?? 0) === 0)).toBe(true);
+  // Two levels down proves a cascade rather than one step into the frames
+  // <main> directly contains.
+  expect(elements.some((e) => (e.framePath?.length ?? 0) > 1)).toBe(true);
 
-  // And a nested frame, two levels down, so this is a cascade rather than one
-  // step into the frames <main> directly contains.
+  // And the container's own control is still there — cascading must extend the
+  // scan, never replace it.
   expect(
-    elements.some((e) => (e.framePath?.length ?? 0) > 1),
-    'an element from a frame inside a frame'
+    elements.some((e) => (e.framePath?.length ?? 0) === 0),
+    "the container's own control"
   ).toBe(true);
 });
