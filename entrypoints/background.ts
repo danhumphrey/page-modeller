@@ -256,6 +256,41 @@ export default defineBackground(() => {
     }
   });
 
+  /**
+   * Tell a version 2 user what happened, once (SPEC §20).
+   *
+   * Mozilla documents this as upboarding and asks for it; Chrome documents the
+   * same pattern for a first install and asks only that extensions avoid
+   * distracting people. A tab is the one approach that works on both browsers
+   * at our declared floors and needs no new permission — `action.openPopup()`
+   * is Chrome 127+ against a floor of 114 and is rejected for an unfocused
+   * window, and a notification would need the `notifications` permission,
+   * which on an UPDATE makes Chrome disable the extension until the user
+   * re-accepts it.
+   *
+   * Gated on the MAJOR version changing, which is the whole reason this is
+   * defensible: it fires on 2.x → 3.x and never again. Three things follow
+   * from that gate, and each of them is a bug without it:
+   *
+   *   * `reason: 'update'` also fires every time an unpacked extension is
+   *     reloaded, which is every rebuild in dev. Chrome's own documentation
+   *     says so. Ungated, this opens a tab on every save.
+   *   * A patch or minor release does not earn a tab. 3.0.1 must be silent.
+   *   * A fresh install is not an upgrade and has nothing to catch up on, so
+   *     `reason: 'install'` is deliberately not handled: the store listing is
+   *     the onboarding.
+   *
+   * `previousVersion` is supplied by the browser, so no state has to be
+   * stored and nothing can be left behind to fire a second time.
+   */
+  browser.runtime.onInstalled.addListener(({ reason, previousVersion }) => {
+    if (reason !== 'update' || !previousVersion) return;
+    const was = Number(previousVersion.split('.')[0]);
+    const now = Number(browser.runtime.getManifest().version.split('.')[0]);
+    if (!Number.isFinite(was) || !Number.isFinite(now) || now <= was) return;
+    void browser.tabs.create({ url: browser.runtime.getURL('/whatsnew.html') });
+  });
+
   browser.contextMenus.onClicked.addListener((info) => {
     if (info.menuItemId === 'options') void browser.runtime.openOptionsPage();
     else if (info.menuItemId === 'support') void browser.tabs.create({ url: SUPPORT_URL });

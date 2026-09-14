@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>What's new in Page Modeller 3.0</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #1f2328;
+        --muted: #656d76;
+        --rule: #d8dce0;
+        --accent: #1f6feb;
+        --card: #f6f8fa;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1e1f22;
+          --fg: #e6e6e6;
+          --muted: #9aa0a6;
+          --rule: #3c4043;
+          --accent: #8ab4f8;
+          --card: #2b2d31;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 48px 24px 64px;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+      }
+      /* The mark sits beside the title block rather than above it: the page
+         had no colour at all otherwise, and the braces are the one piece of
+         identity the extension has. */
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin: 0 0 12px;
+      }
+      header img {
+        flex: none;
+      }
+      .eyebrow {
+        color: var(--muted);
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin: 0 0 4px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 30px;
+        line-height: 1.2;
+        font-weight: 650;
+      }
+      .lede {
+        margin: 0 0 32px;
+        color: var(--muted);
+        font-size: 17px;
+      }
+      h2 {
+        font-size: 17px;
+        margin: 32px 0 12px;
+        font-weight: 650;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin: 0 0 28px;
+      }
+      .card h2 {
+        margin-top: 0;
+      }
+      dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px 16px;
+        align-items: baseline;
+      }
+      dt {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      dd {
+        margin: 0;
+        color: var(--muted);
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      li {
+        margin: 0 0 10px;
+      }
+      li:last-child {
+        margin-bottom: 0;
+      }
+      li b {
+        font-weight: 600;
+      }
+      /* Full-strength text, so it reads in both themes. Hard-coded white was
+         invisible on the light card, where the ground is #f6f8fa. */
+      .badge {
+        color: var(--fg);
+        font-weight: 650;
+      }
+      kbd {
+        padding: 1px 6px;
+        border: 1px solid var(--rule);
+        border-radius: 4px;
+        background: var(--bg);
+        font: 13px/1.4 ui-monospace, SFMono-Regular, monospace;
+      }
+      code {
+        font: 13px/1.4 ui-monospace, SFMono-Regular, monospace;
+      }
+      a {
+        color: var(--accent);
+      }
+      footer {
+        margin-top: 36px;
+        padding-top: 20px;
+        border-top: 1px solid var(--rule);
+        color: var(--muted);
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <!-- Decorative: the title says the name, so announcing it again would
+             be noise to a screen reader. -->
+        <img src="/pm-icon.png" alt="" width="46" height="40" />
+        <div>
+          <p class="eyebrow">Page Modeller</p>
+          <h1>Version 3 is here</h1>
+        </div>
+      </header>
+      <p class="lede">A complete rewrite, with new functionality and modern framework and browser support.</p>
+
+      <div class="card">
+        <dl>
+          <dt>Side panel</dt>
+          <dd><b class="badge">New -</b> Click the Page Modeller toolbar icon to load Page Modeller in the browser side panel.</dd>
+          <dt>DevTools</dt>
+          <dd>Press <span id="devtools-keys">the DevTools shortcut</span> and use
+            <strong>Page Modeller</strong> from the DevTools panel as before.</dd>
+          <dt>Options</dt>
+          <dd>Right-click the toolbar icon. Your existing settings have carried over.</dd>
+        </dl>
+      </div>
+
+      <h2>What's new</h2>
+      <ul>
+        <li>
+          <b>Playwright</b>, in TypeScript and Python, generating role- and label-based locators.
+          <b>Selenium WebDriver Python</b> joins Java and C#.
+        </li>
+        <li>
+          <b>Elements inside iframes.</b> The frame an element lives in is part of its locator, so the
+          generated code enters the frames to reach it.
+        </li>
+        <li>
+          <b>Elements inside shadow DOM.</b> Web components keep their real controls in a shadow root,
+          where an ordinary DOM search cannot see them. Page Modeller now scans into open shadow roots
+          and generates locators that reach them.
+        </li>
+        <li>
+          <b>Alternate code generation styles</b> per framework and language generate a full page object, methods or just the locators.
+        </li>
+        <li>
+          <b>Framework aware locators</b> and match validation within the browser - the way the framework locates elements, not the browser.
+        </li>
+      </ul>
+
+      <h2>Removed</h2>
+      <ul>
+        <li>
+          <b>Robot Framework and Protractor</b> are no longer generated. Neither is maintained
+          upstream.
+        </li>
+      </ul>
+
+      <footer>
+        Everything still runs entirely in your browser: no network requests, no accounts, nothing
+        leaves the page. Found a problem, or want a framework we do not generate?
+        <a href="https://github.com/danhumphrey/page-modeller/issues" target="_blank" rel="noreferrer"
+          >Let me know on GitHub</a
+        >.
+      </footer>
+    </main>
+      <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -85,6 +85,13 @@ for (const [dir, checks] of Object.entries(EXPECT)) {
   else if (/type=["']?module/.test(tag)) fail(dir, 'devtools-register.js must NOT be a module (defers panel registration)');
   await readFile(`.output/${dir}/devtools-register.js`, 'utf8').catch(() => fail(dir, 'devtools-register.js emitted'));
 
+  // The what's new tab (SPEC §20). Same silent-failure shape as the popup
+  // below: `tabs.create` on a path that is not there opens an error page on
+  // the one occasion this ever runs, and nothing in the suite would notice.
+  const whatsNew = (await readFile('entrypoints/background.ts', 'utf8')).match(/getURL\('([^']+)'\)/)?.[1];
+  if (!whatsNew) fail(dir, "background opens a what's new tab on a major update");
+  else await readFile(`.output/${dir}${whatsNew}`, 'utf8').catch(() => fail(dir, `${whatsNew} emitted (referenced by getURL)`));
+
   // The popup the background falls back to where there is no side panel API
   // (SPEC §15). `action.setPopup` with a path that is not there fails exactly
   // as quietly as the bug it exists to fix: no panel, no popup, no error. The

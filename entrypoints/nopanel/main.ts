@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { devtoolsShortcut } from '@/src/shortcut';
 
 // The action popup for a browser with no side panel API (SPEC §15).
 //
@@ -9,26 +10,13 @@ import { browser } from 'wxt/browser';
 /** Where Support goes — the repository, as in v2.5.1 and the context menu. */
 const SUPPORT_URL = 'https://github.com/danhumphrey/page-modeller';
 
-/**
- * The DevTools shortcut, per platform. macOS is the odd one; everywhere else
- * Chromium uses Ctrl+Shift+I.
- *
- * `userAgentData.platform` is the supported reading and `navigator.platform`
- * the deprecated one, so try the first and keep the second as the fallback —
- * Firefox never sees this page, but a Chromium fork may lag on either.
- */
-function shortcutKeys(): string[] {
-  const ua = (navigator as { userAgentData?: { platform?: string } }).userAgentData?.platform;
-  const mac = ua ? ua === 'macOS' : /Mac/i.test(navigator.platform);
-  return mac ? ['Command', 'Option', 'I'] : ['Control', 'Shift', 'I'];
-}
 
 const version = document.getElementById('version');
 if (version) version.textContent = browser.runtime.getManifest().version;
 
 const keys = document.getElementById('keys');
 if (keys) {
-  shortcutKeys().forEach((key, i) => {
+  devtoolsShortcut().forEach((key, i) => {
     if (i > 0) {
       const plus = document.createElement('span');
       plus.className = 'plus';
