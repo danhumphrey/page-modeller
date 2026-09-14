@@ -101,8 +101,12 @@ jobs:
       - name: Which secrets are missing
         if: failure()
         run: |
-          echo "A dry run fails for two reasons: a secret is absent, or a secret is wrong."
-          echo "Absent ones are listed below; anything not listed was present and the store rejected it."
+          echo "A dry run fails for three reasons: a secret is absent, a secret is wrong,"
+          echo "or the addon id does not resolve. Absent ones are listed below."
+          echo
+          echo "A 404 on 'Getting addon details' with the auth accepted means the id: AMO"
+          echo "takes a slug, a numeric id or a GUID, but a GUID has braces, which are not"
+          echo "URL-safe and are passed through raw. Use the slug: page-modeller"
           for name in FIREFOX_EXTENSION_ID FIREFOX_JWT_ISSUER FIREFOX_JWT_SECRET; do
             eval "value=\${$name}"
             [ -n "$value" ] || echo "  missing: $name"
@@ -110,7 +114,7 @@ jobs:
           echo
           echo "These three are all a release needs: the AMO key and secret from the"
           echo "Developer Hub, and the gecko id. Chrome is uploaded by hand from the"
-          echo "release-zips artifact, so its secrets are optional." "
+          echo "release-zips artifact, so its secrets are optional."
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}

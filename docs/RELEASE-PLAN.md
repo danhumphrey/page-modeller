@@ -70,7 +70,11 @@ v3 moves to the root and v2.5.1 retires. Do this first: everything else touches 
 
 16. **Secrets: three, all of which you already have.** In
     `Settings → Secrets and variables → Actions`: `FIREFOX_JWT_ISSUER` and `FIREFOX_JWT_SECRET` (the
-    AMO key and secret) and `FIREFOX_EXTENSION_ID` (`{1e34b9b3-8f45-415e-9586-c7d5de0d0aff}`).
+    AMO key and secret) and `FIREFOX_EXTENSION_ID`, which must be the **slug** — `page-modeller` — and not the gecko GUID. AMO's
+    API takes a slug, a numeric id or a GUID, but a GUID has braces, they are not URL-safe, and the
+    submit tool passes the value straight into the path: the GUID 404s on "Getting addon details"
+    after the authentication has already succeeded, which reads like a credentials problem and is
+    not one. The GUID still belongs in `wxt.config.ts`, where it identifies the add-on to Firefox.
 
     **Chrome is uploaded by hand**, from the `release-zips` artifact the workflow keeps — the same
     drag-and-drop 2.5.1 used, two minutes, a few times a year. Its API is not worth the setup: V1
