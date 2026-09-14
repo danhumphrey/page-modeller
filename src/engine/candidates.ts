@@ -2,12 +2,25 @@ import { computeAccessibleName, getRole } from 'dom-accessibility-api';
 import type { LocatorCandidate, ElementResult, FrameStep, RankedCandidate, ShadowStep } from './types';
 import { baseName, looksGenerated } from './naming';
 
+/**
+ * What a link displays, which is what WebDriver's link-text strategy matches.
+ *
+ * `innerText` is layout-aware and excludes hidden descendants; `textContent`
+ * is not. jsdom implements no layout and returns undefined, so fall back —
+ * there the two agree anyway, because nothing is hidden.
+ */
+function renderedText(el: Element): string {
+  return (el as HTMLElement).innerText ?? el.textContent ?? '';
+}
+
 const norm = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
 
 // Elements Playwright's getByLabel actually matches: form controls named via an
 // associated <label>/aria-label. NOT buttons — a button named by its text content
 // is found via getByRole/getByText, and getByLabel returns 0 for it.
 const LABEL_TARGETS = new Set(['INPUT', 'SELECT', 'TEXTAREA']);
+// Replaced elements: no pseudo-element ever renders on one.
+const REPLACED = new Set(['INPUT', 'SELECT', 'TEXTAREA', 'IMG', 'BR', 'HR', 'EMBED', 'OBJECT', 'IFRAME', 'VIDEO', 'AUDIO', 'CANVAS']);
 // Controls with no meaningful textContent — excluded from getByText candidates.
 const NON_TEXT = new Set(['INPUT', 'SELECT', 'TEXTAREA']);
 
@@ -30,7 +43,12 @@ export function safeName(el: Element): string {
     let name = norm(computeAccessibleName(el));
     // Pseudo content only contributes when the name is derived from content
     // (not when an explicit aria-label/aria-labelledby supplies it).
-    if (!el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby')) {
+    // A replaced element never renders a pseudo-element, though
+    // getComputedStyle still reports the declared content. Folding it in
+    // invented names like "* Email address" from a required marker
+    // (`input.req::before{content:"* "}`), and both the role and label
+    // candidates then resolved to zero.
+    if (!REPLACED.has(el.tagName) && !el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby')) {
       const before = pseudoText(el, '::before');
       const after = pseudoText(el, '::after');
       if (before || after) name = norm(`${before} ${name} ${after}`);
@@ -296,7 +314,16 @@ export function matchesText(actual: string, expected: string, exact: boolean | u
  * counts hidden elements the test will never see.
  */
 export function ariaHidden(el: Element): boolean {
-  for (let cur: Element | null = el; cur; cur = cur.parentElement) {
+  // `parentElement` is null at the top of a shadow tree, so the HOST was never
+  // examined: anything inside a `display:none` component read as visible, was
+  // collected by a scan with the setting off, and was certified unique by a
+  // `getByRole` a real run resolves to zero.
+  const up = (node: Element): Element | null => {
+    if (node.parentElement) return node.parentElement;
+    const root = node.getRootNode();
+    return root instanceof ShadowRoot ? root.host : null;
+  };
+  for (let cur: Element | null = el; cur; cur = up(cur)) {
     if (cur.getAttribute('aria-hidden') === 'true') return true;
     if ((cur as HTMLElement).hidden) return true;
     try {
@@ -331,6 +358,11 @@ export function ariaHidden(el: Element): boolean {
  */
 const NON_RENDERED = new Set(['TITLE', 'SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'META', 'LINK']);
 
+/** What `getByLabel` can match: an aria-label, or a real label association. */
+function isLabelled(el: Element): boolean {
+  return el.hasAttribute('aria-label') || ((el as HTMLInputElement).labels?.length ?? 0) > 0;
+}
+
 export function resolveCandidate(root: Document | ShadowRoot, c: LocatorCandidate): Element[] {
   const doc = root;
   const all = () => pierce(doc, '*').filter((e) => !NON_RENDERED.has(e.tagName));
@@ -342,7 +374,12 @@ export function resolveCandidate(root: Document | ShadowRoot, c: LocatorCandidat
         .filter((e) => safeRole(e) === c.role && (c.name === undefined || matchesText(safeName(e), c.name, c.exact)))
         .filter((e) => !ariaHidden(e));
     case 'label':
-      return all().filter((e) => LABEL_TARGETS.has(e.tagName) && matchesText(safeName(e), c.text, c.exact));
+      // Not restricted to form controls: Playwright's getByLabel matches ANY
+      // element carrying an aria-label, so limiting it here under-counted —
+      // `<input aria-label="Search">` beside `<button aria-label="Search">`
+      // predicted 1 where Playwright resolves 2, a green tick on a locator
+      // that raises a strict-mode violation.
+      return all().filter((e) => isLabelled(e) && matchesText(safeName(e), c.text, c.exact));
     case 'placeholder':
       return pierce(doc, '[placeholder]').filter((e) =>
         matchesText(e.getAttribute('placeholder') ?? '', c.text, c.exact)
@@ -390,10 +427,10 @@ export function resolveCandidate(root: Document | ShadowRoot, c: LocatorCandidat
     case 'tagName':
       return c.value ? pierce(doc, CSS.escape(c.value)) : [];
     case 'linkText':
-      // Selenium matches links on their rendered text, trimmed.
-      return pierce(doc, 'a').filter((a) => norm(a.textContent) === norm(c.text));
+      // Rendered text, as WebDriver does — see renderedText.
+      return pierce(doc, 'a').filter((a) => norm(renderedText(a)) === norm(c.text));
     case 'partialLinkText':
-      return pierce(doc, 'a').filter((a) => norm(a.textContent).includes(norm(c.text)));
+      return pierce(doc, 'a').filter((a) => norm(renderedText(a)).includes(norm(c.text)));
   }
 }
 
@@ -591,7 +628,11 @@ function rankFor(el: Element, role: string | null, name: string): RankedCandidat
   out.push({ kind: 'tagName', value: el.localName });
 
   if (el.localName === 'a') {
-    const linkText = norm(el.textContent);
+    // Rendered text, not textContent: WebDriver's link-text strategy matches
+    // what is displayed, so a hidden span inside the link — the Bootstrap
+    // `d-none d-md-inline` pattern — put words in the locator Selenium never
+    // sees. innerText is layout-aware; textContent is not.
+    const linkText = norm(renderedText(el));
     if (linkText) {
       out.push({ kind: 'linkText', text: linkText });
       out.push({ kind: 'partialLinkText', text: linkText });

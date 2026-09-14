@@ -107,6 +107,15 @@ test('locator engine matches real Playwright resolution', async ({ page }) => {
         failures.push(`${fixture}/${spikeId}: xpath offered for a shadow element`);
       }
 
+      // A link must keep its linkText candidate. Without this, generation and
+      // resolution disagreeing silently DROPS the candidate rather than
+      // producing a wrong one, so the divergence that made it disagree — such
+      // as building it from textContent where WebDriver matches rendered text
+      // — passes this gate untouched.
+      if (result.tag === 'a' && !kinds.includes('linkText')) {
+        failures.push(`${fixture}/${spikeId}: an <a> with no linkText candidate`);
+      }
+
       if (result.preferredIndex < 0) {
         failures.push(`${fixture}/${spikeId}: no unique candidate`);
         continue;
