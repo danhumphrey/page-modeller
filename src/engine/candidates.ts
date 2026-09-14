@@ -137,6 +137,24 @@ function unique(el: Element, sel: string): boolean {
   return pierce(rootOf(el), sel).length === 1;
 }
 
+/**
+ * Escape a value for use inside a double-quoted CSS string.
+ *
+ * `\` and `"` are the obvious two. The line terminators are the ones that bite:
+ * CSS forbids them raw inside a string, so an unescaped newline is not a
+ * mis-match, it is a SyntaxError from the selector parser.
+ */
+function cssString(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\A ')
+    .replace(/\r/g, '\\D ')
+    .replace(/\f/g, '\\C ')
+    .replace(/\u2028/g, '\\2028 ')
+    .replace(/\u2029/g, '\\2029 ');
+}
+
 function attrSelector(el: Element, attr: string): string | null {
   const value = el.getAttribute(attr);
   if (!value) return null;
@@ -144,10 +162,16 @@ function attrSelector(el: Element, attr: string): string | null {
   // its own, `button[type="submit"]` is a locator. Uniqueness is still what
   // decides, so qualifying can only ever help.
   const prefix = attr === testIdAttribute || attr === 'name' ? '' : el.localName;
-  // A quoted attribute value is a CSS *string*, where only `\` and `"` need
-  // escaping. CSS.escape is for identifiers and would render `/forgot` as
-  // `\/forgot` — still valid, but nobody writes that.
-  const sel = `${prefix}[${attr}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
+  // A quoted attribute value is a CSS *string*, so `\` and `"` need escaping —
+  // and so do the line terminators, which a CSS string may not contain raw.
+  // Missing those threw a SyntaxError out of querySelectorAll that nothing
+  // caught: a single `title="Open the report\nin a new window"` anywhere in a
+  // scanned container killed the whole scan, with no rows and no error, and
+  // left the picker armed. Multi-line title/alt/aria-label is ordinary markup.
+  //
+  // CSS.escape is not the answer here: it is for identifiers, and would render
+  // `/forgot` as `\/forgot` — valid, but nobody writes that.
+  const sel = `${prefix}[${attr}="${cssString(value)}"]`;
   return unique(el, sel) ? sel : null;
 }
 
@@ -524,16 +548,21 @@ function rankFor(el: Element, role: string | null, name: string): RankedCandidat
     out.push({ kind: 'label', text: name, exact: true });
   }
 
+  // Raw, not whitespace-normalised: Playwright compares getByPlaceholder /
+  // getByAltText / getByTitle against the ATTRIBUTE VALUE as written, so a
+  // normalised candidate silently matches nothing when the value is wrapped
+  // across lines. Measured: a title of "Open the report\nin a new window"
+  // resolves 1 for the raw string and 0 for the normalised one, exact or not.
   const placeholder = el.getAttribute('placeholder');
-  if (placeholder) out.push({ kind: 'placeholder', text: norm(placeholder), exact: true });
+  if (placeholder) out.push({ kind: 'placeholder', text: placeholder, exact: true });
 
   if (tag === 'img') {
     const alt = el.getAttribute('alt');
-    if (alt) out.push({ kind: 'altText', text: norm(alt), exact: true });
+    if (alt) out.push({ kind: 'altText', text: alt, exact: true });
   }
 
   const title = el.getAttribute('title');
-  if (title) out.push({ kind: 'title', text: norm(title), exact: true });
+  if (title) out.push({ kind: 'title', text: title, exact: true });
 
   if (!NON_TEXT.has(el.tagName)) {
     const text = norm(el.textContent);

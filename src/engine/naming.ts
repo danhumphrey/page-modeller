@@ -42,6 +42,14 @@ function accessibleName(el: Element): string {
  * through to the next naming rule, while a false negative ships a name that
  * will rot.
  */
+/** Split on camelCase boundaries and separators, so each word is judged alone. */
+function words(value: string): string[] {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean);
+}
+
 export function looksGenerated(value: string): boolean {
   // Known CSS-in-JS shapes: emotion (css-1q2w3e), styled-components (sc-bdVaJa),
   // CSS Modules (Button_root__2xK9f), and leading-underscore hashes (_2xK9f).
@@ -51,9 +59,21 @@ export function looksGenerated(value: string): boolean {
   // React's useId: ":r1:" and "«r1»" from React 18, "_r_6_" from React 19.
   if (/^[:«][a-z0-9]+[:»]$/i.test(value)) return true;
   if (/^_r_[a-z0-9]+_$/i.test(value)) return true;
-  // No pronounceable structure: a run of 4+ letters without a vowel. Real
-  // words and abbreviations ("btn", "nav", "col") stay under that bar.
-  return /[^aeiouy\W\d]{4,}/i.test(value);
+  // No pronounceable structure: a run of 5+ letters with no vowel, tested per
+  // WORD rather than across the whole string.
+  //
+  // Both halves of that were wrong before, and together they rejected ordinary
+  // ids. Across the whole string, a camelCase join makes a consonant run that
+  // neither word has: `firstName` -> `rstN`, `btnSubmit` -> `tnS`, `searchBtn`,
+  // `lblName`, `ddlCountry`. And at 4, real English words trip it on their own:
+  // `length`, `strength`, `months`, `html`. The cost is not cosmetic — a
+  // rejected id loses both the `id` candidate and `#id` css, so `firstName`
+  // fell all the way to `body > form > div:nth-of-type(1) > input` and was
+  // named `Input1`, while `lastName` beside it was fine.
+  //
+  // Splitting on camelCase and non-alphanumerics first, then requiring 5, keeps
+  // the hashes this is for — `Xtvsq51`, `bdVaJa` — and lets words through.
+  return words(value).some((w) => /[^aeiouy\W\d]{5,}/i.test(w));
 }
 
 function uniqueClassName(el: Element): string {

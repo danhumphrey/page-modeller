@@ -47,6 +47,13 @@
     <!-- 9. whitespace normalization in link text -->
     <a href="/read" data-spike="ws-link">  Read   more  </a>
 
+    <!-- 9b. a multi-line attribute value. A CSS string may not contain a raw
+         newline, so an unescaped one threw SyntaxError out of querySelectorAll
+         and killed the whole scan — no rows, no error, picker still armed.
+         Wrapped title/alt/aria-label is ordinary CMS markup. -->
+    <a href="/report" data-spike="wrapped-title" title="Open the report
+in a new window">Report</a>
+
     <!-- 10. CSS ::before contributes to the accessible name (divergence probe) -->
     <button class="with-css-prefix" data-spike="css-before-btn">file</button>
 

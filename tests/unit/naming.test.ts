@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { baseName, uniqueName } from '../../src/engine/naming';
+import { baseName, looksGenerated, uniqueName } from '../../src/engine/naming';
 import { safeName } from '../../src/engine/candidates';
 
 let used: Set<string>;
@@ -170,4 +170,32 @@ describe('a validity marker in the label (SPEC §13)', () => {
   it('handles Optional the same way', () => {
     expect(baseName(el('<label>Company name (optional)<input data-t></label>'))).toBe('CompanyName');
   });
+});
+
+describe('looksGenerated tells real ids from build output (SPEC §13)', () => {
+  // The consonant rule used to run across the WHOLE string at a threshold of
+  // four, and rejected ordinary ids: a camelCase join makes a run neither word
+  // has (`firstName` → `rstN`), and real words trip it alone (`length`).
+  //
+  // That is not cosmetic. A rejected id loses the `id` candidate AND `#id` css,
+  // so `firstName` fell to `body > form > div:nth-of-type(1) > input` and was
+  // named `Input1` — while `lastName` beside it was fine.
+  it('lets ordinary ids through', () => {
+    for (const id of [
+      'firstName', 'lastName', 'btnSubmit', 'lblName', 'ddlCountry', 'searchBtn',
+      'length', 'strength', 'months', 'html', 'downloadPdfLink', 'rightsHolder',
+    ]) {
+      expect(looksGenerated(id), id).toBe(false);
+    }
+  });
+
+  it('still catches build output', () => {
+    for (const id of [
+      'Xtvsq51', 'css-1q2w3e', 'sc-bdVaJa', 'Button_root__2xK9f', '_2xK9f',
+      ':r1:', '«r1»', '_r_6_', 'jsxqwrtp',
+    ]) {
+      expect(looksGenerated(id), id).toBe(true);
+    }
+  });
+
 });

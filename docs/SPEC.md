@@ -725,6 +725,13 @@ Name churn versus v2.5.1 is acceptable — no stored model survives the upgrade,
 Truncation runs to the nearest **word boundary** at or under 25 characters, rather than cutting
 mid-word as v2.5.1 does. **[inferred]**
 
+**A generated-looking id is judged per word, at five consonants.** Across the whole string and at
+four, the rule rejected ordinary ids: a camelCase join makes a run neither word has — `firstName` →
+`rstN`, `btnSubmit`, `lblName`, `searchBtn` — and real words trip it alone: `length`, `strength`,
+`months`, `html`. That is not cosmetic, because a rejected id loses the `id` candidate *and* the
+`#id` css, so `firstName` fell to `body > form > div:nth-of-type(1) > input` and was named `Input1`
+while `lastName` beside it was fine. **[settled]**
+
 ## 14. Settings
 
 Stored in `chrome.storage.sync` under the key `options`. Defaults as shipped: **[settled]**
