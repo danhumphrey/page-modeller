@@ -68,7 +68,19 @@ v3 moves to the root and v2.5.1 retires. Do this first: everything else touches 
 
 ## Phase 5 — Submit
 
-16. Secrets, tag, push. Both stores gate on review; AMO will also review the sources.
+16. **Secrets.** Seven, in `Settings → Secrets and variables → Actions`. Two of them — the AMO key and
+    secret — you already hold; two are ids already in this repo
+    (`ejgkdhekcepfgdghejpkmbfjgnioejak`, `{1e34b9b3-8f45-415e-9586-c7d5de0d0aff}`). The Chrome three
+    do not exist yet and are the real task: a Google Cloud project with the Chrome Web Store API
+    enabled, an OAuth client, then a one-off flow to mint a refresh token. `npx wxt submit init`
+    walks through it.
+17. **Rehearse.** Run the **Release dry run** workflow from the Actions tab. It builds the same zips
+    and runs the same submit command with `--dry-run`: authentication only, nothing uploaded. Do this
+    before tagging — otherwise the first time the credentials are exercised is on a tag that has
+    already been pushed.
+18. **Tag and push.** `v3.0.0`. The workflow runs the full suite with `PM_REQUIRE_FULL_SUITE=1`,
+    checks the tag agrees with `package.json`, zips, and submits to both stores. Submitting is not
+    publishing: both gate on review, and AMO reviews the sources zip as well.
 
 ## Risks worth naming now
 
