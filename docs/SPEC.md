@@ -939,13 +939,26 @@ would be a hole in the middle of the tree.
 
 Shadow roots are the same problem in a different shape, and are specified in §19.
 
-**A scan never crosses a frame boundary on its own.** Scanning a container that happens to hold frames
-gets that document's controls and stops. A frame's contents come only when the scan is rooted at that
-frame — the frame element, or its document — and then everything below it is in scope. **[settled]**
+**A scan crosses frame boundaries.** Scanning any container collects its own controls and the contents
+of every frame inside it, however deep. **[settled]**
 
-Descending automatically would mean scanning `<main>` on an ordinary page could sweep in an embedded
-third-party app, an ad, or a sandboxed widget nobody asked to model — and those are exactly the frames
-whose locators are least likely to survive. Entering a frame is a decision, so it takes a click.
+This reverses the original rule, which was that a container scan stopped at the boundary and a frame's
+contents came only when the scan was rooted at that frame. Two things decided it:
+
+**An element inside a frame is something the target framework can drive.** Playwright and Selenium both
+reach it — that is what §16 exists to generate — so it is a legitimate thing to model, and the tool's
+job is to model what a test will interact with. The old rule was reasoned from locator *quality*, that
+a third-party embed's locators are least likely to survive, which is a judgement for the user to make
+about rows they can see, not a reason to withhold them.
+
+**And the old rule was not even consistent.** Scanning the whole page always cascaded into frames; only
+a container scan stopped. The same page therefore gave two different answers depending on where the
+scan started, and the "an ad might get swept in" argument did not hold for the case already permitted.
+
+The cost is over-inclusion on a page full of embeds, and §4 already answers that: *over-inclusion is
+cheap to correct — rows can be deleted after a scan*. The reverse is not cheap. Scanning a form and
+getting nothing back, with no reason given, reads as the tool being broken — which is exactly how it
+was reported, on a contact page whose form is an embedded frame.
 
 ### The eye **[settled]**
 

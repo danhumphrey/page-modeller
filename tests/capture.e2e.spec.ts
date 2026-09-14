@@ -1382,3 +1382,79 @@ test('a scan says what it could not read: a closed shadow root (SPEC §19)', asy
   const report = (await messages()).find((m) => m.message?.type === 'SHADOW_UNREADABLE')!;
   expect(report.message?.count, 'exactly the one closed component, not every custom element').toBe(1);
 });
+
+test('scanning a container scans the frames inside it (SPEC §16)', async () => {
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'scan-frames', 'frames.html');
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  const model = async () =>
+    (
+      await panel.evaluate(
+        () =>
+          (
+            window as unknown as {
+              __msgs: { type: string; model?: { elements: { name: string; framePath?: unknown[] }[] } }[];
+            }
+          ).__msgs
+      )
+    )
+      .filter((m) => m.type === 'MODEL')
+      .at(-1)?.model;
+
+  await panel.evaluate(
+    (id) =>
+      chrome.runtime.sendMessage({
+        type: 'RELAY_TO_TAB',
+        tabId: id,
+        // The nonce is what a frame checks a scan request against (SPEC §16).
+        // Without one the child compares undefined against its own initial ''
+        // and refuses, which looks exactly like a cascade that did not happen.
+        message: { type: 'START_PICKING', mode: 'scan', includeHidden: false, nonce: 'n' },
+      }),
+    tabId
+  );
+
+  // <main> holds the page's own button AND every iframe on the fixture, so it
+  // is the container case: not the whole document, which always cascaded.
+  const label = page.locator('[data-page-modeller="label"]');
+  await page.getByRole('button', { name: 'Submit' }).first().hover();
+  for (let i = 0; i < 6 && !/› main$/.test((await label.textContent()) ?? ''); i++) {
+    await page.keyboard.press('ArrowUp');
+  }
+  await expect(label).toHaveText(/› main$/);
+  await page.keyboard.press('Enter');
+
+  // The frames answer separately, so rows arrive over several messages.
+  await expect
+    .poll(async () => (await model())?.elements.filter((e) => (e.framePath?.length ?? 0) > 0).length, { timeout: 5000 })
+    .toBeGreaterThan(0);
+
+  const elements = (await model())!.elements;
+
+  // The container's own control is still there — cascading must not replace
+  // the scan, only extend it.
+  expect(elements.some((e) => (e.framePath?.length ?? 0) === 0)).toBe(true);
+
+  // And a nested frame, two levels down, so this is a cascade rather than one
+  // step into the frames <main> directly contains.
+  expect(
+    elements.some((e) => (e.framePath?.length ?? 0) > 1),
+    'an element from a frame inside a frame'
+  ).toBe(true);
+});
