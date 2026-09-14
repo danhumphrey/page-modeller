@@ -87,6 +87,17 @@ filter and the locator semantics agree by construction.
 collects is something the generator can write methods for. `static` is deliberately excluded, or a scan
 of a page would return every heading, paragraph and image on it; those go in one at a time with Add.
 
+**Never a native `<option>` or `<optgroup>`.** An option is reached through its `<select>` — Selenium's
+`Select`, Playwright's `selectOption` — so a row for one is a locator nobody can use, sitting beside
+the `<select>` row that already generates the right call. Clicking an `<option>` is the thing
+Selenium's own documentation warns against. A country picker put 250 unusable rows in a model, which
+is how this was noticed. **[settled]**
+
+The rule is the **tag**, not the role: a custom listbox built from divs with `role="option"` has no
+`Select` to drive it, so each option genuinely is clicked and stays collectable. For the same reason a
+native `<option>` added deliberately classifies as `static` rather than actionable — Add Element takes
+any element, but it should not hand back a `click()` that cannot work.
+
 **Plus form controls that HTML-AAM gives no role at all.** `input[type=password]` is the one that
 matters: it has no ARIA role, so a role-only rule skips it, and a scan of a login form that misses the
 password field is plainly broken. The date and time family, colour and file pickers are in the same

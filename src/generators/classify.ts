@@ -27,6 +27,16 @@ export function classify(el: Pick<ModelElement, 'role' | 'tag'> & { inputType?: 
   if (role === 'slider') return 'slider';
   if (role === 'radio') return 'radio';
   if (role && TOGGLE.has(role)) return 'toggle';
+  // A native <option> is reached through its <select>, never clicked — which
+  // is what Selenium's Select exists for, and what `selectOption` does in
+  // Playwright. Must come before ACTIONABLE, which contains `option` for the
+  // custom case: a div with role="option" has no Select to drive it and IS
+  // clicked, so the tag is what decides.
+  //
+  // A scan never collects one at all (see interactive.ts). This is for the
+  // element added deliberately, which gets a plain getter rather than a call
+  // that cannot work.
+  if (role === 'option' && tag === 'option') return 'static';
   if (role && ACTIONABLE.has(role)) return 'actionable';
   if (role && TEXT.has(role)) return 'text';
 

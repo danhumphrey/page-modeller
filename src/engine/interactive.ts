@@ -59,8 +59,29 @@ function isRolelessControl(el: Element): boolean {
   return el.localName === 'input' && ROLELESS_INPUT_TYPES.has((el as HTMLInputElement).type);
 }
 
+/**
+ * A native `<option>` is driven through its `<select>`, never on its own.
+ *
+ * Selenium's `Select` and Playwright's `selectOption` both take the select and
+ * the option's text or value; clicking an `<option>` is the thing Selenium's
+ * own documentation tells you not to do. So a row per option is not merely
+ * noise — it is a locator nobody can use, sitting next to the `<select>` row
+ * that already generates the right call.
+ *
+ * The noise is the visible part: a country picker put 250 rows in the model.
+ *
+ * Restricted to the NATIVE element, not the role. A custom listbox built from
+ * divs with `role="option"` is clicked, so those stay collectable — the
+ * distinction is the tag, because that is what decides whether `Select` works.
+ *
+ * `<optgroup>` goes with it: role `group`, never interactive, and only ever
+ * inside a select.
+ */
+const SELECT_OWNED = new Set(['option', 'optgroup']);
+
 /** Something a scan should collect: an interactive role, or a control with none. */
 export function isInteractive(el: Element): boolean {
+  if (SELECT_OWNED.has(el.localName)) return false;
   return isInteractiveRole(safeRole(el)) || isRolelessControl(el);
 }
 
