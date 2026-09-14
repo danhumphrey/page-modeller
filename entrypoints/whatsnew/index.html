@@ -111,6 +111,12 @@
       li b {
         font-weight: 600;
       }
+      /* Full-strength text, so it reads in both themes. Hard-coded white was
+         invisible on the light card, where the ground is #f6f8fa. */
+      .badge {
+        color: var(--fg);
+        font-weight: 650;
+      }
       kbd {
         padding: 1px 6px;
         border: 1px solid var(--rule);
@@ -149,7 +155,7 @@
       <div class="card">
         <dl>
           <dt>Side panel</dt>
-          <dd><b style="color:#fff !important;">New -</b> Click the Page Modeller toolbar icon to load Page Modeller in the browser side panel.</dd>
+          <dd><b class="badge">New -</b> Click the Page Modeller toolbar icon to load Page Modeller in the browser side panel.</dd>
           <dt>DevTools</dt>
           <dd>Press <span id="devtools-keys">the DevTools shortcut</span> and use
             <strong>Page Modeller</strong> from the DevTools panel as before.</dd>
