@@ -89,3 +89,35 @@ describe('collectInteractive', () => {
     expect(names(collectInteractive(el, false))).toEqual(['deep']);
   });
 });
+
+describe("a select's options are not scanned (SPEC §4)", () => {
+  it('collects the select and none of its options', () => {
+    // A country picker put 250 rows in the model — and every one of them was a
+    // locator nobody can use, because an option is reached through its select.
+    const r = root(`
+      <select name="country">
+        <option>United Kingdom</option>
+        <option>United States</option>
+      </select>`);
+    expect(collectInteractive(r, false).map((e) => e.localName)).toEqual(['select']);
+  });
+
+  it('leaves a custom listbox alone', () => {
+    // Built from divs, so `Select` cannot drive it and each option IS clicked.
+    // The distinction is the tag, not the role.
+    const r = root(`
+      <div role="listbox">
+        <div role="option">United Kingdom</div>
+        <div role="option">United States</div>
+      </div>`);
+    expect(collectInteractive(r, false).map((e) => e.getAttribute('role'))).toEqual(['listbox', 'option', 'option']);
+  });
+
+  it('skips optgroup too', () => {
+    const r = root(`
+      <select name="country">
+        <optgroup label="Europe"><option>United Kingdom</option></optgroup>
+      </select>`);
+    expect(collectInteractive(r, false).map((e) => e.localName)).toEqual(['select']);
+  });
+});

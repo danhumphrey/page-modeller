@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { canGenerate, generateCode, shapesFor } from '../../src/generators';
 import { frameworks } from '../../src/frameworks';
+import { classify } from '../../src/generators/classify';
 import { modelOf, elementsFor, SIGN_IN } from './fixtures/model';
 
 describe('the generator registry', () => {
@@ -37,5 +38,23 @@ describe('the generator registry', () => {
     const model = modelOf('selenium-java', SIGN_IN);
     model.frameworkId = 'not-a-framework';
     expect(generateCode(model)).toContain('is not generated yet');
+  });
+});
+
+describe('a native option is not clickable (SPEC §11)', () => {
+  const bucket = (tag: string, role: string) =>
+    classify({ tag, role, name: 'UnitedKingdom', candidates: [], selectedIndex: 0 } as never);
+
+  it('classifies as static, so no click method is generated', () => {
+    // Clicking an <option> is what Selenium's own documentation tells you not
+    // to do — its Select class exists for this. A user can still add one by
+    // hand; they get a getter rather than a call that cannot work.
+    expect(bucket('option', 'option')).toBe('static');
+  });
+
+  it('still clicks a custom listbox option', () => {
+    // A div with role="option" cannot be driven by Select, so clicking it is
+    // exactly right. The tag is what decides, not the role.
+    expect(bucket('div', 'option')).toBe('actionable');
   });
 });

@@ -597,6 +597,17 @@ export default defineContentScript({
           ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map((el) => generate(el, myPath)) }
           : { type: 'ELEMENT_PICKED', result: generate(target, myPath), keepPicking };
 
+      // A container's frames are scanned too (SPEC §16). An element inside one
+      // is something Playwright and Selenium can drive, so it is something to
+      // model — and the tool exists to model what a test will interact with.
+      //
+      // This is also what scanning the whole page has always done: only a
+      // container scan stopped, which made the same page give two different
+      // answers depending on where the scan started.
+      if (mode === 'scan') {
+        for (const frame of Array.from(target.querySelectorAll('iframe, frame'))) delegateScan(frame);
+      }
+
       // Rejects when no panel is open; that's fine, drop it.
       browser.runtime.sendMessage(message).catch(() => {});
     }
