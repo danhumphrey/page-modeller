@@ -4,24 +4,6 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>What's new in Page Modeller 3.0</title>
-    <!--
-      Shown once, in a tab, when a 2.x install updates to 3.x (SPEC §20).
-      Mozilla calls this upboarding and documents it; Chrome documents the same
-      pattern for a first install and asks only that extensions avoid
-      distracting people. Opening a tab is the one approach that works on both
-      browsers at our declared floors and needs no new permission — a
-      notification would need `notifications`, and adding a required permission
-      on an update makes Chrome DISABLE the extension until the user re-accepts.
-
-      Its first job is not the feature list: it is to answer "where did
-      everything go?", because the surfaces moved. A 2.5.1 user opens DevTools
-      and finds it changed whether or not we say anything.
-
-      No framework: it renders once and has no state, so loading Vue and Quasar
-      to draw a list would be the only reason either is in this bundle. The one
-      script it does carry fills in the DevTools shortcut, which differs by
-      platform and cannot be written into the markup.
-    -->
     <style>
       :root {
         color-scheme: light dark;
@@ -162,21 +144,15 @@
           <h1>Version 3 is here</h1>
         </div>
       </header>
-      <p class="lede">A complete rewrite, and the first thing to say is where everything went.</p>
+      <p class="lede">A complete rewrite, with new functionality and modern framework and browser support.</p>
 
       <div class="card">
-        <h2>Where to find it</h2>
         <dl>
           <dt>Side panel</dt>
-          <dd>Click the Page Modeller toolbar icon. This is new — in version 2 there was only DevTools.</dd>
+          <dd><b style="color:#fff !important;">New -</b> Click the Page Modeller toolbar icon to load Page Modeller in the browser side panel.</dd>
           <dt>DevTools</dt>
-          <!-- The shortcut is filled in for this platform: F12 is bound to the
-               system on macOS and needs `fn` on most keyboards, so naming it
-               here would be telling a Mac user something that does not work.
-               The text below is the no-script fallback and the pre-paint
-               value, so it never flashes the wrong platform's keys. -->
-          <dd>Press <span id="devtools-keys">the DevTools shortcut</span> and choose
-            <strong>Page Modeller</strong>, exactly as before.</dd>
+          <dd>Press <span id="devtools-keys">the DevTools shortcut</span> and use
+            <strong>Page Modeller</strong> from the DevTools panel as before.</dd>
           <dt>Options</dt>
           <dd>Right-click the toolbar icon. Your existing settings have carried over.</dd>
         </dl>
@@ -190,8 +166,7 @@
         </li>
         <li>
           <b>Elements inside iframes.</b> The frame an element lives in is part of its locator, so the
-          generated code enters the frames to reach it — cross-origin, <code>srcdoc</code> and sandboxed
-          frames included.
+          generated code enters the frames to reach it.
         </li>
         <li>
           <b>Elements inside shadow DOM.</b> Web components keep their real controls in a shadow root,
@@ -199,26 +174,18 @@
           and generates locators that reach them.
         </li>
         <li>
-          <b>A choice of output style</b> per framework: a full page object, locators only, or — for
-          Selenium — the methods Page Modeller has always generated.
+          <b>Alternate code generation styles</b> per framework and language generate a full page object, methods or just the locators.
         </li>
         <li>
-          <b>Locators are checked as they are generated</b>, and the eye shows you what one matches
-          before you trust it — counted the way your chosen framework counts, which is not always the
-          way the browser does.
+          <b>Framework aware locators</b> and match validation within the browser - the way the framework locates elements, not the browser.
         </li>
       </ul>
 
-      <h2>Two things that have gone</h2>
+      <h2>Removed</h2>
       <ul>
         <li>
           <b>Robot Framework and Protractor</b> are no longer generated. Neither is maintained
           upstream.
-        </li>
-        <li>
-          <b>Images no longer get a click method.</b> Elements are classified by their accessibility
-          role now rather than their tag, which is more accurate nearly everywhere — and means an
-          <code>&lt;img&gt;</code> is treated as static unless it genuinely has a button role.
         </li>
       </ul>
 
