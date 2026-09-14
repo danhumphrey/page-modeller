@@ -17,9 +17,10 @@
       everything go?", because the surfaces moved. A 2.5.1 user opens DevTools
       and finds it changed whether or not we say anything.
 
-      Static, and no framework: it renders once, has no state, and loading Vue
-      and Quasar to show a list would be the only reason either is in this
-      bundle.
+      No framework: it renders once and has no state, so loading Vue and Quasar
+      to draw a list would be the only reason either is in this bundle. The one
+      script it does carry fills in the DevTools shortcut, which differs by
+      platform and cannot be written into the markup.
     -->
     <style>
       :root {
@@ -55,15 +56,27 @@
         max-width: 44rem;
         margin: 0 auto;
       }
+      /* The mark sits beside the title block rather than above it: the page
+         had no colour at all otherwise, and the braces are the one piece of
+         identity the extension has. */
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin: 0 0 12px;
+      }
+      header img {
+        flex: none;
+      }
       .eyebrow {
         color: var(--muted);
         font-size: 13px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        margin: 0 0 8px;
+        margin: 0 0 4px;
       }
       h1 {
-        margin: 0 0 8px;
+        margin: 0;
         font-size: 30px;
         line-height: 1.2;
         font-weight: 650;
@@ -140,8 +153,15 @@
   </head>
   <body>
     <main>
-      <p class="eyebrow">Page Modeller</p>
-      <h1>Version 3 is here</h1>
+      <header>
+        <!-- Decorative: the title says the name, so announcing it again would
+             be noise to a screen reader. -->
+        <img src="/pm-icon.png" alt="" width="46" height="40" />
+        <div>
+          <p class="eyebrow">Page Modeller</p>
+          <h1>Version 3 is here</h1>
+        </div>
+      </header>
       <p class="lede">A complete rewrite, and the first thing to say is where everything went.</p>
 
       <div class="card">
@@ -150,7 +170,13 @@
           <dt>Side panel</dt>
           <dd>Click the Page Modeller toolbar icon. This is new — in version 2 there was only DevTools.</dd>
           <dt>DevTools</dt>
-          <dd>Press <kbd>F12</kbd> and choose <strong>Page Modeller</strong>, exactly as before.</dd>
+          <!-- The shortcut is filled in for this platform: F12 is bound to the
+               system on macOS and needs `fn` on most keyboards, so naming it
+               here would be telling a Mac user something that does not work.
+               The text below is the no-script fallback and the pre-paint
+               value, so it never flashes the wrong platform's keys. -->
+          <dd>Press <span id="devtools-keys">the DevTools shortcut</span> and choose
+            <strong>Page Modeller</strong>, exactly as before.</dd>
           <dt>Options</dt>
           <dd>Right-click the toolbar icon. Your existing settings have carried over.</dd>
         </dl>
@@ -204,5 +230,6 @@
         >.
       </footer>
     </main>
+      <script type="module" src="./main.ts"></script>
   </body>
 </html>
