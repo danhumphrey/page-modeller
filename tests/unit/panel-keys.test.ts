@@ -53,11 +53,15 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
+let tabChanged: ((id: number | undefined) => void) | undefined;
+
 const host = {
   kind: 'devtools' as const,
   label: 'DevTools',
   getTabId: async () => 7,
-  onTabChanged() {},
+  onTabChanged(cb: (id: number | undefined) => void) {
+    tabChanged = cb;
+  },
   hostTheme: () => undefined,
   onHostThemeChanged() {},
 };
@@ -114,6 +118,47 @@ afterEach(() => {
 function fromBackground(message: object) {
   for (const cb of listeners) cb({ ...message, tabId: 7 });
 }
+
+describe('dialogs belong to the model that was on screen', () => {
+  it('closes the Edit dialog when the panel follows to another tab', async () => {
+    // A side panel FOLLOWS the active tab. The Edit dialog stayed open across
+    // the switch — sitting over another site's empty model, still showing the
+    // previous page's name and selector, with a Save that would write to a row
+    // that is no longer there.
+    await openPanel();
+    fromBackground({
+      type: 'MODEL',
+      model: {
+        ...emptyModel('playwright-ts'),
+        elements: [
+          {
+            id: 'el-0',
+            name: 'A7',
+            tag: 'a',
+            role: 'link',
+            accessibleName: null,
+            suggestedName: 'A7',
+            candidates: [{ candidate: { kind: 'css', value: 'a[href="/industries/"]' }, predictedCount: 1 }],
+            preferredIndex: 0,
+            selectedIndex: 0,
+          },
+        ],
+      },
+    });
+    await wrapper!.vm.$nextTick();
+
+    // Open it the way a double-click does.
+    (wrapper!.vm as unknown as { openEditor: (id: string) => void }).openEditor('el-0');
+    await wrapper!.vm.$nextTick();
+    expect(document.querySelector('[data-testid="edit-name"]'), 'the dialog is open').not.toBeNull();
+
+    tabChanged?.(9);
+    await wrapper!.vm.$nextTick();
+    await wrapper!.vm.$nextTick();
+
+    expect(document.querySelector('[data-testid="edit-name"]'), 'and it went with its model').toBeNull();
+  });
+});
 
 describe('the scanning indicator ends with the SCAN, not the first model', () => {
   const busy = () => !!document.querySelector('[data-testid="scanning"]');

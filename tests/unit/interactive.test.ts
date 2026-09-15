@@ -1,6 +1,18 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { collectInteractive, isInteractiveRole } from '../../src/engine/interactive';
+
+// jsdom has no layout: every getBoundingClientRect is 0x0, and the scan now
+// asks whether an element renders anything (SPEC §4). So layout is supplied
+// here — everything has a box unless the test says otherwise with
+// `data-nobox`, which is how the one case that matters is expressed.
+beforeAll(() => {
+  Element.prototype.getBoundingClientRect = function (this: Element) {
+    const none = this.closest('[data-nobox]') !== null;
+    const size = none ? 0 : 10;
+    return { width: size, height: size, top: 0, left: 0, right: size, bottom: size, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+  };
+});
 
 function root(html: string): Element {
   document.body.innerHTML = `<div id="root">${html}</div>`;
@@ -119,5 +131,34 @@ describe("a select's options are not scanned (SPEC §4)", () => {
         <optgroup label="Europe"><option>United Kingdom</option></optgroup>
       </select>`);
     expect(collectInteractive(r, false).map((e) => e.localName)).toEqual(['select']);
+  });
+});
+
+describe('an element that renders nothing (SPEC §4)', () => {
+  it('is skipped by default, even though the a11y tree exposes it', () => {
+    // The case from a real page: an empty <a> inside a cookie banner whose
+    // ancestors are collapsed to `height: 0`. Nothing is display:none or
+    // visibility:hidden, so it IS in the accessibility tree — Playwright's
+    // getByRole('link') matches it, measured — and it is still not something
+    // anyone wants in a page object. The eye could not even outline it: it
+    // marked it "hidden element" on its nearest visible ancestor, which is the
+    // tool contradicting the setting the user had just turned off.
+    const els = collectInteractive(
+      root('<div data-nobox><a href="/x" data-n="empty"></a></div><a href="/y" data-n="real">Visible</a>'),
+      false
+    );
+
+    expect(names(els)).toEqual(['real']);
+  });
+
+  it('is collected when the setting asks for hidden elements', () => {
+    // The setting means what it says, and this is the kind of element it is
+    // for — a menu that is collapsed until it is opened.
+    const els = collectInteractive(
+      root('<div data-nobox><a href="/x" data-n="empty"></a></div><a href="/y" data-n="real">Visible</a>'),
+      true
+    );
+
+    expect(names(els)).toEqual(['empty', 'real']);
   });
 });

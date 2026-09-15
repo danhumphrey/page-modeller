@@ -1,6 +1,6 @@
 import { batched, frameStepFor, generate, resolveCandidate, setTestIdAttribute } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
-import { collectClosedHosts, collectInteractive } from '@/src/engine/interactive';
+import { collectClosedHosts, collectInteractive, hasBox } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
 import { frameSelector } from '@/src/locators/frames';
 import { shadowSelector } from '@/src/locators/shadow';
@@ -206,11 +206,6 @@ export default defineContentScript({
       if (markTimer) clearTimeout(markTimer);
       markTimer = undefined;
     }
-
-    const hasBox = (el: Element) => {
-      const r = el.getBoundingClientRect();
-      return r.width > 0 || r.height > 0;
-    };
 
     /**
      * Where to draw a match, and whether it is really there.
