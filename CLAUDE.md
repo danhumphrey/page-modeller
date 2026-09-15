@@ -105,6 +105,15 @@ exploited.
   to work from the element itself. This passed every engine test, because those inject into the *main*
   world via `addScriptTag`; only the extension E2E runs in an isolated one.
 
+- **A targetOrigin mismatch on `postMessage` does not throw — it logs.** The message is dropped, the
+  wrong document never sees it, and Chrome writes *"the target origin provided … does not match the
+  recipient window's origin"* to the console, where it collects on `chrome://extensions` and reads like
+  a fault. It happens whenever a frame's `src` says one origin and the document is on another: a
+  redirect across origins, or a frame that has not navigated yet. Nothing breaks — the broadcast
+  fallback delivers — and the frame is remembered so the attempt is not repeated on every push.
+  Measured in `tests/postmessage-origin.spec.ts`; the obvious assumption, that it throws and aborts the
+  loop, is wrong.
+
 - **Never send Vue reactive state through `tabs.sendMessage`.** Anything read out of a `ref` is a Proxy,
   and Firefox serialises messages with structured clone, which throws `DataCloneError` on a Proxy —
   Chrome's path tolerates it, so this fails on Firefox only and presents as an unreachable tab. `send()`
