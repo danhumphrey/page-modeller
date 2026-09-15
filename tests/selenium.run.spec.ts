@@ -63,6 +63,10 @@ test('the generated Selenium finds every element it describes', async ({ page })
   // walk (SPEC §19).
   let shadowElements = 0;
   let deepestChain = 0;
+  // Setters actually executed against the driver. Counted because the writes
+  // are guarded on the element being interactable, and a guard that turned out
+  // to skip everything would leave this suite green on nothing.
+  let settersRun = 0;
 
   for (const fixture of fixtures) {
     const url = `http://localhost:${PORT}/${fixture}`;
@@ -100,7 +104,9 @@ test('the generated Selenium finds every element it describes', async ({ page })
     }
 
     const out = runInSelenium(generateSeleniumPython(model), [...expected], url, 'getter', model.elements);
-    if (out.trim()) failures.push(`${fixture}\n${out.trim()}`);
+    const [reported, counted] = splitSetterCount(out);
+    settersRun += counted;
+    if (reported) failures.push(`${fixture}\n${reported}`);
 
     // Again on xpath. Nothing in the fixtures selects it — css or better always
     // wins — so the universal fallback, and `By.XPATH`, would otherwise never
@@ -117,7 +123,8 @@ test('the generated Selenium finds every element it describes', async ({ page })
       asXpath.elements.map((el) => [el.name, expected.get(el.name)!] as [string, string]),
       url
     );
-    if (xpathOut.trim()) failures.push(`${fixture} (forced xpath)\n${xpathOut.trim()}`);
+    const [xpathReported] = splitSetterCount(xpathOut);
+    if (xpathReported) failures.push(`${fixture} (forced xpath)\n${xpathReported}`);
   }
 
   expect(failures.join('\n\n'), 'generated Selenium did not resolve as promised').toBe('');
@@ -138,6 +145,12 @@ test('the generated Selenium finds every element it describes', async ({ page })
   // And that the shadow chain was genuinely walked, not skipped. An engine
   // change that stopped collecting shadow content would leave every assertion
   // above passing on a smaller model.
+  // The setters are where the API surface is widest — `clear()`, `send_keys`,
+  // `select_by_visible_text`, `deselect_all` — and where the one bug this suite
+  // has caught so far lived: `get_dom_property` is Java's and C#'s spelling and
+  // does not exist in Python. Only the readers were ever run.
+  expect(settersRun, 'generated setters run against a real driver').toBeGreaterThanOrEqual(20);
+
   expect(shadowElements, 'elements reached through a shadow root').toBeGreaterThan(4);
   expect(deepestChain, 'deepest host chain walked').toBeGreaterThanOrEqual(2);
 });
@@ -219,7 +232,7 @@ test('the generated Selenium switches into frames and back out (SPEC §16)', asy
     url,
     'read'
   );
-  expect(out.trim(), 'generated frame switching did not resolve').toBe('');
+  expect(splitSetterCount(out)[0], 'generated frame switching did not resolve').toBe('');
 });
 
 /**
@@ -235,6 +248,15 @@ test('the generated Selenium switches into frames and back out (SPEC §16)', asy
  * Calling these is what proves the method BODIES work, not just the locators —
  * and it is how `get_dom_property`, a method Python does not have, was found.
  */
+/** Peel the setter counter off the runner's output, leaving the failures. */
+function splitSetterCount(out: string): [failures: string, count: number] {
+  const lines = out.split('\n');
+  const i = lines.findIndex((l) => l.startsWith('__setters_run__'));
+  if (i === -1) return [out.trim(), 0];
+  const count = Number(lines[i].split(' ')[1] ?? 0);
+  return [lines.filter((_, n) => n !== i).join('\n').trim(), count];
+}
+
 function readCall(el: ModelElement, snake: (s: string) => string): string | null {
   const n = snake(el.name);
   switch (classify(el)) {
@@ -258,6 +280,73 @@ function readCall(el: ModelElement, snake: (s: string) => string): string | null
   }
 }
 
+/**
+ * The bucket's SETTER, and where it is cheap, a check that it did something.
+ *
+ * Only the read methods were ever executed. The setters are where the API
+ * surface is widest — `clear()`, `send_keys`, `Select.select_by_visible_text`,
+ * `deselect_all` — and where the one bug this suite has caught so far lived:
+ * `get_dom_property` is Java's and C#'s spelling and does not exist in Python,
+ * and no compiler or parser could have found it. A setter spelled the same way
+ * would still be sitting there.
+ *
+ * Every value written is one the element already holds or plainly accepts, so
+ * nothing here depends on a fixture keeping a particular value.
+ */
+function writeCall(el: ModelElement, snake: (s: string) => string): string[] {
+  const n = snake(el.name);
+  const fail = (what: string) => `            failures.append("${el.name}: ${what}")`;
+  switch (classify(el)) {
+    case 'text':
+      // A file input is classified text — `clear()` + `send_keys(path)` is the
+      // documented upload idiom — but it takes a PATH, and anything else
+      // raises InvalidArgumentException. Nothing is proved by feeding it one.
+      if (el.inputType === 'file') return [];
+      // `date`, `number`, `color` and friends silently ignore text they do not
+      // accept, so the round-trip is only asserted where it means something.
+      return el.inputType == null || el.inputType === 'text' || el.inputType === 'search' || el.inputType === 'password'
+        ? [`        set_${n}("pm")`, `        if get_${n}() != "pm":`, fail(`set_${n} did not take`)]
+        : [`        set_${n}("pm")`];
+    case 'toggle':
+      // Set it, check it took, and put it back.
+      return [
+        `        was = is_${n}_checked()`,
+        `        set_${n}(not was)`,
+        `        if is_${n}_checked() == was:`,
+        fail(`set_${n} did not move the control`),
+        `        set_${n}(was)`,
+      ];
+    case 'radio':
+      return [`        select_${n}()`, `        if not is_${n}_selected():`, fail(`select_${n} did not select it`)];
+    case 'select':
+      // Re-selecting what is already selected: the option is guaranteed to
+      // exist, so this exercises `select_by_visible_text` without depending on
+      // the fixture's contents.
+      //
+      // The value round-trip is deliberately NOT here. An <option> with no
+      // `value` attribute reports its text as its IDL value, and
+      // `select_by_value` matches the attribute — so feeding one back to the
+      // other fails on valueless options. That is HTML's and Selenium's
+      // semantics, not something the generator decides, and asserting it here
+      // would only pin the fixture's markup.
+      return [`        set_${n}_by_text(get_${n}_text())`];
+    case 'multiSelect':
+      return [
+        `        set_${n}_by_texts(*get_${n}_texts())`,
+        `        set_${n}_by_values(*get_${n}_values())`,
+        `        deselect_all_${n}()`,
+      ];
+    case 'slider':
+      // Net zero, so the value is where it started for anything read after it.
+      return [`        increment_${n}()`, `        decrement_${n}()`, `        set_${n}(get_${n}())`];
+    // Nothing to write. Clicking is all an actionable element offers and it
+    // navigates, which would take the rest of the run with it.
+    case 'actionable':
+    case 'static':
+      return [];
+  }
+}
+
 function runInSelenium(
   generated: string,
   expected: [string, string][],
@@ -273,8 +362,25 @@ function runInSelenium(
   /** The bucket's read method, called for its exceptions rather than its value. */
   const readLines = (name: string) => {
     const el = elements.find((e) => e.name === name);
-    const call = el ? readCall(el, snake) : null;
-    return call ? [`        ${call}`] : [];
+    if (!el) return [];
+    const call = readCall(el, snake);
+    const writes = writeCall(el, snake);
+    return [
+      ...(call ? [`        ${call}`] : []),
+      // Writing needs an element you could write to. The fixtures carry hidden
+      // and disabled controls on purpose, and a page object is not wrong for
+      // being unable to type into one — WebDriver raises
+      // ElementNotInteractableException, which is the right answer.
+      ...(writes.length
+        ? [
+            '        if found.is_displayed() and found.is_enabled():',
+            ...writes.map((line) => `    ${line}`),
+            // Counted, so the guard above cannot quietly skip every setter and
+            // leave the suite green on nothing.
+            `            ran.append(${JSON.stringify(el.name)})`,
+          ]
+        : []),
+    ];
   };
 
   const source = [
@@ -283,6 +389,11 @@ function runInSelenium(
     'from selenium.webdriver.chrome.options import Options',
     'from selenium.webdriver.common.by import By',
     'from selenium.webdriver.support.ui import Select',
+    // The methods shape emits no imports at all — by design (SPEC §17): it is
+    // pasted into a file that has them, and the page-object shape is the one
+    // that computes them from the buckets present. So the harness supplies the
+    // three a user would: By, Select and Keys.
+    'from selenium.webdriver.common.keys import Keys',
     '',
     'options = Options()',
     'options.add_argument("--headless=new")',
@@ -296,6 +407,7 @@ function runInSelenium(
     // there is none, so this still needs nothing installed.
     'driver = webdriver.Chrome(options=options)',
     'failures = []',
+    'ran = []',
     'try:',
     `    driver.get(${JSON.stringify(url)})`,
     '',
@@ -327,6 +439,9 @@ function runInSelenium(
     '    driver.quit()',
     '',
     'print("\\n".join(failures))',
+    // On its own line, so the caller can count setters run without it reading
+    // as a failure.
+    'print("__setters_run__ " + str(len(ran)))',
     'sys.exit(0)',
   ].join('\n');
 

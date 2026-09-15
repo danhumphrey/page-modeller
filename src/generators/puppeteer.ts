@@ -10,7 +10,7 @@
 // generated code cannot disagree about what a locator is.
 import { activeCandidate, type ModelElement, type TabModel } from '../model';
 import { puppeteerExpr } from '../locators/display';
-import { frameNote, frameSelector } from '../locators/frames';
+import { frameNote, puppeteerFrameSelector } from '../locators/frames';
 import { shadowContext } from '../locators/shadow';
 import type { FrameStep } from '../engine/types';
 import { singleQuoted as q } from '../quote';
@@ -26,7 +26,7 @@ const frameSwitch = (path: FrameStep[]) => {
   let scope = 'page';
   path.forEach((step, i) => {
     const next = `frame${i + 1}`;
-    lines.push(`const ${next} = await (await ${scope}.$(${q(frameSelector(step))})).contentFrame();`);
+    lines.push(`const ${next} = await (await ${scope}.$(${q(puppeteerFrameSelector(step))})).contentFrame();`);
     scope = next;
   });
   lines.push(`Then use ${scope}.locator(...) in place of page.locator(...).`);

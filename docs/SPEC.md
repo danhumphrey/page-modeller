@@ -83,6 +83,15 @@ Both modes are **one-shot**: selecting an element stops picking. No continuous c
 Off is the same rule Playwright's `getByRole` applies by default (`includeHidden: false`), so the scan
 filter and the locator semantics agree by construction.
 
+**A method is only generated where the helper can drive the element.** The role says what an element
+*is*; the tag says whether WebDriver's helper works on it. `isSelected()` is defined only for
+`input[type=checkbox|radio]` and `<option>` — for anything else it returns `false`, always — so a
+`role="switch"` was wrong 100% of the time: the read said *off* for a switch that was on, and the
+setter clicked it and turned it **off**. A custom toggle is clicked instead, which is always correct.
+The same rule already governs `<select>` and `<option>`. `input[type=color]` leaves the `text` bucket
+for the same reason: measured in Chromium, typing into one leaves the value untouched and `clear()`
+sets it to `#000000`, so a setter reported success and left the control black. **[settled]**
+
 **Interactive means the four buckets of §11** — actionable, text, toggle, select — so anything a scan
 collects is something the generator can write methods for. `static` is deliberately excluded, or a scan
 of a page would return every heading, paragraph and image on it; those go in one at a time with Add.
@@ -694,6 +703,14 @@ Four agreed changes: **[settled]**
 Keep v2.5.1's **plain names** by default — `About`, not `AboutLink`. The user can rename before
 exporting.
 
+**A name the user types must be an identifier**, not merely non-empty and unspaced. It becomes a field
+and a method name in five languages: `Sign-In` compiled in none of them, `2fa` in none, and Python
+alone appeared to work because `snake()` silently dropped the punctuation — one model, a working file
+in one language and a broken one in four. Letters, digits and underscore, not starting with a digit,
+which is narrower than any single target allows and is the intersection of all of them. The same rule
+governs the class-name override (§12), and the generator applies it again so an unusable name cannot
+reach a file by another route. **[settled]**
+
 **A trailing validity marker is dropped.** Etsy's sign-in labels are `Email address*`, where the
 asterisk carries an accessible *"Required"* — so the accname is literally "Email address Required" and
 every required field on the form was named `SomethingRequired`. One trailing `Required` or `Optional`
@@ -724,6 +741,13 @@ Name churn versus v2.5.1 is acceptable — no stored model survives the upgrade,
 
 Truncation runs to the nearest **word boundary** at or under 25 characters, rather than cutting
 mid-word as v2.5.1 does. **[inferred]**
+
+**A generated-looking id is judged per word, at five consonants.** Across the whole string and at
+four, the rule rejected ordinary ids: a camelCase join makes a run neither word has — `firstName` →
+`rstN`, `btnSubmit`, `lblName`, `searchBtn` — and real words trip it alone: `length`, `strength`,
+`months`, `html`. That is not cosmetic, because a rejected id loses the `id` candidate *and* the
+`#id` css, so `firstName` fell to `body > form > div:nth-of-type(1) > input` and was named `Input1`
+while `lastName` beside it was fine. **[settled]**
 
 ## 14. Settings
 

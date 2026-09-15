@@ -6,7 +6,7 @@
 import type { LocatorCandidate } from '../engine/types';
 import { singleQuoted, doubleQuoted } from '../quote';
 import type { FrameStep } from '../engine/types';
-import { frameSelector, playwrightFramePrefix, playwrightPyFramePrefix } from './frames';
+import { frameSelector, playwrightFramePrefix, playwrightPyFramePrefix, puppeteerFrameSelector } from './frames';
 import type { ShadowStep } from '../engine/types';
 import { playwrightPyShadowPrefix, playwrightShadowPrefix, puppeteerShadowSelector, shadowSelector } from './shadow';
 
@@ -168,7 +168,8 @@ export function displayElementLocator(
   // prefix — and a frame is not expressible there at all, hence ` › `.
   if (frameworkId === 'puppeteer') {
     const expr = puppeteerExpr(c, hosts);
-    return frames.length ? `${frames.map(frameSelector).join(' › ')} › ${expr}` : expr;
+    // Puppeteer's own xpath spelling, so the row matches the generated line.
+    return frames.length ? `${frames.map(puppeteerFrameSelector).join(' › ')} › ${expr}` : expr;
   }
   // Selenium expresses neither chain in the locator itself: both are steps the
   // generated code takes before the `By` is used, so both read as the path

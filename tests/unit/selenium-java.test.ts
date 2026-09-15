@@ -85,7 +85,9 @@ describe('generateSeleniumJava', () => {
 
     it('gives a radio no set(false), which never worked', () => {
       // Clicking a checked radio does not uncheck it.
-      const out = gen({ name: 'Pro', role: 'radio', tag: 'input', candidate: { kind: 'id', value: 'p' } });
+      // Native: isSelected() only works on input[type=radio], so a custom
+      // role="radio" is clicked instead and gets no select method at all.
+      const out = gen({ name: 'Pro', role: 'radio', tag: 'input', inputType: 'radio', candidate: { kind: 'id', value: 'p' } });
       expect(out).toContain('public void selectPro() {');
       expect(out).toContain('public boolean isProSelected() {');
       expect(out).not.toContain('setPro(boolean');

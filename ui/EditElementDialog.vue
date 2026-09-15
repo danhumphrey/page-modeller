@@ -112,6 +112,7 @@ import { buildCandidate, fieldsFor, isComplete, valuesOf, type LocatorKind } fro
 import type { LocatorCandidate } from '@/src/engine/types';
 import { frameSelector, isOpaque } from '@/src/locators/frames';
 import { shadowSelector } from '@/src/locators/shadow';
+import { identifierError } from '@/src/identifier';
 
 const props = defineProps<{
   showTooltips: boolean;
@@ -170,8 +171,11 @@ watch(kind, (next) => {
 
 const nameError = computed(() => {
   const value = name.value.trim();
-  if (!value) return 'Name is required.';
-  if (/\s/.test(value)) return 'Name cannot contain spaces.';
+  // Must be an identifier in every target, not merely non-empty and unspaced:
+  // this name becomes a field and a method name in five languages, and
+  // `Sign-In` compiled in none of them (SPEC §13).
+  const invalid = identifierError(value, 'Name');
+  if (invalid) return invalid;
   if (props.takenNames.includes(value)) return 'Name must be unique.';
   return '';
 });

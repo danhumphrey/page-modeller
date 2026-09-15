@@ -250,7 +250,16 @@ test('a srcdoc frame can be picked at all, and gets a complete chain', async () 
   // sandboxed frame, whose origin is opaque by construction.
   expect(result.framePath.some((s) => s.opaque)).toBe(false);
   expect(result.framePath).toHaveLength(1);
-  expect(result.framePath[0].frame.value).toContain('Srcdoc');
+
+  // Asserted by resolving it rather than by matching a literal. This used to
+  // read `toContain('Srcdoc')` — the frame's title — because `srcdoc-frame`
+  // was wrongly judged a generated id (the `srcd` consonant run), so its id
+  // was discarded and the title attribute won. Now the real id is used, which
+  // is the better locator; what the test cares about is that the step
+  // identifies THIS frame, not which attribute it came from.
+  const step = result.framePath[0].frame.value;
+  await expect(page.locator(step)).toHaveCount(1);
+  await expect(page.locator(step)).toHaveAttribute('id', 'srcdoc-frame');
 });
 
 test('a cross-origin frame gets a real chain, not an opaque one (SPEC §16)', async () => {

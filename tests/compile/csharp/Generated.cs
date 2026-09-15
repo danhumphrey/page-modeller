@@ -217,13 +217,13 @@ public void SetSliderElToMax()
 public void SetSliderEl(string value)
 {
     IWebElement el = GetSliderElElement();
-    double target = double.Parse(value);
-    double now = double.Parse(el.GetDomProperty("value"));
+    double target = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+    double now = double.Parse(el.GetDomProperty("value"), System.Globalization.CultureInfo.InvariantCulture);
     while (now != target)
     {
         bool up = now < target;
         el.SendKeys(up ? Keys.Right : Keys.Left);
-        double next = double.Parse(el.GetDomProperty("value"));
+        double next = double.Parse(el.GetDomProperty("value"), System.Globalization.CultureInfo.InvariantCulture);
         // Clamped at an end, or stepped past a value this slider
         // cannot land on. Either way it goes no closer.
         if (next == now || (up ? next > target : next < target)) return;
@@ -729,13 +729,13 @@ public void SetFramedSliderEl(string value)
     try
     {
         IWebElement el = driver.FindElement(By.CssSelector("input.volume"));
-        double target = double.Parse(value);
-        double now = double.Parse(el.GetDomProperty("value"));
+        double target = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+        double now = double.Parse(el.GetDomProperty("value"), System.Globalization.CultureInfo.InvariantCulture);
         while (now != target)
         {
             bool up = now < target;
             el.SendKeys(up ? Keys.Right : Keys.Left);
-            double next = double.Parse(el.GetDomProperty("value"));
+            double next = double.Parse(el.GetDomProperty("value"), System.Globalization.CultureInfo.InvariantCulture);
             // Clamped at an end, or stepped past a value this slider
             // cannot land on. Either way it goes no closer.
             if (next == now || (up ? next > target : next < target)) return;

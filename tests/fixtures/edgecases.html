@@ -47,6 +47,35 @@
     <!-- 9. whitespace normalization in link text -->
     <a href="/read" data-spike="ws-link">  Read   more  </a>
 
+    <!-- 9b. a multi-line attribute value. A CSS string may not contain a raw
+         newline, so an unescaped one threw SyntaxError out of querySelectorAll
+         and killed the whole scan — no rows, no error, picker still armed.
+         Wrapped title/alt/aria-label is ordinary CMS markup. -->
+    <a href="/report" data-spike="wrapped-title" title="Open the report
+in a new window">Report</a>
+
+    <!-- 9c. a link whose rendered text differs from its textContent. WebDriver
+         matches what is DISPLAYED, so the hidden span must not reach the
+         locator — the Bootstrap `d-none d-md-inline` responsive-label shape. -->
+    <style>.pm-hidden-part { display: none }</style>
+    <a href="/pricing" data-spike="responsive-link">Read more<span class="pm-hidden-part"> about pricing</span></a>
+
+    <!-- 9d. a required marker drawn with ::before on a replaced element. A
+         pseudo-element never renders on an <input>, but getComputedStyle still
+         reports the declared content, so folding it into the accessible name
+         invented "* Email address" and every locator built from it matched
+         nothing. -->
+    <style>input.pm-req::before { content: "* " }</style>
+    <label for="req-email">Email address</label>
+    <input id="req-email" class="pm-req" data-spike="required-marked">
+
+    <!-- 9e. two elements sharing one aria-label, only one of them a form
+         control. getByLabel matches both, so a resolver that filters to
+         INPUT/SELECT/TEXTAREA under-counts and certifies a locator that
+         raises a strict-mode violation. -->
+    <input aria-label="Quick search" data-spike="labelled-input">
+    <button aria-label="Quick search" data-spike="labelled-button">Go</button>
+
     <!-- 10. CSS ::before contributes to the accessible name (divergence probe) -->
     <button class="with-css-prefix" data-spike="css-before-btn">file</button>
 

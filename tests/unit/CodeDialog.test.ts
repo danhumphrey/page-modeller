@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { nextTick } from 'vue';
 import { mount } from '@vue/test-utils';
 import { Quasar, QBtn, QBtnToggle, QDialog, QCard, QCardSection, QCardActions, QToolbar, QToolbarTitle, ClosePopup } from 'quasar';
 import CodeDialog from '../../ui/CodeDialog.vue';
+import * as generators from '../../src/generators';
 import { emptyModel, type ModelElement, type TabModel } from '../../src/model';
 import { frameworks } from '../../src/frameworks';
 
@@ -29,6 +30,7 @@ function modelWith(frameworkId: string, ...elements: Array<Partial<ModelElement>
 let wrapper: ReturnType<typeof mount> | undefined;
 
 afterEach(() => {
+  vi.restoreAllMocks();
   wrapper?.unmount();
   wrapper = undefined;
   document.body.innerHTML = '';
@@ -88,9 +90,25 @@ describe('CodeDialog', () => {
   });
 
   it('offers no shape row when the framework has one shape', async () => {
-    // No framework has one today; the row must still not appear if one does.
+    // Asserted against a framework that really has one, not against
+    // selenium-java: the old version rendered a THREE-shape framework and
+    // asserted the row was present, which is the opposite of what its name
+    // claims and could not have failed.
+    //
+    // No shipped framework has a single shape today, so the case is reached by
+    // making one — the rule under test is the component's `shapes.length > 1`,
+    // not the contents of the registry.
+    vi.spyOn(generators, 'shapesFor').mockReturnValue([{ id: 'page-object', label: 'Page object' }]);
     await render(modelWith('selenium-java', { name: 'Email' }));
-    expect(document.body.querySelectorAll('[data-testid="code-shape"]').length).toBe(1);
+
+    expect(document.body.querySelectorAll('[data-testid="code-shape"]')).toHaveLength(0);
+    // And the code itself is still there — a missing row is not a missing dialog.
+    expect(codeText()).toContain('Email');
+  });
+
+  it('offers the shape row when there is a choice to make', async () => {
+    await render(modelWith('selenium-java', { name: 'Email' }));
+    expect(document.body.querySelectorAll('[data-testid="code-shape"]')).toHaveLength(1);
   });
 
   it('reopens on the shape last chosen', async () => {

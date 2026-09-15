@@ -1,3 +1,4 @@
+import { identifierError } from '../identifier';
 // A name for the generated class (SPEC §17).
 //
 // Derived from the page the model was built on, because typing one is friction
@@ -7,7 +8,14 @@ const FALLBACK = 'GeneratedPage';
 
 /** The override if there is one, otherwise derived from the URL. */
 export function classNameOf(model: { url: string | null; className?: string }): string {
-  return model.className?.trim() || classNameFor(model.url);
+  // The override is checked here as well as in the dialog. The UI is where a
+  // user is told why their name is refused; this is what keeps an unusable one
+  // out of the generated file if it ever reaches the model by another route —
+  // a restored session, a future import — since `export class My Page {`
+  // compiles nowhere.
+  const typed = model.className?.trim();
+  if (typed && !identifierError(typed, 'Class name')) return typed;
+  return classNameFor(model.url);
 }
 
 export function classNameFor(url: string | null): string {

@@ -15,6 +15,7 @@
 //
 // Names stay plain — `About`, not `AboutLink`. No role suffix.
 import { computeAccessibleName } from 'dom-accessibility-api';
+import { rootOf, escapeClass } from './roots';
 
 const MAX_NAME_LENGTH = 25;
 
@@ -42,6 +43,14 @@ function accessibleName(el: Element): string {
  * through to the next naming rule, while a false negative ships a name that
  * will rot.
  */
+/** Split on camelCase boundaries and separators, so each word is judged alone. */
+function words(value: string): string[] {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean);
+}
+
 export function looksGenerated(value: string): boolean {
   // Known CSS-in-JS shapes: emotion (css-1q2w3e), styled-components (sc-bdVaJa),
   // CSS Modules (Button_root__2xK9f), and leading-underscore hashes (_2xK9f).
@@ -51,22 +60,45 @@ export function looksGenerated(value: string): boolean {
   // React's useId: ":r1:" and "«r1»" from React 18, "_r_6_" from React 19.
   if (/^[:«][a-z0-9]+[:»]$/i.test(value)) return true;
   if (/^_r_[a-z0-9]+_$/i.test(value)) return true;
-  // No pronounceable structure: a run of 4+ letters without a vowel. Real
-  // words and abbreviations ("btn", "nav", "col") stay under that bar.
-  return /[^aeiouy\W\d]{4,}/i.test(value);
+  // No pronounceable structure: a run of 5+ letters with no vowel, tested per
+  // WORD rather than across the whole string.
+  //
+  // Both halves of that were wrong before, and together they rejected ordinary
+  // ids. Across the whole string, a camelCase join makes a consonant run that
+  // neither word has: `firstName` -> `rstN`, `btnSubmit` -> `tnS`, `searchBtn`,
+  // `lblName`, `ddlCountry`. And at 4, real English words trip it on their own:
+  // `length`, `strength`, `months`, `html`. The cost is not cosmetic — a
+  // rejected id loses both the `id` candidate and `#id` css, so `firstName`
+  // fell all the way to `body > form > div:nth-of-type(1) > input` and was
+  // named `Input1`, while `lastName` beside it was fine.
+  //
+  // Splitting on camelCase and non-alphanumerics first, then requiring 5, keeps
+  // the hashes this is for — `Xtvsq51`, `bdVaJa` — and lets words through.
+  return words(value).some((w) => /[^aeiouy\W\d]{5,}/i.test(w));
 }
 
+// Both rules below used to count against `ownerDocument`, which does not
+// descend into a shadow root — so for anything inside a web component the
+// class rule found zero matches instead of one and never fired, and the tag
+// index found the element nowhere, where `indexOf` answers -1: every control
+// in every component on the page was named `Input0`.
+//
+// `getElementsByClassName` and `getElementsByTagName` are not the way back —
+// a ShadowRoot is a DocumentFragment and has neither. `querySelectorAll` is on
+// both.
+
 function uniqueClassName(el: Element): string {
+  const scope = rootOf(el);
   for (const cls of Array.from(el.classList)) {
     if (looksGenerated(cls)) continue;
-    if (el.ownerDocument.getElementsByClassName(cls).length === 1) return cls;
+    if (scope.querySelectorAll(`.${escapeClass(cls)}`).length === 1) return cls;
   }
   return '';
 }
 
 function tagIndexName(el: Element): string {
   const tag = el.tagName.toLowerCase();
-  const all = el.ownerDocument.getElementsByTagName(el.tagName);
+  const all = rootOf(el).querySelectorAll(el.localName);
   const index = Array.prototype.indexOf.call(all, el) + 1;
   return `${tag}${index}`;
 }
@@ -110,7 +142,13 @@ const DIGIT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seve
 function toPascalCase(raw: string): string {
   const words = raw
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .split(/[^\p{L}\p{N}]+/u)
+    // `\p{Nd}` — decimal digits — and NOT `\p{N}`, which also covers `½`, `¼`
+    // and `Ⅻ`. Those are not identifier characters in any of the six targets,
+    // so "½ Pound Burger" produced `½PoundBurger` and nothing downstream caught
+    // it: the leading-digit rule tests ASCII `\d`, and a page object that does
+    // not parse is worse than a badly named one. Dropped as a separator, which
+    // leaves `PoundBurger`.
+    .split(/[^\p{L}\p{Nd}]+/u)
     .filter(Boolean);
   return words.map((w) => w[0].toUpperCase() + w.slice(1)).join('');
 }
@@ -160,9 +198,10 @@ function clean(raw: string): string {
   const firstLine = raw.split(/\r\n|\r|\n/)[0];
   let name = dropValiditySuffix(toPascalCase(firstLine));
   if (!name) return '';
-  // Identifiers cannot start with a digit.
-  if (/^\d/.test(name)) {
-    name = name.length === 1 ? DIGIT_WORDS[Number(name)] : `Element${name}`;
+  // Identifiers cannot start with a digit — in any script, so `\p{Nd}` rather
+  // than `\d`. The digit-word spelling only reads for the ten ASCII ones.
+  if (/^\p{Nd}/u.test(name)) {
+    name = /^[0-9]$/.test(name) ? DIGIT_WORDS[Number(name)] : `Element${name}`;
     name = name[0].toUpperCase() + name.slice(1);
   }
   return truncate(name);

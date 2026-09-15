@@ -1,6 +1,18 @@
 import { computeAccessibleName, getRole } from 'dom-accessibility-api';
 import type { LocatorCandidate, ElementResult, FrameStep, RankedCandidate, ShadowStep } from './types';
 import { baseName, looksGenerated } from './naming';
+import { isShadowRoot, rootOf } from './roots';
+
+/**
+ * What a link displays, which is what WebDriver's link-text strategy matches.
+ *
+ * `innerText` is layout-aware and excludes hidden descendants; `textContent`
+ * is not. jsdom implements no layout and returns undefined, so fall back —
+ * there the two agree anyway, because nothing is hidden.
+ */
+function renderedText(el: Element): string {
+  return (el as HTMLElement).innerText ?? el.textContent ?? '';
+}
 
 const norm = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();
 
@@ -8,6 +20,8 @@ const norm = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g,
 // associated <label>/aria-label. NOT buttons — a button named by its text content
 // is found via getByRole/getByText, and getByLabel returns 0 for it.
 const LABEL_TARGETS = new Set(['INPUT', 'SELECT', 'TEXTAREA']);
+// Replaced elements: no pseudo-element ever renders on one.
+const REPLACED = new Set(['INPUT', 'SELECT', 'TEXTAREA', 'IMG', 'BR', 'HR', 'EMBED', 'OBJECT', 'IFRAME', 'VIDEO', 'AUDIO', 'CANVAS']);
 // Controls with no meaningful textContent — excluded from getByText candidates.
 const NON_TEXT = new Set(['INPUT', 'SELECT', 'TEXTAREA']);
 
@@ -25,51 +39,97 @@ function pseudoText(el: Element, pseudo: '::before' | '::after'): string {
   }
 }
 
-export function safeName(el: Element): string {
+/**
+ * Memo for one scan (SPEC §4).
+ *
+ * `generate` is called once per interactive element, and each call asks the
+ * whole document several questions — every element's role, every element's
+ * accessible name, every element matching a selector. Nothing about the page
+ * changes between those calls, but all of it was recomputed for each one: a
+ * page of 600 repeated rows (4,800 nodes, 1,800 controls) took **16 seconds**
+ * on the main thread, with the tab frozen for all of it.
+ *
+ * Scoped to one batch rather than kept globally, because the page DOES change
+ * between a scan and the next thing asked of the engine — a pick, or the eye
+ * checking a locator — and a stale role or a stale match list is exactly the
+ * wrong answer to give there. Nested calls share the outer batch, so a scan
+ * that recurses into a shadow root does not start a second one.
+ *
+ * Correctness is unchanged with the cache absent, which is the property that
+ * makes it safe: every entry point works uncached, and `batched` only makes it
+ * faster.
+ */
+interface Batch {
+  roles: WeakMap<Element, string | null>;
+  names: WeakMap<Element, string>;
+  hidden: WeakMap<Element, boolean>;
+  text: WeakMap<Element, string>;
+  matches: Map<Document | ShadowRoot | Element, Map<string, Element[]>>;
+  /** Every rendered element per root, and the same list bucketed by role. */
+  rendered: Map<Document | ShadowRoot, Element[]>;
+  byRole: Map<Document | ShadowRoot, Map<string, Element[]>>;
+}
+
+let batch: Batch | null = null;
+
+export function batched<T>(run: () => T): T {
+  if (batch) return run();
+  batch = {
+    roles: new WeakMap(),
+    names: new WeakMap(),
+    hidden: new WeakMap(),
+    text: new WeakMap(),
+    matches: new Map(),
+    rendered: new Map(),
+    byRole: new Map(),
+  };
   try {
-    let name = norm(computeAccessibleName(el));
-    // Pseudo content only contributes when the name is derived from content
-    // (not when an explicit aria-label/aria-labelledby supplies it).
-    if (!el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby')) {
-      const before = pseudoText(el, '::before');
-      const after = pseudoText(el, '::after');
-      if (before || after) name = norm(`${before} ${name} ${after}`);
-    }
-    return name;
-  } catch {
-    return '';
+    return run();
+  } finally {
+    batch = null;
   }
+}
+
+/** Read through the batch memo, or compute when there is no batch. */
+function memo<K extends object, V>(store: WeakMap<K, V> | undefined, key: K, compute: () => V): V {
+  if (!store) return compute();
+  if (store.has(key)) return store.get(key) as V;
+  const value = compute();
+  store.set(key, value);
+  return value;
+}
+
+export function safeName(el: Element): string {
+  return memo(batch?.names, el, (): string => {
+    try {
+      let name = norm(computeAccessibleName(el));
+      // Pseudo content only contributes when the name is derived from content
+      // (not when an explicit aria-label/aria-labelledby supplies it).
+      // A replaced element never renders a pseudo-element, though
+      // getComputedStyle still reports the declared content. Folding it in
+      // invented names like "* Email address" from a required marker
+      // (`input.req::before{content:"* "}`), and both the role and label
+      // candidates then resolved to zero.
+      if (!REPLACED.has(el.tagName) && !el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby')) {
+        const before = pseudoText(el, '::before');
+        const after = pseudoText(el, '::after');
+        if (before || after) name = norm(`${before} ${name} ${after}`);
+      }
+      return name;
+    } catch {
+      return '';
+    }
+  });
 }
 
 export function safeRole(el: Element): string | null {
-  try {
-    return getRole(el) || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * The Document or ShadowRoot an element is scoped to (SPEC §19).
- *
- * Everything that asks "is this selector unique?" has to ask it of the right
- * tree. `ownerDocument` cannot see inside a shadow root at all, so every
- * candidate for a shadow element was rejected as matching zero elements, and
- * the `>` path then walked up to a `parentElement` of null and stopped
- * mid-component.
- *
- * Scoping to the root is also what the generated locator does: a shadow
- * element's locator is relative to its root, reached through the host chain.
- * Ids are scoped to a shadow root, so a path anchored inside one is shorter
- * and steadier than a document-wide path could be.
- */
-export function isShadowRoot(node: Node): node is ShadowRoot {
-  return node.nodeType === 11 && 'host' in node;
-}
-
-export function rootOf(el: Element): Document | ShadowRoot {
-  const root = el.getRootNode();
-  return isShadowRoot(root) ? root : el.ownerDocument;
+  return memo(batch?.roles, el, () => {
+    try {
+      return getRole(el) || null;
+    } catch {
+      return null;
+    }
+  });
 }
 
 // ---- selector builders (deterministic fallbacks) ----
@@ -114,6 +174,23 @@ export function setTestIdAttribute(attr: string): void {
  * that matches six would not (SPEC §7, §19).
  */
 function pierce(root: Document | ShadowRoot | Element, sel: string): Element[] {
+  // Every call walks `*` over the whole tree looking for shadow hosts, so even
+  // an attribute selector costs a full pass — the reason the memo covers this
+  // and not only the accessible-name work.
+  const byRoot = batch?.matches;
+  if (byRoot) {
+    let bySel = byRoot.get(root);
+    if (!bySel) byRoot.set(root, (bySel = new Map()));
+    const hit = bySel.get(sel);
+    if (hit) return hit;
+    const found = pierceNow(root, sel);
+    bySel.set(sel, found);
+    return found;
+  }
+  return pierceNow(root, sel);
+}
+
+function pierceNow(root: Document | ShadowRoot | Element, sel: string): Element[] {
   const out = Array.from(root.querySelectorAll(sel));
   for (const el of Array.from(root.querySelectorAll('*'))) {
     if (el.shadowRoot) out.push(...pierce(el.shadowRoot, sel));
@@ -137,6 +214,24 @@ function unique(el: Element, sel: string): boolean {
   return pierce(rootOf(el), sel).length === 1;
 }
 
+/**
+ * Escape a value for use inside a double-quoted CSS string.
+ *
+ * `\` and `"` are the obvious two. The line terminators are the ones that bite:
+ * CSS forbids them raw inside a string, so an unescaped newline is not a
+ * mis-match, it is a SyntaxError from the selector parser.
+ */
+function cssString(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\A ')
+    .replace(/\r/g, '\\D ')
+    .replace(/\f/g, '\\C ')
+    .replace(/\u2028/g, '\\2028 ')
+    .replace(/\u2029/g, '\\2029 ');
+}
+
 function attrSelector(el: Element, attr: string): string | null {
   const value = el.getAttribute(attr);
   if (!value) return null;
@@ -144,10 +239,16 @@ function attrSelector(el: Element, attr: string): string | null {
   // its own, `button[type="submit"]` is a locator. Uniqueness is still what
   // decides, so qualifying can only ever help.
   const prefix = attr === testIdAttribute || attr === 'name' ? '' : el.localName;
-  // A quoted attribute value is a CSS *string*, where only `\` and `"` need
-  // escaping. CSS.escape is for identifiers and would render `/forgot` as
-  // `\/forgot` — still valid, but nobody writes that.
-  const sel = `${prefix}[${attr}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`;
+  // A quoted attribute value is a CSS *string*, so `\` and `"` need escaping —
+  // and so do the line terminators, which a CSS string may not contain raw.
+  // Missing those threw a SyntaxError out of querySelectorAll that nothing
+  // caught: a single `title="Open the report\nin a new window"` anywhere in a
+  // scanned container killed the whole scan, with no rows and no error, and
+  // left the picker armed. Multi-line title/alt/aria-label is ordinary markup.
+  //
+  // CSS.escape is not the answer here: it is for identifiers, and would render
+  // `/forgot` as `\/forgot` — valid, but nobody writes that.
+  const sel = `${prefix}[${attr}="${cssString(value)}"]`;
   return unique(el, sel) ? sel : null;
 }
 
@@ -196,14 +297,41 @@ function cssFor(el: Element): string {
     }
     let sel = cur.tagName.toLowerCase();
     const parent: Element | null = cur.parentElement;
-    if (parent) {
-      const sameTag = Array.from(parent.children).filter((c) => c.tagName === cur!.tagName);
+    // `parentElement` is null for a top-level child of a shadow root, and the
+    // index was then skipped entirely: two identical controls sitting directly
+    // under the root both came out as plain `input`, matched two, and the
+    // element ended up with no unique candidate at all. The ROOT is their
+    // parent for selector matching, so `:nth-of-type` still applies — the
+    // element to walk up to is what does not exist, not the sibling set.
+    const siblings = parent ?? (cur.parentNode as ParentNode | null);
+    if (siblings) {
+      const sameTag = Array.from(siblings.children).filter((c) => c.tagName === cur!.tagName);
       if (sameTag.length > 1) sel += `:nth-of-type(${sameTag.indexOf(cur) + 1})`;
     }
     parts.unshift(sel);
     cur = parent;
   }
   return parts.join(' > ');
+}
+
+/**
+ * An XPath 1.0 string literal.
+ *
+ * XPath 1.0 has no escape sequences at all, which is why `JSON.stringify` was
+ * the wrong tool and not merely an approximate one: an id containing a double
+ * quote came out as `"a\"b"`, a syntax error the browser rejects outright, and
+ * one containing a newline came out as the two characters `\` and `n`, which
+ * matches nothing while looking perfectly well-formed. Both are the failure
+ * SPEC §8 exists to prevent — a locator certified by the eye that finds nothing
+ * when the test runs.
+ *
+ * A value carrying only one kind of quote is wrapped in the other. A value
+ * carrying both can only be assembled with `concat()`.
+ */
+export function xpathLiteral(value: string): string {
+  if (!value.includes("'")) return `'${value}'`;
+  if (!value.includes('"')) return `"${value}"`;
+  return `concat(${value.split("'").map((part) => `'${part}'`).join(`, "'", `)})`;
 }
 
 const HTML_NS = 'http://www.w3.org/1999/xhtml';
@@ -223,11 +351,16 @@ const HTML_NS = 'http://www.w3.org/1999/xhtml';
 function xpathStep(el: Element, index: number): string {
   return el.namespaceURI === HTML_NS
     ? `${el.localName}[${index}]`
-    : `*[local-name()=${JSON.stringify(el.localName)}][${index}]`;
+    : `*[local-name()=${xpathLiteral(el.localName)}][${index}]`;
 }
 
 function xpathFor(el: Element): string {
-  if (el.id) return `//*[@id=${JSON.stringify(el.id)}]`;
+  // Anchored on an id only when the id is the author's. `cssFor` has always
+  // checked this and xpath did not, so the same React `id="_R_1h6kqsqppb6amH1_"`
+  // that the CSS candidate carefully stepped around became the whole XPath —
+  // a locator that stops resolving on the next render.
+  const id = el.getAttribute('id');
+  if (id && !looksGenerated(id)) return `//*[@id=${xpathLiteral(id)}]`;
   const parts: string[] = [];
   let cur: Element | null = el;
   while (cur && cur.nodeType === 1) {
@@ -272,17 +405,28 @@ export function matchesText(actual: string, expected: string, exact: boolean | u
  * counts hidden elements the test will never see.
  */
 export function ariaHidden(el: Element): boolean {
-  for (let cur: Element | null = el; cur; cur = cur.parentElement) {
-    if (cur.getAttribute('aria-hidden') === 'true') return true;
-    if ((cur as HTMLElement).hidden) return true;
-    try {
-      const st = cur.ownerDocument.defaultView?.getComputedStyle(cur);
-      if (st && (st.display === 'none' || st.visibility === 'hidden' || st.visibility === 'collapse')) return true;
-    } catch {
-      /* detached or cross-document; treat as visible */
+  return memo(batch?.hidden, el, (): boolean => {
+    // `parentElement` is null at the top of a shadow tree, so the HOST was never
+    // examined: anything inside a `display:none` component read as visible, was
+    // collected by a scan with the setting off, and was certified unique by a
+    // `getByRole` a real run resolves to zero.
+    const up = (node: Element): Element | null => {
+      if (node.parentElement) return node.parentElement;
+      const root = node.getRootNode();
+      return root instanceof ShadowRoot ? root.host : null;
+    };
+    for (let cur: Element | null = el; cur; cur = up(cur)) {
+      if (cur.getAttribute('aria-hidden') === 'true') return true;
+      if ((cur as HTMLElement).hidden) return true;
+      try {
+        const st = cur.ownerDocument.defaultView?.getComputedStyle(cur);
+        if (st && (st.display === 'none' || st.visibility === 'hidden' || st.visibility === 'collapse')) return true;
+      } catch {
+        /* detached or cross-document; treat as visible */
+      }
     }
-  }
-  return false;
+    return false;
+  });
 }
 
 /**
@@ -307,18 +451,67 @@ export function ariaHidden(el: Element): boolean {
  */
 const NON_RENDERED = new Set(['TITLE', 'SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'META', 'LINK']);
 
+/** What `getByLabel` can match: an aria-label, or a real label association. */
+function isLabelled(el: Element): boolean {
+  return el.hasAttribute('aria-label') || ((el as HTMLInputElement).labels?.length ?? 0) > 0;
+}
+
+/** Every rendered element under `root`, memoised for the batch. */
+function renderedIn(root: Document | ShadowRoot): Element[] {
+  const cached = batch?.rendered.get(root);
+  if (cached) return cached;
+  const all = pierce(root, '*').filter((e) => !NON_RENDERED.has(e.tagName));
+  batch?.rendered.set(root, all);
+  return all;
+}
+
+/**
+ * The rendered elements carrying `role`.
+ *
+ * Without the index every role candidate re-walked every element in the
+ * document asking each for its role. Bucketing once per batch turns the
+ * commonest resolution on the page — a page of buttons, asked about each of
+ * its buttons — from n per element into the size of one bucket.
+ */
+function withRole(root: Document | ShadowRoot, role: string): Element[] {
+  if (!batch) return renderedIn(root).filter((e) => safeRole(e) === role);
+  let index = batch.byRole.get(root);
+  if (!index) {
+    index = new Map();
+    for (const el of renderedIn(root)) {
+      const r = safeRole(el);
+      if (r == null) continue;
+      const bucket = index.get(r);
+      if (bucket) bucket.push(el);
+      else index.set(r, [el]);
+    }
+    batch.byRole.set(root, index);
+  }
+  return index.get(role) ?? [];
+}
+
+/** Normalised textContent, which the text candidate asks of every element. */
+function textOf(el: Element): string {
+  return memo(batch?.text, el, () => el.textContent ?? '');
+}
+
 export function resolveCandidate(root: Document | ShadowRoot, c: LocatorCandidate): Element[] {
   const doc = root;
-  const all = () => pierce(doc, '*').filter((e) => !NON_RENDERED.has(e.tagName));
+  const all = () => renderedIn(doc);
   switch (c.kind) {
     case 'testId':
       return pierce(doc, `[${testIdAttribute}="${CSS.escape(c.value)}"]`);
     case 'role':
-      return all()
-        .filter((e) => safeRole(e) === c.role && (c.name === undefined || matchesText(safeName(e), c.name, c.exact)))
+      return withRole(doc, c.role)
+        .filter((e) => c.name === undefined || matchesText(safeName(e), c.name, c.exact))
         .filter((e) => !ariaHidden(e));
     case 'label':
-      return all().filter((e) => LABEL_TARGETS.has(e.tagName) && matchesText(safeName(e), c.text, c.exact));
+      // Not restricted to form controls: Playwright's getByLabel matches ANY
+      // element carrying an aria-label, so limiting it here under-counted —
+      // `<input aria-label="Search">` beside `<button aria-label="Search">`
+      // predicted 1 where Playwright resolves 2, a green tick on a locator
+      // that raises a strict-mode violation.
+      return all().filter((e) => isLabelled(e) && matchesText(safeName(e), c.text, c.exact));
     case 'placeholder':
       return pierce(doc, '[placeholder]').filter((e) =>
         matchesText(e.getAttribute('placeholder') ?? '', c.text, c.exact)
@@ -327,7 +520,7 @@ export function resolveCandidate(root: Document | ShadowRoot, c: LocatorCandidat
       // Playwright matches the *smallest* element containing the text, so an
       // ancestor whose text comes entirely from a matching descendant does not
       // count. Without this a <fieldset> matches alongside its <legend>.
-      const hits = all().filter((e) => matchesText((e as HTMLElement).textContent ?? '', c.text, c.exact));
+      const hits = all().filter((e) => matchesText(textOf(e), c.text, c.exact));
       return hits.filter((e) => !hits.some((other) => other !== e && e.contains(other)));
     }
     case 'altText':
@@ -366,10 +559,10 @@ export function resolveCandidate(root: Document | ShadowRoot, c: LocatorCandidat
     case 'tagName':
       return c.value ? pierce(doc, CSS.escape(c.value)) : [];
     case 'linkText':
-      // Selenium matches links on their rendered text, trimmed.
-      return pierce(doc, 'a').filter((a) => norm(a.textContent) === norm(c.text));
+      // Rendered text, as WebDriver does — see renderedText.
+      return pierce(doc, 'a').filter((a) => norm(renderedText(a)) === norm(c.text));
     case 'partialLinkText':
-      return pierce(doc, 'a').filter((a) => norm(a.textContent).includes(norm(c.text)));
+      return pierce(doc, 'a').filter((a) => norm(renderedText(a)).includes(norm(c.text)));
   }
 }
 
@@ -524,16 +717,21 @@ function rankFor(el: Element, role: string | null, name: string): RankedCandidat
     out.push({ kind: 'label', text: name, exact: true });
   }
 
+  // Raw, not whitespace-normalised: Playwright compares getByPlaceholder /
+  // getByAltText / getByTitle against the ATTRIBUTE VALUE as written, so a
+  // normalised candidate silently matches nothing when the value is wrapped
+  // across lines. Measured: a title of "Open the report\nin a new window"
+  // resolves 1 for the raw string and 0 for the normalised one, exact or not.
   const placeholder = el.getAttribute('placeholder');
-  if (placeholder) out.push({ kind: 'placeholder', text: norm(placeholder), exact: true });
+  if (placeholder) out.push({ kind: 'placeholder', text: placeholder, exact: true });
 
   if (tag === 'img') {
     const alt = el.getAttribute('alt');
-    if (alt) out.push({ kind: 'altText', text: norm(alt), exact: true });
+    if (alt) out.push({ kind: 'altText', text: alt, exact: true });
   }
 
   const title = el.getAttribute('title');
-  if (title) out.push({ kind: 'title', text: norm(title), exact: true });
+  if (title) out.push({ kind: 'title', text: title, exact: true });
 
   if (!NON_TEXT.has(el.tagName)) {
     const text = norm(el.textContent);
@@ -562,7 +760,11 @@ function rankFor(el: Element, role: string | null, name: string): RankedCandidat
   out.push({ kind: 'tagName', value: el.localName });
 
   if (el.localName === 'a') {
-    const linkText = norm(el.textContent);
+    // Rendered text, not textContent: WebDriver's link-text strategy matches
+    // what is displayed, so a hidden span inside the link — the Bootstrap
+    // `d-none d-md-inline` pattern — put words in the locator Selenium never
+    // sees. innerText is layout-aware; textContent is not.
+    const linkText = norm(renderedText(el));
     if (linkText) {
       out.push({ kind: 'linkText', text: linkText });
       out.push({ kind: 'partialLinkText', text: linkText });

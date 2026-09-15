@@ -125,13 +125,20 @@ function methods(el: ModelElement): string[] {
         // presses, and min and step never have to be read.
         `public void Set${n}(string value)\n{\n` +
           `    IWebElement el = ${elExpr};\n` +
-          `    double target = double.Parse(value);\n` +
-          `    double now = double.Parse(el.GetDomProperty("value"));\n` +
+          // Fully qualified, not a using: the methods shape emits no imports
+          // at all, so anything else fails to compile in two of three shapes.
+          // double.Parse is culture-sensitive and the DOM property never is —
+          // on a de-DE machine "3.5" parses as 35, so the setter drove the
+          // slider to its maximum and reported success. Java's
+          // Double.parseDouble and Python's float() are invariant, so this was
+          // a real divergence between the three that dotnet build cannot see.
+          `    double target = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);\n` +
+          `    double now = double.Parse(el.GetDomProperty("value"), System.Globalization.CultureInfo.InvariantCulture);\n` +
           `    while (now != target)\n` +
           `    {\n` +
           `        bool up = now < target;\n` +
           `        el.SendKeys(up ? Keys.Right : Keys.Left);\n` +
-          `        double next = double.Parse(el.GetDomProperty("value"));\n` +
+          `        double next = double.Parse(el.GetDomProperty("value"), System.Globalization.CultureInfo.InvariantCulture);\n` +
           `        // Clamped at an end, or stepped past a value this slider\n` +
           `        // cannot land on. Either way it goes no closer.\n` +
           `        if (next == now || (up ? next > target : next < target)) return;\n` +

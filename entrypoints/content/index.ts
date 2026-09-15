@@ -1,4 +1,4 @@
-import { frameStepFor, generate, resolveCandidate, setTestIdAttribute } from '@/src/engine/candidates';
+import { batched, frameStepFor, generate, resolveCandidate, setTestIdAttribute } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
 import { collectClosedHosts, collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
@@ -697,12 +697,33 @@ export default defineContentScript({
 
     function scanDocument() {
       const root = document.body ?? document.documentElement;
-      const results = collectInteractive(root, includeHidden).map((el) => generate(el, myPath));
       const nested = embeddedFrames();
+      // Stop first, so the overlay is gone while the work runs — it is drawn
+      // over a page whose main thread is about to be held, and it cannot be
+      // removed again until that finishes.
       stop({ notify: false });
-      if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
-      reportClosedRoots(root);
-      for (const frame of nested) delegateScan(frame);
+      announceScan(() => {
+        const results = batched(() => collectInteractive(root, includeHidden).map((el) => generate(el, myPath)));
+        if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+        reportClosedRoots(root);
+        for (const frame of nested) delegateScan(frame);
+      });
+    }
+
+    /**
+     * Say a scan has started, then do it on the next macrotask.
+     *
+     * Computing a locator for every control on a large page holds this thread
+     * for seconds, and nothing was said in the meantime: the click landed, the
+     * overlay vanished and the panel sat unchanged until the rows appeared,
+     * which is indistinguishable from a click that missed. The yield is what
+     * makes the message worth sending — dispatched from a thread that is about
+     * to block, it would otherwise reach the panel and be rendered only after
+     * the work it was announcing had already finished.
+     */
+    function announceScan(work: () => void) {
+      browser.runtime.sendMessage({ type: 'SCAN_STARTED' }).catch(() => {});
+      setTimeout(work, 0);
     }
 
     /**
@@ -744,21 +765,24 @@ export default defineContentScript({
       // Scan takes the container's interactive descendants, never the container
       // itself: you are modelling what is inside the section you chose.
       if (mode === 'scan') reportClosedRoots(target);
-      const message =
-        mode === 'scan'
-          ? { type: 'ELEMENTS_PICKED', results: collectInteractive(target, includeHidden).map((el) => generate(el, myPath)) }
-          : { type: 'ELEMENT_PICKED', result: generate(target, myPath), keepPicking };
-
-      // A container's frames are scanned too (SPEC §16). An element inside one
-      // is something Playwright and Selenium can drive, so it is something to
-      // model — and the tool exists to model what a test will interact with.
-      //
-      // This is also what scanning the whole page has always done: only a
-      // container scan stopped, which made the same page give two different
-      // answers depending on where the scan started.
       if (mode === 'scan') {
-        for (const frame of embeddedFrames(target)) delegateScan(frame);
+        announceScan(() => {
+          const results = batched(() => collectInteractive(target, includeHidden).map((el) => generate(el, myPath)));
+          // A container's frames are scanned too (SPEC §16). An element inside
+          // one is something Playwright and Selenium can drive, so it is
+          // something to model — and the tool exists to model what a test will
+          // interact with.
+          //
+          // This is also what scanning the whole page has always done: only a
+          // container scan stopped, which made the same page give two different
+          // answers depending on where the scan started.
+          for (const frame of embeddedFrames(target)) delegateScan(frame);
+          browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+        });
+        return;
       }
+
+      const message = { type: 'ELEMENT_PICKED', result: generate(target, myPath), keepPicking };
 
       // Rejects when no panel is open; that's fine, drop it.
       browser.runtime.sendMessage(message).catch(() => {});
