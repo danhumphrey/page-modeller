@@ -255,6 +255,76 @@ describe('re-broadcasting what a frame said (FROM_TAB)', () => {
   });
 });
 
+describe('a haul from a session that is over (SPEC §4)', () => {
+  beforeEach(startBackground);
+
+  const fromContent = (message: object, sender: object) => {
+    for (const cb of listeners.message) cb(message, sender);
+  };
+
+  /** Arm a picking session on a tab, the way the panel does. */
+  const startPicking = (tabId: number, nonce: string) =>
+    fromContent({ type: 'RELAY_TO_TAB', tabId, message: { type: 'START_PICKING', mode: 'scan', nonce } }, {});
+
+  const haul = (tabId: number, nonce: string | undefined, name: string) =>
+    fromContent(
+      {
+        type: 'ELEMENTS_PICKED',
+        nonce,
+        results: [{ suggestedName: name, candidates: [], preferredIndex: 0, role: null, tag: 'input' }],
+      },
+      { tab: { id: tabId, url: 'https://example.test/one' } }
+    );
+
+  const names = async () => {
+    await flush();
+    const models = (sessionStore.models ?? {}) as Record<number, { elements: { name: string }[] }>;
+    return models[7]?.elements.map((e) => e.name) ?? [];
+  };
+
+  it('accepts a haul from the session that is running', async () => {
+    startPicking(7, 'n1');
+    haul(7, 'n1', 'Email');
+
+    expect(await names()).toEqual(['Email']);
+  });
+
+  it('drops a haul from a session that has ended', async () => {
+    // The shape that matters: a scan fans out, the user presses Delete Model
+    // while a frame is still working, and that frame's haul arrives after.
+    // Putting the model back with a fraction of its rows is worse than either
+    // keeping it whole or losing it.
+    startPicking(7, 'n1');
+    haul(7, 'n1', 'Email');
+    await flush();
+
+    fromContent({ type: 'DELETE_MODEL', tabId: 7 }, {});
+    await flush();
+    haul(7, 'n1', 'LateFromAFrame');
+
+    expect(await names(), 'the deleted model stays deleted').toEqual([]);
+  });
+
+  it('drops a haul from a previous session', async () => {
+    startPicking(7, 'n1');
+    startPicking(7, 'n2');
+
+    haul(7, 'n1', 'Stale');
+    haul(7, 'n2', 'Current');
+
+    expect(await names()).toEqual(['Current']);
+  });
+
+  it('accepts a haul that names no session at all', async () => {
+    // A frame that never saw a START_PICKING, or a message from across an
+    // extension reload. Refusing it would be a regression for anything
+    // mid-flight, and the nonce is an anti-revival guard, not authentication.
+    haul(7, undefined, 'Unversioned');
+
+    expect(await names()).toEqual(['Unversioned']);
+  });
+});
+
 describe('navigation (SPEC §7)', () => {
   beforeEach(startBackground);
 

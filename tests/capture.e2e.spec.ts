@@ -1615,6 +1615,55 @@ test('scanning the component itself reaches what it renders (SPEC §4, §19)', a
   await page.close();
 });
 
+test('a scan reports completion once, after the whole frame tree (SPEC §4, §16)', async () => {
+  // A scan fans out and every frame publishes its own haul, so the FIRST model
+  // is the first frame's finish, not the last's — the panel treated it as the
+  // end and cleared the indicator while the tree was still working. Completion
+  // now rolls up: a delegated frame answers its parent, and only the frame the
+  // user clicked in tells the background.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'scan-complete', 'frames.html');
+  await collectMessages(sw as never);
+
+  await sw.evaluate(
+    (id) => chrome.tabs.sendMessage(id, { type: 'START_PICKING', mode: 'scan', includeHidden: false, nonce: 'n' }),
+    tabId
+  );
+  await page.evaluate(() => {
+    document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  });
+
+  const seen = async () =>
+    (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string }[] }).__picks)).map((m) => m.type);
+
+  // Several frames, so several hauls — that is the whole point.
+
+
+  // Several frames, so several hauls — that is the whole point.
+  await expect.poll(async () => (await seen()).filter((t) => t === 'ELEMENTS_PICKED').length, {
+    message: 'more than one frame reported a haul',
+  }).toBeGreaterThan(1);
+
+  await expect.poll(async () => (await seen()).filter((t) => t === 'SCAN_COMPLETE').length, {
+    message: 'exactly one completion',
+  }).toBe(1);
+
+  // And it is LAST: the tree finished before anyone was told the scan had.
+  const order = await seen();
+  expect(order.lastIndexOf('SCAN_COMPLETE')).toBeGreaterThan(order.lastIndexOf('ELEMENTS_PICKED'));
+
+  // Give any straggler a chance to arrive, then confirm nothing followed it.
+  await page.waitForTimeout(1000);
+  const after = await seen();
+  expect(after.filter((t) => t === 'SCAN_COMPLETE'), 'still exactly one').toHaveLength(1);
+  expect(after.lastIndexOf('SCAN_COMPLETE'), 'still the last word').toBe(after.length - 1);
+
+  await page.close();
+});
+
 test('a scan says what it could not read: a closed shadow root (SPEC §19)', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });

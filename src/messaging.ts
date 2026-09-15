@@ -65,10 +65,14 @@ export type PanelToContent =
 export type ContentToPanel =
   // `keepPicking` when the modifier was held: Add stays armed for the next
   // click instead of stopping after one (SPEC §4).
-  | { type: 'ELEMENT_PICKED'; result: ElementResult; keepPicking?: boolean }
+  // `nonce` is the picking session this haul belongs to. The background drops
+  // one that names a session that is over, which is what stops a frame still
+  // scanning when the user pressed Delete Model from putting the model
+  // straight back.
+  | { type: 'ELEMENT_PICKED'; result: ElementResult; keepPicking?: boolean; nonce?: string }
   // A scan's haul, in one message rather than N: the background adds them in a
   // single model update, so the table does not animate in row by row.
-  | { type: 'ELEMENTS_PICKED'; results: ElementResult[] }
+  | { type: 'ELEMENTS_PICKED'; results: ElementResult[]; nonce?: string }
   // Sent the instant a scan is committed, before any of the work.
   //
   // Computing a locator for every control on a large page takes seconds with
@@ -76,6 +80,13 @@ export type ContentToPanel =
   // click landed, the overlay vanished, and the panel sat exactly as it was
   // until the rows appeared. Indistinguishable from a click that missed.
   | { type: 'SCAN_STARTED' }
+  // The whole scan is over — every frame in the delegated tree has reported.
+  //
+  // Sent once, by the frame the user clicked in. A scan fans out and each
+  // frame publishes its own haul, so the first model is the FIRST frame's
+  // finish, not the last's; treating it as the end cleared the indicator while
+  // the rest of the tree was still working.
+  | { type: 'SCAN_COMPLETE'; nonce?: string }
   | { type: 'PICKING_STOPPED' }
   // `hidden` is how many of those matches have no box of their own, so the
   // count can say why nothing was outlined where you expected it.

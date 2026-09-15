@@ -116,8 +116,29 @@ let unwatchSettings: (() => void) | undefined;
 const tabId = ref<number | undefined>();
 const model = ref<TabModel>(emptyModel(defaultFrameworkId));
 const isScanning = ref(false);
-/** A scan has been committed and its results have not arrived yet. */
+/** A scan has been committed and the frame tree has not finished reporting. */
 const isBusy = ref(false);
+let busyTimer: ReturnType<typeof setTimeout> | undefined;
+
+/**
+ * The indicator is driven by SCAN_COMPLETE, which a frame that crashes or is
+ * navigated away mid-scan will never send. A stuck spinner is a worse failure
+ * than an early one, so it also gives up on its own — generously, because the
+ * thing it is waiting for legitimately takes seconds on a large page.
+ */
+const BUSY_CEILING = 60_000;
+
+function startBusy() {
+  isBusy.value = true;
+  clearTimeout(busyTimer);
+  busyTimer = setTimeout(() => (isBusy.value = false), BUSY_CEILING);
+}
+
+function clearBusy() {
+  isBusy.value = false;
+  clearTimeout(busyTimer);
+  busyTimer = undefined;
+}
 const isAdding = ref(false);
 const editing = ref<ModelElement | undefined>();
 const showCode = ref(false);
@@ -300,13 +321,10 @@ function onRuntimeMessage(msg: unknown) {
   if (!('tabId' in incoming) || incoming.tabId !== tabId.value || tabId.value == null) return;
 
   if (incoming.type === 'MODEL') {
-    // The rows are here, whatever they are — a scan that found nothing still
-    // publishes a model, so this is what clears the indicator rather than
-    // ELEMENTS_PICKED, which a fruitless scan never sends.
-    isBusy.value = false;
     model.value = incoming.model;
   } else if (incoming.type === 'TAB_UNREACHABLE') {
-    isAdding.value = isScanning.value = isBusy.value = false;
+    isAdding.value = isScanning.value = false;
+    clearBusy();
     // Teaching someone to scan a page that cannot be scanned is noise on top
     // of an error. Withdrawn rather than left standing — and not counted as
     // seen, so it still appears the first time picking actually starts.
@@ -342,7 +360,11 @@ function onRuntimeMessage(msg: unknown) {
         color: 'warning',
       });
     }
-    else if (m.type === 'SCAN_STARTED') isBusy.value = true;
+    else if (m.type === 'SCAN_STARTED') startBusy();
+    // The end of the WHOLE scan, reported once by the frame the user clicked
+    // in after every delegated frame below it has finished. The first MODEL
+    // used to clear this, which is the first frame's finish and not the last's.
+    else if (m.type === 'SCAN_COMPLETE') clearBusy();
     else if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
     else if (m.type === 'HIGHLIGHT_RESULT') {
       answeredSeq = highlightSeq;
@@ -407,6 +429,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   closing = true;
+  clearBusy();
   unwatchSettings?.();
   window.removeEventListener('keydown', onPanelKey, true);
   browser.runtime.onMessage.removeListener(onRuntimeMessage);
@@ -418,7 +441,8 @@ host.onTabChanged((next) => {
     isAdding.value = isScanning.value = false;
     send(tabId.value, { type: 'STOP_PICKING' });
   }
-  isScanning.value = isAdding.value = isBusy.value = false;
+  isScanning.value = isAdding.value = false;
+  clearBusy();
   tabId.value = next;
   reportViewing();
   model.value = emptyModel(defaultFrameworkId);

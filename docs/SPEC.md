@@ -172,6 +172,18 @@ they are dismissal state, not a preference, and the **?** already brings the gui
 The strip is **always in the layout** and only made invisible when idle. A row that appears and
 disappears shifts the whole table under the pointer at the moment you are aiming at it. **[settled]**
 
+**A scan ends when the whole frame tree has finished, not when the first haul lands.** A scan fans out:
+each frame collects its own elements and publishes them separately, so the first model to arrive is the
+first frame's finish and says nothing about the rest. Completion rolls up — a delegated frame reports to
+the parent that asked it once its own collection and all of its children are done, and the frame the user
+clicked in reports to the background. That one message is what ends the *Scanning the page…* indicator.
+A frame that never answers is dropped when its acknowledgement times out, so one unreadable frame cannot
+hold the scan open. **[settled]**
+
+**A haul names the picking session it belongs to**, and the background drops one from a session that has
+ended. Without it, a frame still scanning when the user pressed **Delete Model** put the model straight
+back — with a fraction of its rows, which is worse than either keeping it whole or losing it. **[settled]**
+
 ## 5. Model lifetime
 
 v2.5.1 never had to decide this — a DevTools panel is inherently per-tab, its model lived in panel
