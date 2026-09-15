@@ -55,6 +55,13 @@ sites. Do a pass on one of those too.
 9. With **Model hidden elements** on, a scan picks up elements excluded from the accessibility tree;
    off, it does not.
 
+> **Scan a page with a cookie banner** (most real sites). With *Model hidden elements* off, nothing the
+> eye would caption *hidden element* should be in the model at all — that pairing is the tool
+> contradicting its own setting. Turn the setting on and they come back.
+
+> **Switch tabs with the Edit dialog open.** It must close with its model, not sit over the next tab's
+> empty table still showing the previous page's name and selector. Same for Generate Code.
+
 > **Scan `frames.html`.** *Scanning the page…* must stay up until every frame has reported — not vanish
 > as soon as the first rows appear — and must clear on its own afterwards. Then scan it again and press
 > **Delete Model** while it is still running: the model must stay deleted, not reappear with a handful of

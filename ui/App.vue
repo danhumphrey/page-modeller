@@ -446,6 +446,14 @@ host.onTabChanged((next) => {
   tabId.value = next;
   reportViewing();
   model.value = emptyModel(defaultFrameworkId);
+  // Every dialog belongs to the model that was on screen, so they go with it.
+  // A side panel FOLLOWS the active tab, and the Edit dialog stayed open
+  // across the switch — sitting over another site's empty model, still
+  // showing the previous page's name and selector, with a Save that would
+  // write to a row that is not there any more. Generate Code is the same
+  // shape: its content is the model it was opened on.
+  editing.value = undefined;
+  showCode.value = false;
   if (next != null) toBackground({ type: 'GET_MODEL', tabId: next });
 });
 

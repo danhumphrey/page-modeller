@@ -1,6 +1,6 @@
 import { batched, frameStepFor, generate, resolveCandidate, setTestIdAttribute } from '@/src/engine/candidates';
 import { describeBrief, describeElement } from '@/src/engine/describe';
-import { collectClosedHosts, collectInteractive } from '@/src/engine/interactive';
+import { collectClosedHosts, collectInteractive, hasBox } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
 import { frameSelector } from '@/src/locators/frames';
 import { shadowSelector } from '@/src/locators/shadow';
@@ -206,11 +206,6 @@ export default defineContentScript({
       if (markTimer) clearTimeout(markTimer);
       markTimer = undefined;
     }
-
-    const hasBox = (el: Element) => {
-      const r = el.getBoundingClientRect();
-      return r.width > 0 || r.height > 0;
-    };
 
     /**
      * Where to draw a match, and whether it is really there.
@@ -422,7 +417,14 @@ export default defineContentScript({
 
     /** Post to a child frame, naming its origin wherever one exists. */
     function postToFrame(frame: Element, win: Window, message: object) {
-      win.postMessage(message, frameOrigin(frame) ?? '*');
+      // A frame whose named origin has already been shown wrong gets the
+      // broadcast straight away. Chrome logs "the target origin provided does
+      // not match the recipient window's origin" to the CONSOLE for every
+      // attempt — it does not throw, and the message is simply dropped — and
+      // that error surfaces on chrome://extensions, where it reads far more
+      // alarming than it is. Remembering spares the repeat on every push.
+      const origin = namedOriginFailed.has(win) ? null : frameOrigin(frame);
+      win.postMessage(message, origin ?? '*');
     }
 
     /**
@@ -499,6 +501,17 @@ export default defineContentScript({
      * know the origin we derived for them is the one they are actually on.
      */
     const namedOriginWorks = new WeakSet<Window>();
+    /**
+     * Frames whose derived origin turned out to be wrong — they redirected
+     * across origins since their `src` was written, or had not navigated yet.
+     *
+     * Nothing breaks when that happens: the message is dropped rather than
+     * misdelivered, and the broadcast fallback below gets the path there. But
+     * Chrome logs a console error each time, and those collect on
+     * chrome://extensions where they read like a fault. Once is diagnosis;
+     * once per push is noise.
+     */
+    const namedOriginFailed = new WeakSet<Window>();
 
     /** Tell one child frame, or every child frame, where it sits. */
     function pushPaths(only?: Window) {
@@ -520,7 +533,9 @@ export default defineContentScript({
         // frame we can name is now better off.
         if (frameOrigin(frame) === null || namedOriginWorks.has(win)) continue;
         setTimeout(() => {
-          if (!namedOriginWorks.has(win)) win.postMessage(message, '*');
+          if (namedOriginWorks.has(win)) return;
+          namedOriginFailed.add(win);
+          win.postMessage(message, '*');
         }, 300);
       }
     }

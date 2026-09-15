@@ -184,6 +184,24 @@ hold the scan open. **[settled]**
 ended. Without it, a frame still scanning when the user pressed **Delete Model** put the model straight
 back — with a fraction of its rows, which is worse than either keeping it whole or losing it. **[settled]**
 
+**Hidden means one thing.** A scan with the setting off skips an element that is out of the accessibility
+tree *or* that renders no box at all, and both halves are needed:
+
+- Accessibility-tree exposure is what `getByRole` applies, so a scan cannot collect something the
+  generated locator could never find.
+- A box is what a person means. An **empty** `<a>` in a cookie banner is exposed to the accessibility
+  tree — `getByRole('link')` genuinely matches it, measured in `tests/scan-visibility.spec.ts` — and an
+  empty inline element generates no line box, so it draws nothing. The eye could only mark it on its
+  nearest visible ancestor, captioned *hidden element*, immediately after the user had turned hidden
+  elements off.
+
+One definition, `hasBox`, exported from the engine and used by both the scan and the eye, so they cannot
+drift apart again. Width **or** height: a zero-width control with height is still a visible strip. Below
+the fold and screen-reader-only (1×1, clipped) both have boxes and both stay — they are operable, and a
+test drives them. **Resolution is unchanged**: the eye still counts exactly what `getByRole` counts, or
+the predicted count and the real one would part company (§7, §8). This decides what a scan *collects*.
+**[settled]**
+
 ## 5. Model lifetime
 
 v2.5.1 never had to decide this — a DevTools panel is inherently per-tab, its model lived in panel
@@ -785,8 +803,9 @@ through `storage.onChanged`.
 
 ### v3 changes **[settled]**
 
-- **`modelHiddenElements` is kept, redefined.** Off (default) = exposed to the accessibility tree, which
-  matches `getByRole`. On = include interactive-role elements regardless. See §4 — including why it is
+- **`modelHiddenElements` is kept, redefined.** Off (default) = exposed to the accessibility tree **and
+  rendering a box**. On = include interactive-role elements regardless. See §4 — including why it is not
+  redundant with Add Element. The occlusion and opacity tests behind the old definition are dropped. See §4 — including why it is
   not redundant with Add Element. The occlusion and opacity tests behind the old definition are dropped.
 - **`darkMode` becomes a three-way theme: System / Light / Dark, defaulting to System.** v2.5.1 had to ask
   because it could not know; v3 can — `chrome.devtools.panels.themeName` in the DevTools panel,

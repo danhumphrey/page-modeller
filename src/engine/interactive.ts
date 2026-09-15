@@ -79,6 +79,41 @@ function isRolelessControl(el: Element): boolean {
  */
 const SELECT_OWNED = new Set(['option', 'optgroup']);
 
+/**
+ * Whether the element renders anything at all.
+ *
+ * THE definition of "has a box", exported so there is exactly one. The eye
+ * marks a match it cannot outline as a hidden element on its nearest visible
+ * ancestor, using this test; the scan filter used only a11y-tree exposure. So
+ * the two disagreed, and a scan with "model hidden elements" OFF could collect
+ * something the eye then labelled hidden — the tool contradicting itself on
+ * the same element.
+ *
+ * `width || height`, not `&&`: a 0-width divider with height is still rendered.
+ */
+export function hasBox(el: Element): boolean {
+  const r = el.getBoundingClientRect();
+  return r.width > 0 || r.height > 0;
+}
+
+/**
+ * Hidden, for the purpose of the `modelHiddenElements` setting (SPEC §4, §14).
+ *
+ * Out of the accessibility tree OR rendering nothing. The first half is what
+ * `getByRole` applies and is why a scan cannot collect something the generated
+ * locator could never find. The second is what a person means by hidden — an
+ * empty `<a>` inside a cookie banner collapsed to `height: 0` is exposed to
+ * the accessibility tree, and Playwright's `getByRole('link')` does match it,
+ * but nobody wants it in a page object and the eye cannot even draw it.
+ *
+ * Resolution is deliberately NOT changed by this: the eye still counts exactly
+ * what `getByRole` counts, or the predicted count and the real one would part
+ * company (SPEC §7, §8). This decides what a scan COLLECTS, nothing else.
+ */
+export function hiddenForScan(el: Element): boolean {
+  return ariaHidden(el) || !hasBox(el);
+}
+
 /** Something a scan should collect: an interactive role, or a control with none. */
 export function isInteractive(el: Element): boolean {
   if (SELECT_OWNED.has(el.localName)) return false;
@@ -111,7 +146,7 @@ export function collectInteractive(root: Element | ShadowRoot, includeHidden: bo
   if (ownRoot) found.push(...collectInteractive(ownRoot, includeHidden));
 
   for (const el of Array.from(root.querySelectorAll('*'))) {
-    if (isInteractive(el) && (includeHidden || !ariaHidden(el))) found.push(el);
+    if (isInteractive(el) && (includeHidden || !hiddenForScan(el))) found.push(el);
     // A web component's controls live in its shadow root, which
     // querySelectorAll does not enter (SPEC §19). Etsy's sign-up form is
     // <clg-text-input> elements whose real <input> is inside one, so a scan of
