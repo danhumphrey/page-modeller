@@ -1275,6 +1275,74 @@ test('scan adds a container\'s interactive descendants, not the container (SPEC 
   expect(elements).toHaveLength(4);
 });
 
+test('modelHiddenElements carries all the way into a scan (SPEC §4, §14)', async () => {
+  // The setting was unit-tested at `collectInteractive` and never once reached
+  // a real scan: the wiring from the options page through START_PICKING to the
+  // content script had no coverage at all, so a scan could have ignored the
+  // flag entirely and every test would still have passed.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  /** Scan the whole page with the flag set one way, and say what was modelled. */
+  async function scanWith(includeHidden: boolean, caseName: string): Promise<string[]> {
+    const { page, tabId } = await openFixture(sw as never, caseName, 'edgecases.html');
+    const panel = await context.newPage();
+    await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+    await panel.evaluate(() => {
+      (window as unknown as { __msgs: unknown[] }).__msgs = [];
+      chrome.runtime.onMessage.addListener((m) => {
+        (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+      });
+    });
+
+    await panel.evaluate(
+      ([id, hidden]) =>
+        chrome.runtime.sendMessage({
+          type: 'RELAY_TO_TAB',
+          tabId: id as number,
+          message: { type: 'START_PICKING', mode: 'scan', includeHidden: hidden as boolean, nonce: 'n' },
+        }),
+      [tabId, includeHidden] as [number, boolean]
+    );
+
+    // Scanning the body means the whole document (SPEC §16).
+    await page.evaluate(() => document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true })));
+    await page.evaluate(() => {
+      const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.body.dispatchEvent(ev);
+    });
+
+    const names = async () =>
+      (
+        await panel.evaluate(
+          () => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string }[] } }[] }).__msgs
+        )
+      )
+        .filter((m) => m.type === 'MODEL')
+        .at(-1)
+        ?.model?.elements.map((e) => e.name) ?? [];
+
+    await expect.poll(async () => (await names()).length).toBeGreaterThan(0);
+    const out = await names();
+    await panel.close();
+    await page.close();
+    return out;
+  }
+
+  const visibleOnly = await scanWith(false, 'hidden-off');
+  const everything = await scanWith(true, 'hidden-on');
+
+  // `<button aria-hidden="true">Ghost action</button>` is removed from the
+  // accessibility tree, which is the rule `getByRole` applies — so with the
+  // setting off it must not be modelled, and with it on it must.
+  expect(visibleOnly, 'aria-hidden is out by default').not.toContain('GhostAction');
+  expect(everything, 'and in when the setting says so').toContain('GhostAction');
+  // The setting adds; it never takes anything away.
+  for (const name of visibleOnly) expect(everything, name).toContain(name);
+  expect(everything.length).toBeGreaterThan(visibleOnly.length);
+});
+
 test('a hidden match is marked on its nearest visible ancestor', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
@@ -1315,6 +1383,68 @@ test('a hidden match is marked on its nearest visible ancestor', async () => {
         .at(-1)?.hidden
     )
     .toBe(1);
+});
+
+test('the eye resolves inside the shadow root it was given (SPEC §19)', async () => {
+  // HIGHLIGHT carries a shadowPath for the same reason it carries a framePath:
+  // a locator has to be resolved where the generated test will resolve it. It
+  // was never once SENT with one, so `shadowRootFor` — the walk that turns the
+  // path into a root, and the null it returns when a host has gone — had no
+  // coverage on the message path at all.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'shadow-eye', 'shadow.html');
+  await collectMessages(sw as never);
+
+  const marks = page.locator('[data-page-modeller="highlight"]');
+  const highlight = (message: object) =>
+    sw.evaluate(
+      ([id, m]) => chrome.tabs.sendMessage(id as number, m as object),
+      [tabId, message] as [number, object]
+    );
+  const lastCount = async () =>
+    (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string; count?: number }[] }).__picks))
+      .filter((m) => m.type === 'HIGHLIGHT_RESULT')
+      .at(-1)?.count;
+
+  // `#coupon-field` exists in THREE shadow roots — one plain-field and two
+  // twins. Scoped to one host it is unique; that is the entire point.
+  await highlight({
+    type: 'HIGHLIGHT',
+    candidate: { kind: 'css', value: '#coupon-field' },
+    shadowPath: [{ host: { kind: 'css', value: '#twin-two' } }],
+  });
+  await expect.poll(lastCount, 'scoped to one component').toBe(1);
+  await expect(marks).toHaveCount(1);
+
+  // The same locator with no path resolves from the document — and the
+  // resolver pierces, because Playwright's css does (SPEC §19), so it finds all
+  // three. Which is the whole reason the path has to be carried: without it the
+  // eye contradicts the count the model was built with.
+  await highlight({ type: 'HIGHLIGHT', candidate: { kind: 'css', value: '#coupon-field' } });
+  await expect.poll(lastCount, 'unscoped, it is one of three').toBe(3);
+
+  // Two boundaries deep, which a one-step walk would get wrong.
+  await highlight({
+    type: 'HIGHLIGHT',
+    candidate: { kind: 'css', value: '[data-spike="nested-input"]' },
+    shadowPath: [{ host: { kind: 'css', value: 'outer-panel' } }, { host: { kind: 'css', value: 'inner-field' } }],
+  });
+  await expect.poll(lastCount, 'two hosts deep').toBe(1);
+
+  // A host that is not on the page any more: zero, and no exception — the page
+  // has changed since the element was captured, and reporting nothing found is
+  // the honest answer rather than resolving against the wrong tree.
+  await highlight({
+    type: 'HIGHLIGHT',
+    candidate: { kind: 'css', value: '#coupon-field' },
+    shadowPath: [{ host: { kind: 'css', value: 'no-such-component' } }],
+  });
+  await expect.poll(lastCount, 'a host that has gone').toBe(0);
+  await expect(marks, 'and the previous highlight is cleared, not left behind').toHaveCount(0);
+
+  await page.close();
 });
 
 test('a scan says what it could not read: a closed shadow root (SPEC §19)', async () => {

@@ -29,7 +29,11 @@ const listeners = {
   connect: [] as Listener[],
   installed: [] as Listener[],
   updated: [] as Listener[],
+  message: [] as Listener[],
 };
+
+/** Everything the background sent to panels via runtime.sendMessage. */
+const broadcast: Array<{ type: string; tabId?: number; message?: { type: string } }> = [];
 
 /** Tabs the background opened of its own accord. */
 const tabsCreated: string[] = [];
@@ -46,9 +50,12 @@ vi.mock('wxt/browser', () => ({
   browser: {
     runtime: {
       onConnect: { addListener: (cb: Listener) => listeners.connect.push(cb) },
-      onMessage: { addListener: () => {} },
+      onMessage: { addListener: (cb: Listener) => listeners.message.push(cb) },
       onInstalled: { addListener: (cb: Listener) => listeners.installed.push(cb) },
-      sendMessage: () => Promise.resolve(),
+      sendMessage: (message: { type: string }) => {
+        broadcast.push(message);
+        return Promise.resolve();
+      },
       getURL: (path: string) => `chrome-extension://test${path}`,
       getManifest: () => ({ version: manifestVersion }),
     },
@@ -112,6 +119,8 @@ async function startBackground() {
   listeners.connect.length = 0;
   listeners.installed.length = 0;
   listeners.updated.length = 0;
+  listeners.message.length = 0;
+  broadcast.length = 0;
   sentToTabs.length = 0;
   tabsCreated.length = 0;
   manifestVersion = '3.0.0';
@@ -187,6 +196,62 @@ describe('closing the last panel on a tab', () => {
     panel.disconnect();
 
     expect(sentToTabs).toHaveLength(0);
+  });
+});
+
+describe('re-broadcasting what a frame said (FROM_TAB)', () => {
+  beforeEach(startBackground);
+
+  /** Deliver a content-script message, as runtime.onMessage does. */
+  const fromContent = (message: object, sender: object) => {
+    for (const cb of listeners.message) cb(message, sender);
+  };
+
+  const relayed = () => broadcast.filter((m) => m.type === 'FROM_TAB');
+
+  it('stamps the sending tab, because Firefox does not', () => {
+    // A content script's runtime.sendMessage arrives at a Firefox DevTools
+    // page with no `sender.tab` at all, so a panel filtering on it would drop
+    // every message. The background always sees the sender, so it stamps the
+    // tab and re-broadcasts; panels filter on that instead.
+    fromContent({ type: 'HIGHLIGHT_RESULT', count: 2, hidden: 0 }, { tab: { id: 7 } });
+
+    expect(relayed()).toHaveLength(1);
+    expect(relayed()[0].tabId, 'the tab the content script is in').toBe(7);
+    expect(relayed()[0].message?.type).toBe('HIGHLIGHT_RESULT');
+  });
+
+  it('says nothing when it cannot tell which tab it came from', () => {
+    // Unstamped, the message would reach every panel and each would have to
+    // guess — and a panel on another tab showing another tab's frame warning
+    // is worse than showing nothing.
+    fromContent({ type: 'HIGHLIGHT_RESULT', count: 2, hidden: 0 }, {});
+    fromContent({ type: 'FRAME_UNREADABLE', sandboxed: true }, { tab: {} });
+
+    expect(relayed()).toHaveLength(0);
+  });
+
+  it('ignores a message it does not recognise', () => {
+    fromContent({ type: 'NOT_OURS' }, { tab: { id: 7 } });
+    fromContent({ nope: true }, { tab: { id: 7 } });
+    fromContent(null as unknown as object, { tab: { id: 7 } });
+
+    expect(relayed()).toHaveLength(0);
+  });
+
+  it('relays each of the notices a frame can raise', () => {
+    // Every one of these is a frame saying it could not do what was asked, and
+    // each has its own snackbar in the panel. A missing case here is silence.
+    fromContent({ type: 'FRAME_UNREADABLE', sandboxed: false }, { tab: { id: 7 } });
+    fromContent({ type: 'SHADOW_UNREADABLE', count: 3 }, { tab: { id: 7 } });
+    fromContent({ type: 'PICKING_STOPPED' }, { tab: { id: 7 } });
+
+    expect(relayed().map((m) => m.message?.type)).toEqual([
+      'FRAME_UNREADABLE',
+      'SHADOW_UNREADABLE',
+      'PICKING_STOPPED',
+    ]);
+    expect(new Set(relayed().map((m) => m.tabId))).toEqual(new Set([7]));
   });
 });
 

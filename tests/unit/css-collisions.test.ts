@@ -10,6 +10,7 @@ import { join } from 'node:path';
 const RESERVED = ['row', 'column', 'flex', 'items-center', 'justify-between', 'absolute', 'relative', 'fixed', 'hidden'];
 
 const UI_DIR = join(import.meta.dirname, '../../ui');
+const HOST_DIR = join(import.meta.dirname, '../../host');
 
 function classAttrs(source: string): string[] {
   return [...source.matchAll(/\bclass="([^"{}]+)"/g)].flatMap((m) => m[1].split(/\s+/)).filter(Boolean);
@@ -39,17 +40,39 @@ describe('our templates do not collide with Quasar utility classes', () => {
 // call, so a regression here is invisible on Chrome and on every automated test
 // we can run. The panel must go through the background relay instead.
 describe('the panel never touches browser.tabs directly', () => {
-  const files = readdirSync(UI_DIR).filter((f) => f.endsWith('.vue') || f.endsWith('.ts'));
+  /** Comments explain the rule; they are not calls. */
+  const code = (path: string) =>
+    readFileSync(path, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
 
-  for (const file of files) {
-    it(file, () => {
-      const source = readFileSync(join(UI_DIR, file), 'utf8')
-        // Comments explain the rule; they are not calls.
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/\/\/.*$/gm, '');
-      expect(source, 'use send() / RELAY_TO_TAB — browser.tabs is undefined in a DevTools panel').not.toMatch(
-        /browser\s*\.\s*tabs/
-      );
+  const uses = (path: string) => /browser\s*\.\s*tabs/.test(code(path));
+
+  // Everything a DevTools panel loads. `ui/` was scanned and `host/` was not,
+  // which left the one file whose entire job is to be the DevTools adapter
+  // outside the guard the rule exists for.
+  const panelFiles = [
+    ...readdirSync(UI_DIR)
+      .filter((f) => f.endsWith('.vue') || f.endsWith('.ts'))
+      .map((f) => join(UI_DIR, f)),
+    ...readdirSync(HOST_DIR)
+      .filter((f) => f.endsWith('.ts') && f !== 'sidepanel.ts')
+      .map((f) => join(HOST_DIR, f)),
+  ];
+
+  for (const path of panelFiles) {
+    it(path.split('/').slice(-2).join('/'), () => {
+      expect(uses(path), 'use send() / RELAY_TO_TAB — browser.tabs is undefined in a DevTools panel').toBe(false);
     });
   }
+
+  it('exempts the side panel host, which is the one surface that may', () => {
+    // A side panel is not a devtools page: it follows the active tab and has
+    // no other way to know which one that is. Asserted rather than merely
+    // skipped, so the exemption cannot quietly become dead — a rename would
+    // fail here instead of silently dropping a file out of the scan above.
+    expect(uses(join(HOST_DIR, 'sidepanel.ts')), 'sidepanel.ts is the exemption this list is written around').toBe(
+      true
+    );
+  });
 });
