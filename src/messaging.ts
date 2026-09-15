@@ -5,7 +5,8 @@ import type { TabModel } from './model';
 //
 // Picking is one-shot in both modes (SPEC §4): the content script stops itself
 // as soon as an element is chosen. 'add' takes any single element anywhere;
-// 'scan' takes a container and is not wired up yet.
+// 'scan' takes a container — the document, a frame, or any element — and
+// collects what is inside it, frames and shadow roots included (SPEC §16, §19).
 export type PickMode = 'add' | 'scan';
 export type PanelToContent =
   // `includeHidden` is the modelHiddenElements setting (SPEC §14), passed in

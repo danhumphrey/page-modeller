@@ -43,7 +43,13 @@ function by(c: LocatorCandidate): string {
 /** The switch a reader can paste, one line per level, outermost first. */
 const frameSwitch = (path: FrameStep[]) => [
   'driver.switchTo().defaultContent();',
-  ...path.map((s) => `driver.switchTo().frame(driver.findElement(${by(s.frame)}));`),
+  // A frame can itself be rendered by a web component, and a document-rooted
+  // find cannot see into a shadow root (SPEC §19) — so the hosts are walked
+  // first, exactly as they are for an element inside one. Empty for an
+  // ordinary frame, where this is the same line it always was.
+  ...path.map(
+    (s) => `driver.switchTo().frame(${seleniumShadowRoot(s.shadowPath, 'driver', javaHostStep)}.findElement(${by(s.frame)}));`
+  ),
 ];
 
 /**
@@ -56,8 +62,10 @@ const frameSwitch = (path: FrameStep[]) => [
  * driver. An element inside both a frame and a component needs both, and gets
  * both — the frame switch wraps the method, this builds the receiver.
  */
+const javaHostStep = (r: string, css: string) => `${r}.findElement(By.cssSelector(${q(css)})).getShadowRoot()`;
+
 function shadowRoot(el: ModelElement): string {
-  return seleniumShadowRoot(el.shadowPath, 'driver', (r, css) => `${r}.findElement(By.cssSelector(${q(css)})).getShadowRoot()`);
+  return seleniumShadowRoot(el.shadowPath, 'driver', javaHostStep);
 }
 
 /** The element expression, host chain included. */

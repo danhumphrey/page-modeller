@@ -89,3 +89,37 @@ export const javaName = (name: string) => (JAVA_KEYWORDS.has(name) ? `${name}_` 
 const OBJECT_METHODS = new Set(['getClass', 'hashCode', 'equals', 'toString', 'notify', 'notifyAll', 'wait', 'clone', 'finalize']);
 
 export const javaMethod = (name: string) => (OBJECT_METHODS.has(name) ? `${name}_` : name);
+
+/**
+ * C#'s reserved words. There is no `csharpName` to go with this: the locators
+ * shape gives C# fields the .NET underscore, which makes them safe on their
+ * own — but a CLASS name is written bare, so the list is still needed.
+ */
+const CSHARP_KEYWORDS = new Set(
+  ('abstract as base bool break byte case catch char checked class const continue decimal default ' +
+    'delegate do double else enum event explicit extern false finally fixed float for foreach goto ' +
+    'if implicit in int interface internal is lock long namespace new null object operator out ' +
+    'override params private protected public readonly ref return sbyte sealed short sizeof ' +
+    'stackalloc static string struct switch this throw true try typeof uint ulong unchecked unsafe ' +
+    'ushort using virtual void volatile while')
+    .split(' ')
+);
+
+/**
+ * Reserved in ANY target, for the one identifier that cannot be sanitised
+ * behind the user's back: the generated class name (SPEC §17).
+ *
+ * Element names are made safe per language — `jsName`, `pythonName`,
+ * `javaName` each suffix an underscore — because they are derived
+ * automatically and nobody should be nagged about a name they did not choose.
+ * A class name is typed deliberately, and one name is emitted into all six
+ * targets, so `class` has to be refused rather than quietly renamed: it passed
+ * the identifier shape check and produced `export class class`,
+ * `public class class` and `class class:`, none of which compile.
+ */
+export const RESERVED_CLASS_NAMES: ReadonlySet<string> = new Set([
+  ...JS_KEYWORDS,
+  ...PYTHON_KEYWORDS,
+  ...JAVA_KEYWORDS,
+  ...CSHARP_KEYWORDS,
+]);

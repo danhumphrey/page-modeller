@@ -22,6 +22,8 @@
  * letters, TypeScript nearly as many — because the name has to work in all
  * five at once, and because a name nobody can type is a poor one anyway.
  */
+import { RESERVED_CLASS_NAMES } from './generators/names';
+
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 export function identifierError(value: string, what: 'Name' | 'Class name'): string {
@@ -30,5 +32,14 @@ export function identifierError(value: string, what: 'Name' | 'Class name'): str
   if (/\s/.test(trimmed)) return `${what} cannot contain spaces.`;
   if (/^[0-9]/.test(trimmed)) return `${what} cannot start with a digit.`;
   if (!IDENTIFIER.test(trimmed)) return `${what} can only use letters, digits and underscores.`;
+  // Only for a class name. An element called `class` is renamed per language on
+  // the way out — `jsName` and friends suffix an underscore — because those
+  // names are derived and nobody should be nagged about one they did not
+  // choose. The class name is typed on purpose and one name is emitted into
+  // all six targets, so refusing it is clearer than silently shipping
+  // `export class class_`.
+  if (what === 'Class name' && RESERVED_CLASS_NAMES.has(trimmed)) {
+    return `${what} cannot be a reserved word in any target language.`;
+  }
   return '';
 }

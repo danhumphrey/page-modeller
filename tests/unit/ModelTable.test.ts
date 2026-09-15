@@ -64,3 +64,27 @@ describe('ModelTable', () => {
     expect(w.emitted('remove')).toEqual([['a']]);
   });
 });
+
+describe('names for assistive technology', () => {
+  it('names each row action with the element it acts on', () => {
+    // Icon-only, so aria-label is the only name they have — and "Delete"
+    // repeated down a table says nothing about WHICH row, which is the whole
+    // difficulty of a table of identical controls.
+    const w = render();
+
+    const labels = [...w.element.querySelectorAll('tbody button')].map((b) => b.getAttribute('aria-label'));
+
+    expect(labels).toContain(`View Matched Elements ${rows[0].name}`);
+    expect(labels).toContain(`Edit ${rows[0].name}`);
+    expect(labels).toContain(`Delete ${rows[0].name}`);
+    expect(labels.every(Boolean), 'every row button is named').toBe(true);
+  });
+
+  it('keeps the names when tooltips are turned off', () => {
+    const w = render({ showTooltips: false });
+
+    for (const b of w.element.querySelectorAll('tbody button')) {
+      expect(b.getAttribute('aria-label')).toBeTruthy();
+    }
+  });
+});

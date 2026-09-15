@@ -24,14 +24,18 @@
           <!-- `type: value` (SPEC §6). Long CSS and XPath must not widen the
                panel, so the cell truncates and carries the full text. -->
           <td class="col-locator"><span :title="el.locator">{{ el.locator }}</span></td>
+          <!-- Icon-only, so aria-label is the only name these have — and it
+               carries the row's element, because "Delete" repeated down a
+               table says nothing about WHICH one. The tooltips are gated on a
+               setting and are not a name in any case. -->
           <td class="col-actions">
-            <q-btn flat dense round size="sm" icon="visibility" @click.stop="$emit('highlight', el.id)">
+            <q-btn flat dense round size="sm" icon="visibility" :aria-label="`View Matched Elements ${el.name}`" @click.stop="$emit('highlight', el.id)">
               <q-tooltip v-if="showTooltips">View Matched Elements</q-tooltip>
             </q-btn>
-            <q-btn flat dense round size="sm" icon="edit" @click.stop="$emit('edit', el.id)">
+            <q-btn flat dense round size="sm" icon="edit" :aria-label="`Edit ${el.name}`" @click.stop="$emit('edit', el.id)">
               <q-tooltip v-if="showTooltips">Edit</q-tooltip>
             </q-btn>
-            <q-btn flat dense round size="sm" icon="delete" @click.stop="$emit('remove', el.id)">
+            <q-btn flat dense round size="sm" icon="delete" :aria-label="`Delete ${el.name}`" @click.stop="$emit('remove', el.id)">
               <q-tooltip v-if="showTooltips">Delete</q-tooltip>
             </q-btn>
           </td>

@@ -7,6 +7,7 @@
 // document.
 import type { FrameStep } from '../engine/types';
 import { singleQuoted, doubleQuoted } from '../quote';
+import { puppeteerShadowSelector } from './shadow';
 
 /**
  * The selector string for one step, in PLAYWRIGHT's spelling.
@@ -20,9 +21,23 @@ export function frameSelector(step: FrameStep): string {
   return step.frame.kind === 'xpath' ? `xpath=${step.frame.value}` : (step.frame as { value: string }).value;
 }
 
-/** The same step for Puppeteer, whose xpath prefix is `xpath/`. */
+/**
+ * The same step for Puppeteer, whose xpath prefix is `xpath/`.
+ *
+ * Host chain included, via `>>>`. Puppeteer's plain css does NOT pierce — that
+ * is the whole reason `>>>` exists (SPEC §19) — so a frame rendered by a web
+ * component was addressed with a selector that resolves to null, and
+ * `(await page.$(sel)).contentFrame()` then throws on the null rather than
+ * merely finding the wrong thing.
+ *
+ * Not applied to an xpath step: `xpath/` and `>>>` are different engines and
+ * do not compose. A frame inside a shadow root is located by css anyway —
+ * `frameStepFor` ranks within the frame's own root, where xpath resolves
+ * nothing at all.
+ */
 export function puppeteerFrameSelector(step: FrameStep): string {
-  return step.frame.kind === 'xpath' ? `xpath/${step.frame.value}` : (step.frame as { value: string }).value;
+  if (step.frame.kind === 'xpath') return `xpath/${step.frame.value}`;
+  return puppeteerShadowSelector(step.shadowPath, (step.frame as { value: string }).value);
 }
 
 /**

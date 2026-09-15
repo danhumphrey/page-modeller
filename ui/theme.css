@@ -4,9 +4,10 @@
  * of that chrome rather than as a branded surface — hence a neutral toolbar,
  * as in v2.5.1, not a saturated one.
  *
- * SPEC §14 makes this a three-way System / Light / Dark setting. Until the
- * options page lands (REWRITE-PLAN §12 step 13) the tokens follow the host via
- * prefers-color-scheme, and the setting will override by stamping the root. */
+ * SPEC §14 makes this a three-way System / Light / Dark setting. On System the
+ * tokens follow the host — prefers-color-scheme in a side panel or sidebar, and
+ * DevTools' own theme in a DevTools panel, which `PanelHost.hostTheme()`
+ * answers. Light and Dark override by stamping `data-pm-theme` on the root. */
 :root {
   --pm-page-bg: #ffffff;
   --pm-toolbar-bg: #f5f6f7;

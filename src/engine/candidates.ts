@@ -557,6 +557,14 @@ export function resolveCandidate(root: Document | ShadowRoot, c: LocatorCandidat
       // selector because a ShadowRoot has no getElementsByClassName.
       return c.value ? pierce(doc, `.${CSS.escape(c.value)}`) : [];
     case 'tagName':
+      // The second strategy WebDriver refuses from a shadow root, alongside
+      // xpath: `tests/shadow.probe.spec.ts` measures both as
+      // InvalidArgumentException. xpath drops out of its own accord, because
+      // `doc.evaluate` finds nothing in a shadow tree; this one resolves
+      // perfectly well with querySelectorAll, so the eye would have certified
+      // a hand-typed `tagName` that the generated Selenium cannot execute —
+      // the one thing SPEC §8 says must not happen.
+      if (isShadowRoot(doc)) return [];
       return c.value ? pierce(doc, CSS.escape(c.value)) : [];
     case 'linkText':
       // Rendered text, as WebDriver does — see renderedText.
@@ -636,7 +644,13 @@ export function frameStepFor(frame: Element): FrameStep {
     (c) => c.candidate.kind === 'css' || c.candidate.kind === 'xpath'
   );
   const best = ranked[chooseFirstUnique(ranked)] ?? ranked[0];
-  return { frame: best?.candidate ?? { kind: 'css', value: frame.localName } };
+  const hosts = shadowPathOf(frame);
+  return {
+    frame: best?.candidate ?? { kind: 'css', value: frame.localName },
+    // Only when there is one, so a model written before this existed and an
+    // ordinary light-DOM frame both stay exactly as they were.
+    ...(hosts.length ? { shadowPath: hosts } : {}),
+  };
 }
 
 /**

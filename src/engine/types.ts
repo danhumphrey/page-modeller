@@ -76,6 +76,18 @@ export interface ShadowStep {
 export interface FrameStep {
   frame: LocatorCandidate;
   /**
+   * The shadow hosts between this frame's own document and the `<iframe>`,
+   * when it is rendered by a web component (SPEC §16, §19).
+   *
+   * The frame's selector is located in the tree it lives in, which for a
+   * shadow-embedded frame is that root — so a target that looks it up from the
+   * document finds nothing. Playwright's engines pierce and need no help;
+   * Selenium's do not, and a document-rooted find cannot reach shadow content
+   * at all (measured in `tests/shadow.probe.spec.ts`), so the host chain has
+   * to be walked before the frame can be switched into.
+   */
+  shadowPath?: ShadowStep[];
+  /**
    * True when the chain could not be completed because a document in it is
    * cross-origin, so `window.frameElement` is unreadable from inside. The
    * locator is then relative to that frame rather than to the page, and saying
