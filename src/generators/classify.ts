@@ -25,8 +25,19 @@ export function classify(el: Pick<ModelElement, 'role' | 'tag'> & { inputType?: 
   // clear() on it, which moves a range to the MIDDLE of its span and reports
   // nothing, then send_keys, which does nothing at all — measured, not assumed.
   if (role === 'slider') return 'slider';
-  if (role === 'radio') return 'radio';
-  if (role && TOGGLE.has(role)) return 'toggle';
+  // Toggle and radio methods are built on WebDriver's isSelected(), which is
+  // defined only for input[type=checkbox|radio] and <option> — for anything
+  // else it returns false, always. `role="switch"` has no native element at
+  // all, so it was wrong 100% of the time: isDarkModeChecked() said false for
+  // a switch that was on, and setDarkMode(true) clicked an already-on switch
+  // and turned it OFF.
+  //
+  // Same rule as <select> above and <option> below: the role decides what the
+  // element IS, the tag decides whether the helper can drive it. A custom
+  // toggle is clicked, which is always correct.
+  const nativeInput = (type: string) => tag === 'input' && el.inputType === type;
+  if (role === 'radio') return nativeInput('radio') ? 'radio' : 'actionable';
+  if (role && TOGGLE.has(role)) return nativeInput('checkbox') ? 'toggle' : 'actionable';
   // A native <option> is reached through its <select>, never clicked — which
   // is what Selenium's Select exists for, and what `selectOption` does in
   // Playwright. Must come before ACTIONABLE, which contains `option` for the
@@ -47,7 +58,12 @@ export function classify(el: Pick<ModelElement, 'role' | 'tag'> & { inputType?: 
   if (role === 'listbox') return tag === 'select' ? 'multiSelect' : 'actionable';
 
   if (tag === 'input' && el.inputType && ROLELESS_TEXT_INPUTS.has(el.inputType)) return 'text';
-  if (tag === 'input' && (el.inputType === 'file' || el.inputType === 'color')) return 'text';
+  // file takes clear() + sendKeys(path), the documented upload idiom. color
+  // does NOT: measured in Chromium, typing into a colour input leaves the
+  // value untouched and clear() sets it to #000000, so a `set` method would
+  // report success and silently leave the control black — the same pathology
+  // the slider bucket was created for.
+  if (tag === 'input' && el.inputType === 'file') return 'text';
 
   return 'static';
 }

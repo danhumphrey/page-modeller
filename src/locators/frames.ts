@@ -8,9 +8,21 @@
 import type { FrameStep } from '../engine/types';
 import { singleQuoted, doubleQuoted } from '../quote';
 
-/** The selector string for one step; every frame API in reach takes one. */
+/**
+ * The selector string for one step, in PLAYWRIGHT's spelling.
+ *
+ * Puppeteer's xpath prefix is `xpath/`, not `xpath=`, so it needs its own —
+ * see `puppeteerFrameSelector`. Passing this one to `page.$()` produced a
+ * selector Puppeteer parses as CSS and rejects, in a comment whose whole
+ * purpose is to carry a line the reader pastes (SPEC §16).
+ */
 export function frameSelector(step: FrameStep): string {
   return step.frame.kind === 'xpath' ? `xpath=${step.frame.value}` : (step.frame as { value: string }).value;
+}
+
+/** The same step for Puppeteer, whose xpath prefix is `xpath/`. */
+export function puppeteerFrameSelector(step: FrameStep): string {
+  return step.frame.kind === 'xpath' ? `xpath/${step.frame.value}` : (step.frame as { value: string }).value;
 }
 
 /**

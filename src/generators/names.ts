@@ -54,7 +54,19 @@ const JS_KEYWORDS = new Set(
 );
 
 export const pythonName = (name: string) => (PYTHON_KEYWORDS.has(name) ? `${name}_` : name);
-export const jsName = (name: string) => (JS_KEYWORDS.has(name) ? `${name}_` : name);
+/**
+ * Also the identifiers the emitter itself occupies, and the two names that are
+ * only reserved in strict mode — which a module always is.
+ *
+ * `page` is the constructor parameter every generated locator reads, so an
+ * element called Page produced `const page = page.locator(...)`: a TDZ error
+ * that breaks not just its own line but EVERY locator in the file, since they
+ * all read `page` afterwards. `constructor` is a parse error in a class body.
+ */
+const JS_RESERVED_HERE = new Set(['page', 'constructor', 'eval', 'arguments']);
+
+export const jsName = (name: string) =>
+  JS_KEYWORDS.has(name) || JS_RESERVED_HERE.has(name) ? `${name}_` : name;
 
 // Java's, for the locators shape, whose fields are bare names. Its methods are
 // prefixed (`getContinueElement`) and safe, and C#'s fields carry the .NET

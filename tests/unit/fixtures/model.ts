@@ -50,6 +50,11 @@ export const REMEMBER: TestElement = {
   name: 'RememberMe',
   role: 'checkbox',
   tag: 'input',
+  // A NATIVE checkbox. The engine always sets inputType for an <input>, and
+  // the toggle methods are built on isSelected(), which WebDriver defines only
+  // for input[type=checkbox|radio] — so a custom `role="checkbox"` div is
+  // clicked instead, and the distinction has to be in the fixture.
+  inputType: 'checkbox',
   candidate: { kind: 'id', value: 'r' },
 };
 export const LOGO: TestElement = { name: 'Logo', role: 'img', tag: 'img', candidate: { kind: 'id', value: 'l' } };
@@ -137,8 +142,8 @@ export function everyTypeFor(frameworkId: string): TestElement[] {
 export const ALL_BUCKETS: TestElement[] = [
   { name: 'ActionableEl', role: 'button', tag: 'button', candidate: { kind: 'css', value: 'button.pay' } },
   { name: 'TextEl', role: 'textbox', tag: 'input', candidate: { kind: 'css', value: 'input.email' } },
-  { name: 'ToggleEl', role: 'checkbox', tag: 'input', candidate: { kind: 'css', value: 'input.remember' } },
-  { name: 'RadioEl', role: 'radio', tag: 'input', candidate: { kind: 'css', value: 'input.plan' } },
+  { name: 'ToggleEl', role: 'checkbox', tag: 'input', inputType: 'checkbox', candidate: { kind: 'css', value: 'input.remember' } },
+  { name: 'RadioEl', role: 'radio', tag: 'input', inputType: 'radio', candidate: { kind: 'css', value: 'input.plan' } },
   { name: 'SelectEl', role: 'combobox', tag: 'select', candidate: { kind: 'css', value: 'select.country' } },
   { name: 'MultiSelectEl', role: 'listbox', tag: 'select', candidate: { kind: 'css', value: 'select.toppings' } },
   { name: 'SliderEl', role: 'slider', tag: 'input', candidate: { kind: 'css', value: 'input.volume' } },

@@ -12,6 +12,9 @@
           borderless
           class="class-name"
           :placeholder="derivedName"
+          :error="classNameError !== ''"
+          :error-message="classNameError"
+          hide-bottom-space
           data-testid="code-class-name"
           @update:model-value="emit('update:className', String($event))"
         />
@@ -49,6 +52,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { identifierError } from '@/src/identifier';
 import { useQuasar } from 'quasar';
 import { frameworkById } from '@/src/frameworks';
 import { generateCode, shapesFor } from '@/src/generators';
@@ -81,6 +85,15 @@ const code = computed(() => generateCode(props.model, shapeId.value, props.class
 
 // The derived name, shown as the placeholder: it is what you get by typing
 // nothing, so it should be what the field looks like when empty.
+// The typed name goes straight into `export class …`, so it has to be an
+// identifier. Blank is fine and means "use the derived one"; anything else is
+// checked, because `My Page` produced `public class My Page {` in four
+// languages and a silently-mangled name in Python.
+const classNameError = computed(() => {
+  const typed = (props.className ?? '').trim();
+  return typed ? identifierError(typed, 'Class name') : '';
+});
+
 const derivedName = computed(() => classNameFor(props.model.url));
 const namesAClass = computed(() => code.value.includes(`class ${props.className?.trim() || derivedName.value}`));
 

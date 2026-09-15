@@ -58,3 +58,33 @@ describe('a native option is not clickable (SPEC §11)', () => {
     expect(bucket('div', 'option')).toBe('actionable');
   });
 });
+
+describe('a helper that only works on a native element (SPEC §11)', () => {
+  const bucket = (tag: string, role: string, inputType?: string) =>
+    classify({ tag, role, inputType, name: 'X', candidates: [], selectedIndex: 0 } as never);
+
+  it('toggles and radios need the native input', () => {
+    // WebDriver's isSelected() is defined only for input[type=checkbox|radio]
+    // and <option>; for anything else it returns false, always. role="switch"
+    // has no native element at all, so isDarkModeChecked() reported false for
+    // a switch that was on, and setDarkMode(true) clicked an on switch and
+    // turned it OFF.
+    expect(bucket('input', 'checkbox', 'checkbox')).toBe('toggle');
+    expect(bucket('input', 'radio', 'radio')).toBe('radio');
+
+    // Custom ones are clicked, which is always correct.
+    expect(bucket('div', 'checkbox')).toBe('actionable');
+    expect(bucket('div', 'radio')).toBe('actionable');
+    expect(bucket('button', 'switch')).toBe('actionable');
+  });
+
+  it('a colour input gets no setter', () => {
+    // Measured in Chromium: typing into a colour input leaves the value
+    // untouched, and clear() sets it to #000000 — so a set method would report
+    // success and silently leave the control black. Same pathology the slider
+    // bucket was created for.
+    expect(bucket('input', null as never, 'color')).toBe('static');
+    // file is fine: clear() + sendKeys(path) is the documented upload idiom.
+    expect(bucket('input', null as never, 'file')).toBe('text');
+  });
+});
