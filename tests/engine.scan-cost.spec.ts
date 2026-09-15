@@ -52,22 +52,42 @@ test('the batch memo changes no answer', async ({ page }) => {
   expect(same.cached).toEqual(same.plain);
 });
 
-test('a scan of a large page stays well clear of the old cost', async ({ page }) => {
-  await bigPage(page, 600, 1);
+test('the memo is what keeps a scan off the quadratic path', async ({ page }) => {
+  // A RATIO, not a stopwatch. The first version of this asserted the scan took
+  // under 10 seconds — 3.6s locally, which read as generous until a shared CI
+  // runner came in at 10.18s and failed a pull request that had not touched the
+  // engine. Wall-clock on a machine you do not own measures the machine.
+  //
+  // Comparing the two paths in the same run cancels the machine out entirely:
+  // however slow the box, uncached is the quadratic one and cached is not. Take
+  // the memo away and this collapses towards 1.
+  await bigPage(page, 300, 1);
 
-  const ms = await page.evaluate(() => {
+  const t = await page.evaluate(() => {
     const spike = window.__spike;
     const els = spike.collectInteractive(document.body, false);
+
+    // Warm the browser up on a slice, so neither figure pays for first-run JIT.
+    for (const el of els.slice(0, 20)) spike.generate(el);
+
     const t0 = performance.now();
+    for (const el of els) spike.generate(el);
+    const uncached = performance.now() - t0;
+
+    const t1 = performance.now();
     spike.batched(() => {
       for (const el of els) spike.generate(el);
     });
-    return { elapsed: performance.now() - t0, found: els.length };
+    const cached = performance.now() - t1;
+
+    return { uncached, cached, found: els.length };
   });
 
-  expect(ms.found).toBe(1800);
-  // Measured at ~3.6s here against ~16s before the memo. The bound is loose on
-  // purpose: this is a guard against the quadratic coming back, not a
-  // benchmark, and CI machines are slower and share their cores.
-  expect(ms.elapsed, `${Math.round(ms.elapsed)}ms for ${ms.found} controls`).toBeLessThan(10_000);
+  expect(t.found).toBe(900);
+  // Measured at roughly 4x locally. Asserting 2x leaves room for a loaded CI
+  // box without leaving room for the memo to have stopped working.
+  expect(
+    t.uncached / t.cached,
+    `${Math.round(t.uncached)}ms uncached vs ${Math.round(t.cached)}ms cached`
+  ).toBeGreaterThan(2);
 });
