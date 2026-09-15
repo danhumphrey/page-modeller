@@ -36,6 +36,10 @@ sites. Do a pass on one of those too.
      the first use of each mode, and Quasar gives it focus, so this is the state most people meet the
      arrows in. Escape there closes the dialog; it does not stop the pick.
    - **↑ / ↓** walk the target up and down the nesting; moving the mouse starts again from the cursor.
+     ↓ is a *return* path (SPEC §4): it retraces toward the element the mouse last sat on. So from a
+     freshly-hovered container it does nothing — you are already at that element — and ↑ is the only
+     direction with anywhere to go. Working as specced, not a bug; reaching a child means putting the
+     pointer on it.
      **Enter** or a click picks the walked-to element, not what is under the pointer. The page must not
      scroll, and Enter must not re-trigger the Add Element button.
 5. **Hold ⌘ (or Ctrl) while clicking** and picking stays armed for the next click; release it and the
