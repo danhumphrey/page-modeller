@@ -15,6 +15,7 @@
 //
 // Names stay plain — `About`, not `AboutLink`. No role suffix.
 import { computeAccessibleName } from 'dom-accessibility-api';
+import { rootOf, escapeClass } from './roots';
 
 const MAX_NAME_LENGTH = 25;
 
@@ -76,17 +77,28 @@ export function looksGenerated(value: string): boolean {
   return words(value).some((w) => /[^aeiouy\W\d]{5,}/i.test(w));
 }
 
+// Both rules below used to count against `ownerDocument`, which does not
+// descend into a shadow root — so for anything inside a web component the
+// class rule found zero matches instead of one and never fired, and the tag
+// index found the element nowhere, where `indexOf` answers -1: every control
+// in every component on the page was named `Input0`.
+//
+// `getElementsByClassName` and `getElementsByTagName` are not the way back —
+// a ShadowRoot is a DocumentFragment and has neither. `querySelectorAll` is on
+// both.
+
 function uniqueClassName(el: Element): string {
+  const scope = rootOf(el);
   for (const cls of Array.from(el.classList)) {
     if (looksGenerated(cls)) continue;
-    if (el.ownerDocument.getElementsByClassName(cls).length === 1) return cls;
+    if (scope.querySelectorAll(`.${escapeClass(cls)}`).length === 1) return cls;
   }
   return '';
 }
 
 function tagIndexName(el: Element): string {
   const tag = el.tagName.toLowerCase();
-  const all = el.ownerDocument.getElementsByTagName(el.tagName);
+  const all = rootOf(el).querySelectorAll(el.localName);
   const index = Array.prototype.indexOf.call(all, el) + 1;
   return `${tag}${index}`;
 }
@@ -130,7 +142,13 @@ const DIGIT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seve
 function toPascalCase(raw: string): string {
   const words = raw
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .split(/[^\p{L}\p{N}]+/u)
+    // `\p{Nd}` — decimal digits — and NOT `\p{N}`, which also covers `½`, `¼`
+    // and `Ⅻ`. Those are not identifier characters in any of the six targets,
+    // so "½ Pound Burger" produced `½PoundBurger` and nothing downstream caught
+    // it: the leading-digit rule tests ASCII `\d`, and a page object that does
+    // not parse is worse than a badly named one. Dropped as a separator, which
+    // leaves `PoundBurger`.
+    .split(/[^\p{L}\p{Nd}]+/u)
     .filter(Boolean);
   return words.map((w) => w[0].toUpperCase() + w.slice(1)).join('');
 }
@@ -180,9 +198,10 @@ function clean(raw: string): string {
   const firstLine = raw.split(/\r\n|\r|\n/)[0];
   let name = dropValiditySuffix(toPascalCase(firstLine));
   if (!name) return '';
-  // Identifiers cannot start with a digit.
-  if (/^\d/.test(name)) {
-    name = name.length === 1 ? DIGIT_WORDS[Number(name)] : `Element${name}`;
+  // Identifiers cannot start with a digit — in any script, so `\p{Nd}` rather
+  // than `\d`. The digit-word spelling only reads for the ten ASCII ones.
+  if (/^\p{Nd}/u.test(name)) {
+    name = /^[0-9]$/.test(name) ? DIGIT_WORDS[Number(name)] : `Element${name}`;
     name = name[0].toUpperCase() + name.slice(1);
   }
   return truncate(name);

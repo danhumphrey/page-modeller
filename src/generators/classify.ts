@@ -54,7 +54,17 @@ export function classify(el: Pick<ModelElement, 'role' | 'tag'> & { inputType?: 
   // Selenium's Select and Playwright's selectOption both require a real
   // <select>; `new Select(div)` throws UnexpectedTagNameException. A custom
   // combobox built from divs is something you click open instead (SPEC §11).
-  if (role === 'combobox') return tag === 'select' ? 'select' : 'actionable';
+  //
+  // An <input role="combobox"> is neither: it is ARIA 1.2's combobox, which is
+  // a TEXT FIELD with a popup attached — every autocomplete, every type-ahead,
+  // every "search or jump to" box. Lumped in with the div case it got a click
+  // and no setter at all, so the one thing the control exists for could not be
+  // driven. A <textarea role="combobox"> is the same shape and is explicitly
+  // allowed by the ARIA spec.
+  if (role === 'combobox') {
+    if (tag === 'select') return 'select';
+    return tag === 'input' || tag === 'textarea' ? 'text' : 'actionable';
+  }
   if (role === 'listbox') return tag === 'select' ? 'multiSelect' : 'actionable';
 
   if (tag === 'input' && el.inputType && ROLELESS_TEXT_INPUTS.has(el.inputType)) return 'text';

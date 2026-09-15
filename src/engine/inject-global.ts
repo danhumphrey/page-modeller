@@ -1,5 +1,6 @@
-import { generate, resolveCandidate, shadowPathOf, shadowSelector } from './candidates';
+import { generate, resolveCandidate, shadowPathOf, shadowSelector, batched } from './candidates';
 import { collectInteractive, collectClosedHosts } from './interactive';
+import { baseName } from './naming';
 
 // Test-only entry: exposes the engine on window.__spike so the fidelity harness
 // can inject it into a page and call it. Not part of the shipped extension.
@@ -17,6 +18,8 @@ import { collectInteractive, collectClosedHosts } from './interactive';
       shadowSelector: typeof shadowSelector;
       collectInteractive: typeof collectInteractive;
       collectClosedHosts: typeof collectClosedHosts;
+      baseName: typeof baseName;
+      batched: typeof batched;
     };
   }
-).__spike = { generate, resolveCandidate, shadowPathOf, shadowSelector, collectInteractive, collectClosedHosts };
+).__spike = { generate, resolveCandidate, shadowPathOf, shadowSelector, collectInteractive, collectClosedHosts, baseName, batched };

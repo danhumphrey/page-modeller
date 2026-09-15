@@ -59,6 +59,31 @@ describe('a native option is not clickable (SPEC §11)', () => {
   });
 });
 
+describe('a combobox is three different controls (SPEC §11)', () => {
+  const bucket = (tag: string, role: string) =>
+    classify({ tag, role, name: 'City', candidates: [], selectedIndex: 0 } as never);
+
+  it('drives a real <select> through Select / selectOption', () => {
+    expect(bucket('select', 'combobox')).toBe('select');
+  });
+
+  it('types into an <input role="combobox">', () => {
+    // ARIA 1.2's combobox: a text field with a popup attached — every
+    // autocomplete and type-ahead on the web. It was lumped in with the div
+    // case and got a click and NO setter, so the one thing the control exists
+    // for could not be driven at all.
+    expect(bucket('input', 'combobox')).toBe('text');
+    // The spec allows a textarea in the same role, and it is the same shape.
+    expect(bucket('textarea', 'combobox')).toBe('text');
+  });
+
+  it('clicks a combobox built out of divs', () => {
+    // `new Select(div)` throws UnexpectedTagNameException, and there is nothing
+    // to type into — it is opened by clicking.
+    expect(bucket('div', 'combobox')).toBe('actionable');
+  });
+});
+
 describe('a helper that only works on a native element (SPEC §11)', () => {
   const bucket = (tag: string, role: string, inputType?: string) =>
     classify({ tag, role, inputType, name: 'X', candidates: [], selectedIndex: 0 } as never);

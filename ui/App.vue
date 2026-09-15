@@ -30,6 +30,15 @@
           <q-btn flat dense no-caps size="sm" label="Delete Model" data-testid="stale-delete" @click="deleteModel" />
         </div>
 
+        <!-- A scan of a large page holds the PAGE's main thread for seconds
+             while it computes a locator for every control. Without this the
+             click landed, the overlay vanished, and nothing else happened
+             until the rows appeared — which reads as a click that missed. -->
+        <div v-if="isBusy" class="scanning" data-testid="scanning">
+          <q-spinner size="18px" />
+          <span>Scanning the page…</span>
+        </div>
+
         <ModelTable
           :elements="rows"
           :click-to-highlight="settings.clickTableRowsToViewMatchedElements"
@@ -107,6 +116,8 @@ let unwatchSettings: (() => void) | undefined;
 const tabId = ref<number | undefined>();
 const model = ref<TabModel>(emptyModel(defaultFrameworkId));
 const isScanning = ref(false);
+/** A scan has been committed and its results have not arrived yet. */
+const isBusy = ref(false);
 const isAdding = ref(false);
 const editing = ref<ModelElement | undefined>();
 const showCode = ref(false);
@@ -259,9 +270,13 @@ function onRuntimeMessage(msg: unknown) {
   if (!('tabId' in incoming) || incoming.tabId !== tabId.value || tabId.value == null) return;
 
   if (incoming.type === 'MODEL') {
+    // The rows are here, whatever they are — a scan that found nothing still
+    // publishes a model, so this is what clears the indicator rather than
+    // ELEMENTS_PICKED, which a fruitless scan never sends.
+    isBusy.value = false;
     model.value = incoming.model;
   } else if (incoming.type === 'TAB_UNREACHABLE') {
-    isAdding.value = isScanning.value = false;
+    isAdding.value = isScanning.value = isBusy.value = false;
     // Teaching someone to scan a page that cannot be scanned is noise on top
     // of an error. Withdrawn rather than left standing — and not counted as
     // seen, so it still appears the first time picking actually starts.
@@ -297,6 +312,7 @@ function onRuntimeMessage(msg: unknown) {
         color: 'warning',
       });
     }
+    else if (m.type === 'SCAN_STARTED') isBusy.value = true;
     else if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
     else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count, m.hidden);
   }
@@ -361,7 +377,7 @@ host.onTabChanged((next) => {
     isAdding.value = isScanning.value = false;
     send(tabId.value, { type: 'STOP_PICKING' });
   }
-  isScanning.value = isAdding.value = false;
+  isScanning.value = isAdding.value = isBusy.value = false;
   tabId.value = next;
   reportViewing();
   model.value = emptyModel(defaultFrameworkId);
@@ -544,6 +560,15 @@ function notYet(what: string) {
   border-radius: 3px;
   padding: 0 4px;
   color: var(--pm-text);
+}
+
+.scanning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px var(--pm-gutter);
+  font-size: 13px;
+  color: var(--pm-text-muted);
 }
 
 .stale-banner {

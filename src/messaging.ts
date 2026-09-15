@@ -68,6 +68,13 @@ export type ContentToPanel =
   // A scan's haul, in one message rather than N: the background adds them in a
   // single model update, so the table does not animate in row by row.
   | { type: 'ELEMENTS_PICKED'; results: ElementResult[] }
+  // Sent the instant a scan is committed, before any of the work.
+  //
+  // Computing a locator for every control on a large page takes seconds with
+  // the page's main thread held, and nothing was said in the meantime: the
+  // click landed, the overlay vanished, and the panel sat exactly as it was
+  // until the rows appeared. Indistinguishable from a click that missed.
+  | { type: 'SCAN_STARTED' }
   | { type: 'PICKING_STOPPED' }
   // `hidden` is how many of those matches have no box of their own, so the
   // count can say why nothing was outlined where you expected it.

@@ -199,3 +199,29 @@ describe('looksGenerated tells real ids from build output (SPEC §13)', () => {
   });
 
 });
+
+describe('names built from numerals', () => {
+  const nameOf = (text: string) => baseName(el(`<button data-t>${text}</button>`));
+
+  it('drops numerals that are not identifier characters', () => {
+    // `\p{N}` covers `½`, `¼` and `Ⅻ` as well as the digits, and none of those
+    // are legal in an identifier in any of the six targets. "½ Pound Burger"
+    // came out as `½PoundBurger`, which nothing downstream caught: the
+    // leading-digit rule tests ASCII `\d`, so a page object that does not
+    // parse shipped.
+    expect(nameOf('½ Pound Burger')).toBe('PoundBurger');
+    expect(nameOf('Section Ⅻ')).toBe('Section');
+  });
+
+  it('keeps ordinary digits', () => {
+    expect(nameOf('Line 2 address')).toBe('Line2Address');
+  });
+
+  it('spells out a name that is a single digit', () => {
+    expect(nameOf('4')).toBe('Four');
+  });
+
+  it('prefixes a name that merely starts with digits', () => {
+    expect(nameOf('2024 return')).toBe('Element2024Return');
+  });
+});

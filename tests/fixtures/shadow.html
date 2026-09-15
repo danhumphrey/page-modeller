@@ -40,6 +40,15 @@
     <plain-field class="twin" id="twin-one"></plain-field>
     <plain-field class="twin" id="twin-two"></plain-field>
 
+    <h2>Open root, nothing that names the controls</h2>
+    <!-- No label, no placeholder, no name and no id, so the accessible name is
+         empty and naming falls all the way through to the class rule and then
+         to the tag index (SPEC §13). Both of those used to count against the
+         DOCUMENT, which cannot see in here: the class matched zero where it
+         needed one, and `indexOf` answered -1, so every control in every
+         component on a page came out as `Input0`. -->
+    <unnamed-field></unnamed-field>
+
     <h2>Closed root</h2>
     <!-- `element.shadowRoot` is null and there is no way in. Must be reported,
          never silently skipped (SPEC §19). -->
@@ -112,6 +121,15 @@
             <input data-spike="nested-input" name="postcode" placeholder="Enter a postcode">
           </label>
           <button data-spike="nested-submit">Submit</button>`;
+      }
+    });
+
+    customElements.define('unnamed-field', class extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: 'open' });
+        root.innerHTML = `
+          <input data-spike="unnamed-classed" class="promo-code">
+          <input data-spike="unnamed-bare">`;
       }
     });
 

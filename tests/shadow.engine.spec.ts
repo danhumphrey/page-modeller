@@ -156,6 +156,51 @@ test('a shadow element scoped by its host resolves uniquely in real Playwright',
   await expect(scoped).toHaveAttribute('data-spike', 'plain-input');
 });
 
+test('an element in a shadow root is named from its own tree', async ({ page }) => {
+  // Both fallback naming rules counted against `ownerDocument`, which cannot
+  // see into a shadow root. The class rule found zero matches where it needed
+  // one and never fired; the tag-index rule found the element nowhere at all,
+  // and `indexOf` answers -1 — so every unnamed control in every component on
+  // the page came out as `Input0`.
+  const names = await page.evaluate(() => {
+    const spike = window.__spike;
+    const root = document.querySelector('unnamed-field')!.shadowRoot!;
+    const at = (sel: string) => spike.baseName(root.querySelector(sel)!);
+    return {
+      // Nothing names either of these, so naming falls through to the class
+      // rule and then to the tag index — the two that did the counting.
+      classed: at('[data-spike="unnamed-classed"]'),
+      bare: at('[data-spike="unnamed-bare"]'),
+      // And the ordinary case still works: a label inside the component.
+      labelled: spike.baseName(
+        document.querySelector('plain-field:not(.twin)')!.shadowRoot!.querySelector('[data-spike="plain-input"]')!
+      ),
+    };
+  });
+
+  // `Input0` is the signature of the bug: the class rule found zero matches
+  // where it needed one, then `indexOf` answered -1 for an element the
+  // document cannot see.
+  expect(names.classed, 'a class unique inside the root').toBe('PromoCode');
+  expect(names.bare, 'the tag index, counted in the root').toBe('Input2');
+  expect(names.labelled).toBe('CouponCode');
+});
+
+test('a class unique within its shadow root is usable as a name', async ({ page }) => {
+  // Counted in the root, where it IS unique. Counted in the document it was
+  // zero, so the rule never fired at all.
+  const counted = await page.evaluate(() => {
+    const root = document.querySelector('plain-field:not(.twin)')!.shadowRoot!;
+    return {
+      inRoot: root.querySelectorAll('.coupon-input').length,
+      inDocument: document.querySelectorAll('.coupon-input').length,
+    };
+  });
+
+  expect(counted.inRoot).toBe(1);
+  expect(counted.inDocument, 'the document cannot see inside the root').toBe(0);
+});
+
 test('a closed root is reported, and nothing else is', async ({ page }) => {
   const closed = await page.evaluate(() =>
     window.__spike.collectClosedHosts(document.body).map((el) => el.localName)

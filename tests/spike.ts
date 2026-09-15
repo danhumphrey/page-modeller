@@ -15,6 +15,10 @@ export interface Spike {
   shadowSelector(step: ShadowStep): string;
   collectInteractive(root: Element, includeHidden: boolean): Element[];
   collectClosedHosts(root: Element): Element[];
+  /** The name an element suggests for itself, before the panel makes it unique. */
+  baseName(el: Element): string;
+  /** Run a scan's worth of work against one memo (SPEC §4). */
+  batched<T>(run: () => T): T;
 }
 
 declare global {

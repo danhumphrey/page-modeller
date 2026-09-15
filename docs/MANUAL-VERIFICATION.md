@@ -48,6 +48,9 @@ sites. Do a pass on one of those too.
 9. With **Model hidden elements** on, a scan picks up elements excluded from the accessibility tree;
    off, it does not.
 
+> **Scan a big page** — a long search-results or product-listing page, not a fixture. The panel says
+> *Scanning the page…* from the click until the rows land, and the page is usable again afterwards.
+
 ## The table (SPEC §6)
 
 10. Name and locator read correctly and stay **on one line** — Name, Locator, Actions across, not
