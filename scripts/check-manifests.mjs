@@ -87,6 +87,18 @@ for (const [dir, checks] of Object.entries(EXPECT)) {
   const tag = html.match(/<script[^>]*devtools-register\.js[^>]*>/)?.[0];
   if (!tag) fail(dir, 'devtools.html loads devtools-register.js');
   else if (/type=["']?module/.test(tag)) fail(dir, 'devtools-register.js must NOT be a module (defers panel registration)');
+  // The stores disagree on how long a name may be: Chrome allows 75, AMO
+  // allows 45. Over the AMO limit the upload is REJECTED — and the submit API
+  // answers `400 Bad Request: {"upload":["Upload is not valid."]}`, naming
+  // neither the field nor the limit, ten minutes into a release. The linter
+  // says `JSON_INVALID: "/name" must NOT have more than 45 characters`; this
+  // says it in two seconds, on every build.
+  const NAME_LIMIT = dir.startsWith('firefox') ? 45 : 75;
+  const name = manifest.name ?? '';
+  if (name.length > NAME_LIMIT) {
+    fail(dir, `name within ${NAME_LIMIT} characters (it is ${name.length}: ${JSON.stringify(name)})`);
+  }
+
   await readFile(`.output/${dir}/devtools-register.js`, 'utf8').catch(() => fail(dir, 'devtools-register.js emitted'));
 
   // The what's new tab (SPEC §20). Same silent-failure shape as the popup
