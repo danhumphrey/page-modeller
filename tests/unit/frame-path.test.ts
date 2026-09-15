@@ -79,9 +79,16 @@ describe('the targets that cannot carry it say so', () => {
     );
     // Puppeteer has no switch: it walks down to the frame and hands you a new
     // scope to use in place of `page`.
+    //
+    // Both halves are asserted, because both are nullable — `$` when nothing
+    // matches and `contentFrame()` when the handle is not a frame — and this
+    // is advertised as a line the reader uncomments, so it has to compile
+    // when pasted. `tests/unit/generated-compiles.test.ts` puts this very
+    // snippet through tsc, which is what makes the assertion more than a
+    // string match.
     const pup = generatePuppeteerLocators(modelOf('puppeteer', framed(PATH, cssSubmit)));
-    expect(pup).toContain("// const frame1 = await (await page.$('#same-frame')).contentFrame();");
-    expect(pup).toContain("// const frame2 = await (await frame1.$('#deep-frame')).contentFrame();");
+    expect(pup).toContain("// const frame1 = (await (await page.$('#same-frame'))!.contentFrame())!;");
+    expect(pup).toContain("// const frame2 = (await (await frame1.$('#deep-frame'))!.contentFrame())!;");
     expect(pup).toContain('// Then use frame2.locator(...) in place of page.locator(...).');
   });
 

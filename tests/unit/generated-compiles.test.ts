@@ -141,6 +141,25 @@ describe('the generated TypeScript typechecks against the real libraries', () =>
       `${preamble('@playwright/test', 1)}\n${generatePlaywrightLocators(model('playwright-ts'))}\nexport {};`
     );
     writeFileSync(join(dir, 'pup-page-object.ts'), generatePuppeteerPageObject(model('puppeteer')));
+
+    // Puppeteer's frame traversal is emitted COMMENTED OUT, as a line the
+    // reader uncomments — `page.locator` is page-scoped and there is no
+    // frameLocator, so a framed element needs `page.frames()` first (SPEC
+    // §16). A snippet offered for pasting has to compile when pasted, and
+    // being a comment is exactly how it escaped every check: `$()` and
+    // `contentFrame()` are both nullable under these settings.
+    // One element: each note sits above its own method, so the `frameN`
+    // bindings never share a scope in real output — concatenating several
+    // here would only prove that redeclaration is an error.
+    const note = generatePuppeteerPageObject(modelOf('puppeteer', FRAMED_BUCKETS[0]))
+      .split('\n')
+      .filter((line) => /^\s*\/\/\s*const frame\d/.test(line))
+      .map((line) => line.replace(/^\s*\/\/\s?/, ''));
+    expect(note.length, 'the frame traversal is emitted at all').toBeGreaterThan(0);
+    writeFileSync(
+      join(dir, 'pup-frame-note.ts'),
+      [preamble('puppeteer', 3), ...note, 'export {};'].join('\n')
+    );
     writeFileSync(
       join(dir, 'pup-locators.ts'),
       `${preamble('puppeteer', 2)}\n${generatePuppeteerLocators(model('puppeteer'))}\nexport {};`

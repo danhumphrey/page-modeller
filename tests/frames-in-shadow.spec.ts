@@ -76,3 +76,40 @@ test('Puppeteer needs the host chain, and works with it', async () => {
     await browser.close();
   }
 });
+
+test('two components can each hold the same frame selector', async ({ page }) => {
+  // Piercing is what makes the bare selector work, and is exactly why the host
+  // chain is still needed. `frameStepFor` certifies a frame's selector within
+  // the shadow root it lives in, so `#editor` is genuinely unique there — and
+  // `frameLocator('#editor')` pierces BOTH roots and addresses both frames.
+  // Unique where it was measured, ambiguous where it is used.
+  await page.setContent(`
+    <editor-panel id="left"></editor-panel>
+    <editor-panel id="right"></editor-panel>
+    <script>
+      customElements.define('editor-panel', class extends HTMLElement {
+        connectedCallback() {
+          const side = this.id;
+          this.attachShadow({ mode: 'open' }).innerHTML =
+            '<iframe id="editor" srcdoc="&lt;body&gt;&lt;input name=&quot;body&quot; value=&quot;' + side + '&quot;&gt;&lt;/body&gt;"></iframe>';
+        }
+      });
+    </script>
+  `);
+  await page.waitForFunction(() => !!document.querySelector('#left')?.shadowRoot?.querySelector('iframe'));
+
+  // The bare selector matches the frame in BOTH roots, so using it raises a
+  // strict-mode violation — the generated test does not quietly do the wrong
+  // thing, it fails outright, which is the failure SPEC §7 says a locator we
+  // certified must never produce.
+  const bare = page.frameLocator('#editor').locator('[name="body"]');
+  await expect(bare.inputValue()).rejects.toThrow(/strict mode violation/);
+
+  // Scoped through its host, each resolves to exactly one, and to the right one.
+  const left = page.locator('#left').frameLocator('#editor').locator('[name="body"]');
+  const right = page.locator('#right').frameLocator('#editor').locator('[name="body"]');
+  await expect(left).toHaveCount(1);
+  await expect(right).toHaveCount(1);
+  await expect(left).toHaveValue('left');
+  await expect(right).toHaveValue('right');
+});

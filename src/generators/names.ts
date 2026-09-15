@@ -75,7 +75,13 @@ const JAVA_KEYWORDS = new Set(
   ('abstract assert boolean break byte case catch char class const continue default do double else ' +
     'enum extends final finally float for goto if implements import instanceof int interface long ' +
     'native new package private protected public return short static strictfp super switch ' +
-    'synchronized this throw throws transient try void volatile while true false null')
+    'synchronized this throw throws transient try void volatile while true false null ' +
+    // Restricted and contextual identifiers. They are legal in most positions,
+    // which is why they are not in the list above — and every one of them is
+    // rejected as a TYPE name. Confirmed against javac rather than the JLS:
+    // `public class record {}` answers "'record' not allowed here", and so do
+    // sealed, permits, var, yield and the lone underscore.
+    'record sealed permits var yield _')
     .split(' ')
 );
 

@@ -26,7 +26,15 @@ const frameSwitch = (path: FrameStep[]) => {
   let scope = 'page';
   path.forEach((step, i) => {
     const next = `frame${i + 1}`;
-    lines.push(`const ${next} = await (await ${scope}.$(${q(puppeteerFrameSelector(step))})).contentFrame();`);
+    // Both halves are nullable — `$` answers null when nothing matches, and
+    // `contentFrame()` when the handle is not a frame — so the bare form does
+    // not typecheck under the strict settings the generated file is pasted
+    // into. This is advertised as a line the reader uncomments, so it has to
+    // compile as written; the assertions fail loudly at runtime if the frame
+    // has gone, which is the right answer either way.
+    lines.push(
+      `const ${next} = (await (await ${scope}.$(${q(puppeteerFrameSelector(step))}))!.contentFrame())!;`
+    );
     scope = next;
   });
   lines.push(`Then use ${scope}.locator(...) in place of page.locator(...).`);
