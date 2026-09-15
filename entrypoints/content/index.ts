@@ -704,7 +704,12 @@ export default defineContentScript({
       stop({ notify: false });
       announceScan(() => {
         const results = batched(() => collectInteractive(root, includeHidden).map((el) => generate(el, myPath)));
-        if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+        // Sent even when empty. The panel shows "Scanning the page…" from
+        // SCAN_STARTED until the background publishes a model, and a scan that
+        // found nothing published nothing — so a page with no eligible
+        // controls, or a run ending on an empty child frame, left the spinner
+        // up for ever. An empty haul is an answer; silence is not.
+        browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
         reportClosedRoots(root);
         for (const frame of nested) delegateScan(frame);
       });

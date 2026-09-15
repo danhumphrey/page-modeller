@@ -75,6 +75,49 @@ describe('the framework selector (SPEC §3)', () => {
   });
 });
 
+describe('names for assistive technology', () => {
+  it('names every icon-only toolbar button', () => {
+    // Nothing else names them: they carry an icon and a tooltip, and the
+    // tooltip is a SETTING — with it off there is no text in the subtree at
+    // all — and a tooltip is not a persistent name even when it is on.
+    render();
+
+    const named = [...wrapper!.element.querySelectorAll('[data-testid^="btn-"]')].map((el) => [
+      el.getAttribute('data-testid'),
+      el.getAttribute('aria-label'),
+    ]);
+
+    expect(named).toEqual([
+      ['btn-scan', 'Scan Page'],
+      ['btn-delete-model', 'Delete Model'],
+      ['btn-add', 'Add Element'],
+      ['btn-help', 'Picking Guidance'],
+      ['btn-generate', 'Generate Code'],
+    ]);
+  });
+
+  it('keeps the name when tooltips are turned off', () => {
+    // The case that makes the tooltip useless as a name.
+    wrapper = mount(AppToolbar, {
+      props: {
+        frameworkId: 'playwright-ts',
+        hasModel: true,
+        isScanning: false,
+        isAdding: false,
+        showTooltips: false,
+      },
+      global: {
+        plugins: [Quasar],
+        components: { QToolbar, QBtn, QIcon, QMenu, QList, QItem, QItemSection, QTooltip, QSpace },
+      },
+    });
+
+    for (const el of wrapper.element.querySelectorAll('[data-testid^="btn-"]')) {
+      expect(el.getAttribute('aria-label'), el.getAttribute('data-testid') ?? '').toBeTruthy();
+    }
+  });
+});
+
 describe('the rest of the toolbar (SPEC §3)', () => {
   it('disables Scan and enables Add while the model is empty', () => {
     render();

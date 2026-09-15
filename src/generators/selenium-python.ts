@@ -54,12 +54,10 @@ function find(c: LocatorCandidate, recv: string): string {
  * default content to return to. A shadow element inside a frame needs both,
  * and gets both: the frame switch wraps the method, this builds the receiver.
  */
+const pyHostStep = (r: string, css: string) => `${r}.find_element(By.CSS_SELECTOR, ${q(css)}).shadow_root`;
+
 function shadowRoot(el: ModelElement, recv: string): string {
-  return seleniumShadowRoot(
-    el.shadowPath,
-    `${recv}driver`,
-    (r, css) => `${r}.find_element(By.CSS_SELECTOR, ${q(css)}).shadow_root`
-  );
+  return seleniumShadowRoot(el.shadowPath, `${recv}driver`, pyHostStep);
 }
 
 /** The element expression, host chain included. */
@@ -73,7 +71,14 @@ function findIn(el: ModelElement, recv: string): string {
 /** The switch a reader can paste, one line per level, outermost first. */
 const frameSwitch = (path: FrameStep[], recv = '') => [
   `${recv}driver.switch_to.default_content()`,
-  ...path.map((s) => `${recv}driver.switch_to.frame(${recv}driver.find_element(${findArgs(s.frame)}))`),
+  // A frame can itself be rendered by a web component, and a document-rooted
+  // find cannot see into a shadow root (SPEC §19) — so the hosts are walked
+  // first, exactly as they are for an element inside one. Empty for an
+  // ordinary frame, where this is the same line it always was.
+  ...path.map(
+    (s) =>
+      `${recv}driver.switch_to.frame(${seleniumShadowRoot(s.shadowPath, `${recv}driver`, pyHostStep)}.find_element(${findArgs(s.frame)}))`
+  ),
 ];
 
 function banner(el: ModelElement): string {

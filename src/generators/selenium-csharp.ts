@@ -35,7 +35,13 @@ function by(c: LocatorCandidate): string {
 /** The switch a reader can paste, one line per level, outermost first. */
 const frameSwitch = (path: FrameStep[]) => [
   'driver.SwitchTo().DefaultContent();',
-  ...path.map((s) => `driver.SwitchTo().Frame(driver.FindElement(${by(s.frame)}));`),
+  // A frame can itself be rendered by a web component, and a document-rooted
+  // find cannot see into a shadow root (SPEC §19) — so the hosts are walked
+  // first, exactly as they are for an element inside one. Empty for an
+  // ordinary frame, where this is the same line it always was.
+  ...path.map(
+    (s) => `driver.SwitchTo().Frame(${seleniumShadowRoot(s.shadowPath, 'driver', csHostStep)}.FindElement(${by(s.frame)}));`
+  ),
 ];
 
 /**
@@ -45,8 +51,10 @@ const frameSwitch = (path: FrameStep[]) => [
  *
  * Nothing is mutated, unlike a frame switch, so there is no try/finally here.
  */
+const csHostStep = (r: string, css: string) => `${r}.FindElement(By.CssSelector(${q(css)})).GetShadowRoot()`;
+
 function shadowRoot(el: ModelElement): string {
-  return seleniumShadowRoot(el.shadowPath, 'driver', (r, css) => `${r}.FindElement(By.CssSelector(${q(css)})).GetShadowRoot()`);
+  return seleniumShadowRoot(el.shadowPath, 'driver', csHostStep);
 }
 
 /** The element expression, host chain included. */

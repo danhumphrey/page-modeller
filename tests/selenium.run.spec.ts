@@ -235,6 +235,47 @@ test('the generated Selenium switches into frames and back out (SPEC §16)', asy
   expect(splitSetterCount(out)[0], 'generated frame switching did not resolve').toBe('');
 });
 
+test('the generated Selenium switches into a frame a component renders (SPEC §16, §19)', async ({ page }) => {
+  test.skip(!ready && !REQUIRE_FULL_SUITE, 'run `npm run fetch:test-deps` for the Python venv');
+  expect(ready, 'PM_REQUIRE_FULL_SUITE is set but .test-venv is missing').toBe(true);
+
+  // A frame's own selector is located in the tree the frame lives in, and for
+  // a frame rendered by a web component that is the component's shadow root.
+  // Selenium cannot see in from the document at all — `shadow.probe.spec.ts`
+  // measures a document-rooted find as reaching nothing — so the switch has to
+  // walk the host chain first. Emitting the bare selector produced a
+  // NoSuchElementException on a locator the model called good.
+  const url = `http://localhost:${PORT}/shadow.html`;
+  await page.goto(url);
+  await page.waitForFunction(() => !!document.querySelector('frame-host')?.shadowRoot?.querySelector('iframe'));
+
+  const model = emptyModel('selenium-python');
+  model.elements.push({
+    id: 'Giftcard',
+    name: 'Giftcard',
+    tag: 'input',
+    role: 'textbox',
+    accessibleName: null,
+    suggestedName: 'Giftcard',
+    candidates: [{ candidate: { kind: 'css', value: '[data-spike="shadow-frame-input"]' }, predictedCount: 1 }],
+    preferredIndex: 0,
+    selectedIndex: 0,
+    framePath: [
+      {
+        frame: { kind: 'css', value: '#in-shadow' },
+        shadowPath: [{ host: { kind: 'css', value: 'frame-host' } }],
+      },
+    ],
+  } as ModelElement);
+
+  const generated = generateSeleniumPython(model);
+  // The traversal is in the switch, not merely in a comment above it.
+  expect(generated, 'the host chain is walked before the frame is entered').toContain('.shadow_root');
+
+  const out = runInSelenium(generated, [['Giftcard', '']], url, 'read');
+  expect(splitSetterCount(out)[0], 'generated frame switching did not resolve').toBe('');
+});
+
 /**
  * Run the generated module against a real browser and return whatever went
  * wrong, empty for success.

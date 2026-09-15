@@ -1252,6 +1252,19 @@ found nothing, and scanning a closed one reported nothing to explain it either. 
 is collected, what is reported unreadable, and which frames to delegate to — look at the container's own
 root first. **[settled]**
 
+**A frame inside a shadow root needs a different answer per engine**, measured rather than reasoned
+about (`tests/frames-in-shadow.spec.ts`, `tests/shadow.probe.spec.ts`):
+
+| Target | Reaches `#in-shadow` from the document? | So the frame step carries |
+|---|---|---|
+| Playwright (TS, Python) | ✅ its css engine pierces | nothing extra — the bare selector resolves |
+| Puppeteer | ❌ plain css does not pierce; `page.$` answers **null**, and `.contentFrame()` then throws on it | the hosts joined with `>>>` |
+| Selenium (Python, Java, C#) | ❌ a document-rooted find reaches no shadow content at all | a `shadowRoot` walk before the switch |
+
+So `FrameStep` carries the host chain, and each target spends it or ignores it. Getting this from "it is
+a shadow root, so it needs the chain" would have been wrong for Playwright and right for the other two
+— which is why each is run. **[settled]**
+
 **A frame inside a shadow root is still a frame.** `querySelectorAll` does not enter a shadow root, so
 an `<iframe>` inside a web component was invisible to the frame machinery: never pushed a path, never
 answered when it asked for one, never asked to scan itself. It kept an empty path, which also made it

@@ -2,12 +2,17 @@
   <q-toolbar class="app-toolbar">
     <!-- Enablement rules are SPEC §3. Scan and the framework selector lock once
          a model exists; the framework is chosen up front because locator types
-         are framework-specific. -->
-    <q-btn flat dense round icon="manage_search" :disable="hasModel || isAdding" data-testid="btn-scan" @click="$emit('scan')">
+         are framework-specific.
+
+         Every button here is icon-only, so `aria-label` is the only thing that
+         names it. The tooltips are not a substitute: they are a setting, so
+         with them off there is no text in the subtree at all, and a tooltip is
+         not a persistent name even when it is on. -->
+    <q-btn flat dense round icon="manage_search" :disable="hasModel || isAdding" aria-label="Scan Page" data-testid="btn-scan" @click="$emit('scan')">
       <q-tooltip v-if="showTooltips">Scan Page</q-tooltip>
     </q-btn>
 
-    <q-btn flat dense round icon="delete_sweep" :disable="!hasModel || isPicking" data-testid="btn-delete-model" @click="$emit('deleteModel')">
+    <q-btn flat dense round icon="delete_sweep" :disable="!hasModel || isPicking" aria-label="Delete Model" data-testid="btn-delete-model" @click="$emit('deleteModel')">
       <q-tooltip v-if="showTooltips">Delete Model</q-tooltip>
     </q-btn>
 
@@ -33,17 +38,17 @@
 
     <q-space />
 
-    <q-btn flat dense round icon="playlist_add" :disable="isScanning" data-testid="btn-add" @click="$emit('add')">
+    <q-btn flat dense round icon="playlist_add" :disable="isScanning" aria-label="Add Element" data-testid="btn-add" @click="$emit('add')">
       <q-tooltip v-if="showTooltips">Add Element</q-tooltip>
     </q-btn>
 
     <!-- Never disabled: the one control whose whole job is to explain the
          others is no use only when everything is already clear. -->
-    <q-btn flat dense round icon="help_outline" data-testid="btn-help" @click="$emit('help')">
+    <q-btn flat dense round icon="help_outline" aria-label="Picking Guidance" data-testid="btn-help" @click="$emit('help')">
       <q-tooltip v-if="showTooltips">Help</q-tooltip>
     </q-btn>
 
-    <q-btn flat dense round icon="code" :disable="!hasModel || isPicking" data-testid="btn-generate" @click="$emit('generate')">
+    <q-btn flat dense round icon="code" :disable="!hasModel || isPicking" aria-label="Generate Code" data-testid="btn-generate" @click="$emit('generate')">
       <q-tooltip v-if="showTooltips">Generate Code</q-tooltip>
     </q-btn>
   </q-toolbar>
