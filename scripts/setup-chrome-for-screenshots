@@ -1,7 +1,7 @@
 #!/bin/sh
 # A clean Chrome for store screenshots. macOS only.
 #
-#   npm run build
+#   npm run build:chrome
 #   scripts/setup-chrome-for-screenshots
 #   scripts/setup-chrome-for-screenshots 1200 750   # bigger, same 1.6:1
 #
@@ -27,7 +27,7 @@ chrome="${CHROME_PATH:-/Applications/Google Chrome.app/Contents/MacOS/Google Chr
 ext="$(cd "$(dirname "$0")/.." && pwd)/.output/chrome-mv3"
 
 [ -x "$chrome" ] || { echo "Chrome not found at $chrome — set CHROME_PATH." >&2; exit 1; }
-[ -d "$ext" ] || echo "Note: $ext does not exist yet. Run 'npm run build' first." >&2
+[ -d "$ext" ] || echo "Note: $ext does not exist yet. Run 'npm run build:chrome' first." >&2
 
 "$chrome" \
   --user-data-dir="$profile" \

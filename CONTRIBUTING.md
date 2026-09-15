@@ -29,7 +29,8 @@ npm test             # the automated gate
 | Script | Purpose |
 |---|---|
 | `npm run dev` / `dev:firefox` | WXT dev server (HMR); launches the browser with the extension loaded |
-| `npm run build` / `build:firefox` | Production build (`.output/`) |
+| `npm run build` | Production build of **both** browsers (`.output/chrome-mv3`, `.output/firefox-mv3`) |
+| `npm run build:chrome` / `build:firefox` | One of them, when you only need one |
 | `npm run zip` | Store-ready zips, including the Firefox sources zip |
 | `npm run typecheck` | Strict TS over the pure core |
 | `npm run test:unit` | Vitest — pure core plus Vue component tests |
@@ -40,7 +41,7 @@ npm test             # the automated gate
 
 ## Loading a production build by hand
 
-- **Chrome** — `npm run build`, then `chrome://extensions` → Developer mode → Load unpacked →
+- **Chrome** — `npm run build:chrome`, then `chrome://extensions` → Developer mode → Load unpacked →
   `.output/chrome-mv3`.
 - **Firefox** — `npm run build:firefox`, then `about:debugging#/runtime/this-firefox` → Load Temporary
   Add-on → `.output/firefox-mv3/manifest.json`.
@@ -56,7 +57,7 @@ macOS only. Three scripts, because doing this by hand goes wrong in ways that ar
 images are side by side.
 
 ```sh
-npm run build                             # or build:firefox
+npm run build                             # both; build:chrome / build:firefox for one
 scripts/setup-chrome-for-screenshots      # or setup-firefox-for-screenshots
 scripts/capture-window-screenshot model-chrome
 ```

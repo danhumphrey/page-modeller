@@ -37,9 +37,15 @@ Everything runs from the repo root:
 
 ```
 npm test          # unit + engine bundle + build + Playwright (the gate)
-npm run dev       # WXT dev server
+npm run build     # BOTH browsers; build:chrome / build:firefox for one
+npm run dev       # WXT dev server, Chrome — dev:firefox for the other
 npm run typecheck # strict TS over the pure core
 ```
+
+**`build` means both browsers**, as does `zip`; the per-browser scripts are suffixed. `build` used to be
+Chrome only with `build:firefox` beside it, which read as though `build` were the pair — and a stale
+`.output/firefox-mv3` is invisible until someone hand-tests the wrong bundle. `dev` is the exception and
+is Chrome only: two dev servers cannot run at once, so `dev`/`dev:chrome` are the same thing.
 
 ### Constraints that bind v3
 
