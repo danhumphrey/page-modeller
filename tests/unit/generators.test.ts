@@ -2,7 +2,21 @@ import { describe, it, expect } from 'vitest';
 import { canGenerate, generateCode, shapesFor } from '../../src/generators';
 import { frameworks } from '../../src/frameworks';
 import { classify } from '../../src/generators/classify';
+import { typeValue } from '../../src/locators/display';
+import type { LocatorCandidate } from '../../src/engine/types';
 import { modelOf, elementsFor, SIGN_IN } from './fixtures/model';
+
+/**
+ * The shape `typeValue` produces. Seeing it in generated code means a candidate
+ * the framework cannot express fell through the display fallback and was
+ * emitted as prose.
+ *
+ * The guard used to be `/= \w+: /`, which could never fire: the leaked string
+ * arrives inside a string literal, so there is always a quote between the `=`
+ * and the kind. It was checked against every framework on every run and could
+ * not have failed for any of them.
+ */
+const LEAKED = /\b(testId|role|label|placeholder|altText|title|css|xpath|className|tagName|linkText|partialLinkText): /;
 
 describe('the generator registry', () => {
   it('covers every framework the toolbar offers', () => {
@@ -14,7 +28,31 @@ describe('the generator registry', () => {
       expect(code, f.label).not.toBe('');
       // `type: value` in generated code means a candidate the framework cannot
       // express leaked through the display fallback.
-      expect(code, f.label).not.toMatch(/= \w+: /);
+      expect(code, f.label).not.toMatch(LEAKED);
+    }
+  });
+
+  it('has a leak guard that can actually fire', () => {
+    // A guard nothing can trip is worse than no guard: it reads as coverage.
+    // Every kind the display fallback can produce must match it, so whichever
+    // one leaks is caught.
+    const kinds: LocatorCandidate[] = [
+      { kind: 'testId', value: 'submit' },
+      { kind: 'role', role: 'button', name: 'Submit' },
+      { kind: 'label', text: 'Email' },
+      { kind: 'placeholder', text: 'Email' },
+      { kind: 'altText', text: 'Logo' },
+      { kind: 'title', text: 'Close' },
+      { kind: 'css', value: 'div.a' },
+      { kind: 'xpath', value: '//div' },
+      { kind: 'className', value: 'a' },
+      { kind: 'tagName', value: 'div' },
+      { kind: 'linkText', text: 'About' },
+      { kind: 'partialLinkText', text: 'Abo' },
+    ] as LocatorCandidate[];
+
+    for (const c of kinds) {
+      expect(typeValue(c), c.kind).toMatch(LEAKED);
     }
   });
 
