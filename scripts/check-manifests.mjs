@@ -99,6 +99,36 @@ for (const [dir, checks] of Object.entries(EXPECT)) {
     fail(dir, `name within ${NAME_LIMIT} characters (it is ${name.length}: ${JSON.stringify(name)})`);
   }
 
+  // Firefox draws the sidebar's icon from `sidebar_action.default_icon` and
+  // from NOWHERE else — MDN: "if it is omitted, the sidebar doesn't get an
+  // icon". There is no fallback to `icons`, which is what the toolbar button
+  // uses, so the two can disagree and did: the real icon on the toolbar, a
+  // generic placeholder in the sidebar rail beside it.
+  if (dir.startsWith('firefox')) {
+    const icon = manifest.sidebar_action?.default_icon;
+    if (!icon) fail(dir, 'sidebar_action.default_icon (Firefox has no fallback to `icons`)');
+    else {
+      for (const path of Object.values(icon)) {
+        await readFile(`.output/${dir}/${path}`).catch(() => fail(dir, `sidebar icon ${path} emitted`));
+      }
+    }
+  }
+
+  // Every page a user can SEE needs a favicon, or the browser falls back to its
+  // own generic extension glyph — which is what the side panel's own toolbar
+  // showed while the browser action beside it showed the real icon. Nothing in
+  // the manifest covers this: `icons` is the extension's icon, and a panel page
+  // is just a page.
+  //
+  // `devtools.html` is exempt: it is the invisible registration page, never
+  // rendered, and the panel it creates takes its icon from the `panels.create`
+  // argument instead.
+  for (const page of ['sidepanel', 'devtools-panel', 'options', 'whatsnew', 'nopanel']) {
+    const html = await readFile(`.output/${dir}/${page}.html`, 'utf8').catch(() => '');
+    if (!html) fail(dir, `${page}.html emitted`);
+    else if (!/rel=["']icon["']/.test(html)) fail(dir, `${page}.html declares a favicon`);
+  }
+
   await readFile(`.output/${dir}/devtools-register.js`, 'utf8').catch(() => fail(dir, 'devtools-register.js emitted'));
 
   // The what's new tab (SPEC §20). Same silent-failure shape as the popup
