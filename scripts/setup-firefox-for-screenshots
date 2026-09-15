@@ -1,0 +1,41 @@
+#!/bin/sh
+# A clean Firefox for store screenshots. macOS only.
+#
+#   npm run build:firefox
+#   scripts/setup-firefox-for-screenshots
+#
+# Same idea as setup-chrome-for-screenshots: a dedicated profile, so nothing
+# personal is in frame. The profile persists but the extension does NOT —
+# about:debugging installs it temporarily and Firefox drops it on quit, so this
+# step repeats every session:
+#
+#   about:debugging#/runtime/this-firefox → Load Temporary Add-on
+#     → .output/firefox-mv3/manifest.json
+#
+# Firefox has no --window-size, so the window is sized afterwards with
+# AppleScript. Its `bounds` are {left, top, right, bottom}, hence the addition.
+set -e
+w="${1:-1000}"
+h="${2:-625}"
+profile="${PM_SHOT_PROFILE_FF:-${TMPDIR:-/tmp}/pm-shot-profile-ff}"
+firefox="${FIREFOX_PATH:-/Applications/Firefox.app/Contents/MacOS/firefox}"
+ext="$(cd "$(dirname "$0")/.." && pwd)/.output/firefox-mv3"
+
+[ -x "$firefox" ] || { echo "Firefox not found at $firefox — set FIREFOX_PATH." >&2; exit 1; }
+[ -d "$ext" ] || echo "Note: $ext does not exist yet. Run 'npm run build:firefox' first." >&2
+mkdir -p "$profile"
+
+"$firefox" --profile "$profile" --no-remote >/dev/null 2>&1 &
+
+# Wait for the window before addressing it, rather than guessing at a delay.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  osascript -e "tell application \"Firefox\" to set bounds of front window to {0, 25, $w, $((h + 25))}" 2>/dev/null && break
+  sleep 1
+done
+
+cat <<EOF
+Firefox up on a clean profile ($profile) at ${w}x${h}.
+Every session: about:debugging#/runtime/this-firefox → Load Temporary Add-on →
+  $ext/manifest.json
+Then: scripts/capture-window-screenshot <name>
+EOF

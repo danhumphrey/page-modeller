@@ -1,49 +1,62 @@
 # CLAUDE.md
 
-## Orientation — two codebases live here
+## Orientation
 
-| | Ships today | The rewrite |
-|---|---|---|
-| Version | **v2.5.1** | **v3** |
-| Branch | `master` | `v3-rewrite` |
-| Code | `src/` (repo root) | `v3/` |
-| Stack | JS · Vue 2 · Vuetify · Webpack · Sizzle | TS · Vue 3 · Quasar · WXT · Vite |
+One codebase, at the repo root: **TS · Vue 3 · Quasar · WXT · Vite**, MV3 on Chrome and Firefox.
 
-They are independent trees with separate `package.json`s and toolchains. **Never mix them in one
-change.** v3 work goes on the `v3-rewrite` branch, inside `v3/`.
+v2.5.1 — the Webpack/Vue 2 extension this replaces — is gone from the tree and reachable at the
+`v2.5.1-final` tag. Nothing here builds it, and nothing here should be judged against how it did
+things (see "v2.5.1 is not the default" below).
 
-Note the branch is `v3-rewrite`, not `v3` — a branch named `v3` would be ambiguous with the `v3/`
-directory in every revision argument (`git log v3`, `git show v3:file`).
+**Branch from `v3-rewrite`, not from the branch you happen to be on.** PRs here are squash-merged, so a
+branch cut from another branch carries commits that land again under a different identity — and every
+file both touched then conflicts, even though the content is identical. Recovery is
+`git rebase --onto origin/v3-rewrite <last commit of the parent branch> <your branch>`, which replays
+only your own commits.
 
-> **Until the `v3-rewrite` branch merges, `v3/` and `docs/v3/` exist only on that branch** — `git checkout v3-rewrite` before
-> looking for anything below. This file is on `master` so the orientation is available from either side.
+**Always `gh pr create --base v3-rewrite`.** `gh` defaults the base to the repo's default branch,
+`master`. A branch PR'd that way does not carry one commit — squash-merging it collapses the whole
+`v3-rewrite`..branch difference into `master` (97 files the one time it happened, #75/#76).
 
-## v3 — the rewrite
+## The docs
 
-On the `v3-rewrite` branch. Read `docs/v3/PRD.md` (owns *what*) before changing behaviour, and `docs/v3/REWRITE-PLAN.md` (owns
-*how*) before changing architecture. `docs/v3/SESSION-CONTEXT.md` is the history — why the project
-exists and what was decided. Spike evidence is in `docs/v3/spikes/`.
+Read `docs/SPEC.md` (owns *what the tool does*) before changing behaviour, and `docs/REWRITE-PLAN.md`
+(owns *how*) before changing architecture. `docs/CONSTRAINTS.md` is the short list neither of them may
+quietly contradict — browser floors, the in-place upgrade, what is deliberately out of scope.
+`docs/RELEASE-PLAN.md` is what stands between here and the stores. Spike evidence is in
+`docs/spikes/`.
 
-**Status:** Phase 0 (de-risk) and Phase 1 (Chrome-only core) are done. **Next is Phase 2 — generators**
-(Playwright-Python, Selenium Java/C#/Python, Puppeteer). Roadmap: `REWRITE-PLAN.md` §12.
+**Status:** the host-agnostic shell is built and hand-verified on both browsers. Behaviour was specced
+from scratch with the author on 2026-09-08 (`SPEC.md`, 18 sections). **Next is stripping the spike UI**,
+then rebuilding to the spec one manually-verifiable increment at a time. Roadmap: `docs/REWRITE-PLAN.md` §12.
 
-Run everything from `v3/` — it is self-contained:
+The spike UI in `ui/` and `src/generators/` predates the spec and does not match it. Only
+`src/engine/` and its fidelity test survive.
+
+Everything runs from the repo root:
 
 ```
 npm test          # unit + engine bundle + build + Playwright (the gate)
-npm run dev       # WXT dev server
+npm run build     # BOTH browsers; build:chrome / build:firefox for one
+npm run dev       # WXT dev server, Chrome — dev:firefox for the other
 npm run typecheck # strict TS over the pure core
 ```
+
+**`build` means both browsers**, as does `zip`; the per-browser scripts are suffixed. `build` used to be
+Chrome only with `build:firefox` beside it, which read as though `build` were the pair — and a stale
+`.output/firefox-mv3` is invisible until someone hand-tests the wrong bundle. `dev` is the exception and
+is Chrome only: two dev servers cannot run at once, so `dev`/`dev:chrome` are the same thing.
 
 ### Constraints that bind v3
 
 - **No LLM in the critical path.** Locators are computed deterministically from published a11y specs.
-  This was measured, not assumed (`REWRITE-PLAN.md` §1, §11). Fully offline, no network.
-- **Cross-browser.** Chrome + Firefox. WXT emits MV3 for Chrome, MV2 for Firefox. Firefox has no side
-  panel — hence side panel *and* DevTools panel, user's choice.
+  This was measured, not assumed (`docs/REWRITE-PLAN.md` §1, §11). Fully offline, no network.
+- **Cross-browser.** Chrome + Firefox, **MV3 on both** — v2.5.1 already ships MV3 to AMO, so MV2 would be
+  a downgrade on an in-place update. Three surfaces off one host-agnostic app: Chrome side panel,
+  Firefox sidebar (`sidebar_action`), DevTools panel on both.
 - **Ships as an in-place update** to the existing Chrome Web Store and AMO listings. The CWS item ID
   and AMO `gecko.id` must be preserved, and user storage must survive the upgrade.
-- **Locator fidelity is the core contract.** `v3/tests/engine.fidelity.spec.ts` checks generated
+- **Locator fidelity is the core contract.** `tests/engine.fidelity.spec.ts` checks generated
   locators against real Playwright resolution. If you touch the engine, that test is the arbiter.
 
 ## v2.5.1 — the shipping extension
@@ -58,12 +71,60 @@ exploited.
 
 ## Gotchas
 
-- `v3/.github/workflows/` is **inert** — GitHub only reads `.github/` at the repo root. Merge it with
-  the root CI when v3 is ready to build.
-- Build output is gitignored (`/v3/.output`, `/v3/.wxt`, `/v3/.test-dist`, `/v3/test-results`).
-- `v3/` output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
+- **v3 needs Node 22+.** jsdom's bundled undici calls `webidl.util.markAsUncloneable`, absent on Node
+  20, and every jsdom component test fails to start with `Failed to start forks worker`. CI pins 24.
+- **CI is one job over one tree.** GitHub reads workflows from the repo root only; a `.github/` further
+  down is inert, which is how the v3 workflow sat unrun for months.
+- `.github/workflows/release.yml` fires on a `v3.*` tag — not `v*`, which would match v2.5.1's tags —
+  and checks that the tag agrees with `package.json` before submitting.
+- **CI sees the whole repo**, and runs on every `pull_request`, so anything added anywhere lands in its
+  path. Check `package.json`'s scripts before adding a tree.
+- Build output is gitignored (`.output`, `.wxt`, `.test-dist`, `test-results`).
+- Output sizes are small by design; WXT 0.21 emits little runtime boilerplate.
+
+- **A sandboxed iframe is unreachable on Firefox.** `sandbox="allow-scripts"` gives a null principal;
+  Firefox's `match_about_blank` only injects where the principal is *inherited*, and it has no
+  equivalent of Chrome's `match_origin_as_fallback`. Nothing to fix — but it works on Chrome, so a
+  Chrome-only hand-test will not show it. `tests/fixtures/frames.html` has one to check against.
+- **If the `npm run dev` server stops, the extension keeps running and quietly stops working.** In dev
+  the manifest has *no* `content_scripts`: WXT registers them at runtime, and the background bundle
+  holds none of the data — no `matches`, no `allFrames`, not even the script path. It fetches all of it
+  from the dev server. Kill the server and every page reports *"Page Modeller can't reach this page"*,
+  and reloading the tab cannot help, because nothing is missing from the tab. Check the dev server is
+  still up before believing the extension is broken.
+- **`browser.tabs` is undefined in a Firefox DevTools panel.** A devtools page is granted only
+  `devtools.*`, `runtime.*` and a few others. Chrome tolerates the direct call, so a regression is
+  invisible on Chrome and in every test we can run. The panel goes through the background relay
+  (`RELAY_TO_TAB`); a unit test scans `ui/` to keep it that way.
+- **`sender.tab` is not reliable in a Firefox DevTools page.** A content script's `runtime.sendMessage`
+  arrives without it, so a `sender.tab.id === myTab` filter silently drops every message. The background
+  always sees the sender, so it stamps the tab and re-broadcasts as `FROM_TAB`; panels filter on that.
+- **A content script cannot see the page's `customElements` registry.** An isolated world has its own,
+  and an element the page defined is simply absent from it — `customElements.get('my-widget')` returns
+  undefined for a component that plainly exists. The DOM is shared; the registry is not. Detection has
+  to work from the element itself. This passed every engine test, because those inject into the *main*
+  world via `addScriptTag`; only the extension E2E runs in an isolated one.
+
+- **A targetOrigin mismatch on `postMessage` does not throw — it logs.** The message is dropped, the
+  wrong document never sees it, and Chrome writes *"the target origin provided … does not match the
+  recipient window's origin"* to the console, where it collects on `chrome://extensions` and reads like
+  a fault. It happens whenever a frame's `src` says one origin and the document is on another: a
+  redirect across origins, or a frame that has not navigated yet. Nothing breaks — the broadcast
+  fallback delivers — and the frame is remembered so the attempt is not repeated on every push.
+  Measured in `tests/postmessage-origin.spec.ts`; the obvious assumption, that it throws and aborts the
+  loop, is wrong.
+
+- **Never send Vue reactive state through `tabs.sendMessage`.** Anything read out of a `ref` is a Proxy,
+  and Firefox serialises messages with structured clone, which throws `DataCloneError` on a Proxy —
+  Chrome's path tolerates it, so this fails on Firefox only and presents as an unreachable tab. `send()`
+  in `ui/App.vue` JSON round-trips for this reason; anything bypassing it must do the same.
 
 ## Verification — manual testing is the completion gate
+
+**Firefox has no automated coverage, and cannot easily get any.** Playwright *installs* a Firefox
+extension fine (`playwright-webextext`), but Juggler cannot navigate to `moz-extension://` pages, so the
+panel is undrivable — see `docs/spikes/SPIKE6-FIREFOX-E2E.md`. Every cross-browser bug so far passed
+the Chrome suite. Hand-test Firefox.
 
 **Automated tests are a net, not the criterion for done.** Nothing is complete until it has been
 exercised by hand in a real browser, on real pages, across browsers and varied DOM structures. Do not
@@ -77,6 +138,45 @@ through today over a larger one that cannot.
 The automation that does earn its place is the part hand-testing cannot repeat cheaply: the fidelity
 spec re-runs 43 DOM edge cases against real Playwright on every change, and the extension E2E proves the
 built extension still loads before a manual session starts. Keep both green, but neither is the gate.
+
+### What is verified per target
+
+Two separate questions: does the locator find the element, and is the emitted code valid.
+
+| Target | Locator semantics | Generated code |
+|---|---|---|
+| Playwright TS | ✅ every expression resolved in real Playwright | ✅ `tsc` against `@playwright/test` |
+| Puppeteer | ✅ real Puppeteer (`puppeteer.fidelity.spec.ts`) | ✅ `tsc` against `puppeteer-core` |
+| Playwright Python | ✅ **run** in a real browser via the Python bindings | ✅ `python3 -m ast` |
+| Selenium Python | ✅ **run** in a real Chrome via WebDriver | ✅ `python3 -m ast` |
+| Selenium Java | ⚠️ strategy only, but see below | ✅ `javac` against selenium-api + selenium-support |
+| Selenium C# | ⚠️ strategy only, but see below | ✅ `dotnet build` against Selenium.WebDriver |
+
+`tests/playwright-python.run.spec.ts` does the same for Playwright: the generated page object is
+imported into a real Playwright Python run, and every locator must resolve to exactly one element and
+to the right one. It found two syntax errors nothing else could — an element called Continue produced
+`self.continue`, and the TypeScript locators shape produced `const continue`.
+
+`tests/selenium.run.spec.ts` drives the **generated Python** in a real Chrome through WebDriver: every
+locator must find the element it was generated from, each bucket's read method must run, and the frame
+`switchTo` chain must land in the right document and come back out. It found `get_dom_property`, which
+is Java's and C#'s spelling and does not exist in Python — no compiler or parser could have.
+
+That covers Java and C# further than the table suggests: **which** strategy is chosen is decided once
+for all three in `src/generators/selenium.ts`, and the method bodies are the same decisions in three
+spellings. What Java and C# have that Python does not is spelling, and their compilers check that.
+
+⚠️ **strategy only**: `tests/pw-builder.ts` also resolves each `By` strategy as the equivalent CSS/XPath
+in real Playwright, so the choice is checked twice over. Not run: `className`, `tagName` and
+`partialLinkText`, which rank below css in Selenium's order (SPEC §11) and nothing in the fixtures
+reaches — the run spec asserts exactly which strategies it proved, so that stays honest.
+
+The Java and C# checks need `npm run fetch:test-deps` once — a Maven jar download and a NuGet restore.
+Deliberately not part of `npm test`, so the gate still works offline and on a machine with no JDK.
+Toolchain-gated tests **skip loudly**, never silently.
+
+A compile check is not a semantic one. It proves `SelectElement.SelectByText` exists and that
+`params string[]` is legal; it cannot prove the method does what the element needs.
 
 ## v2.5.1 is not the default
 

@@ -7,30 +7,63 @@ on:
 
 jobs:
   test:
-    name: Test with coverage
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # jsdom's bundled undici calls
+      # `webidl.util.markAsUncloneable`, which is not there on Node 20, and
+      # every jsdom component test fails to start.
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
+
+      # javac and dotnet compile the generated Selenium against the real
+      # libraries; python3 parses the generated Python. Pinned rather than
+      # taken from the runner image, so a change there cannot silently drop a
+      # check. net8.0 matches tests/compile/csharp/Verify.csproj.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
       - run: npm ci
 
-      - run: npm run lint
+      - run: npm run typecheck
 
-      - run: npm run prettier:check
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      - run: npm run test:coverage
+      # chromium only: the extension E2E and the Puppeteer fidelity spec both
+      # drive it, and Firefox cannot be automated here at all (SPIKE6).
+      - run: npx playwright install --with-deps chromium
 
-      - run: npm run build
+      - name: Fetch the Selenium jar, NuGet packages and Python venv
+        run: npm run fetch:test-deps
 
-      - name: Upload coverage report
-        if: always()
+      # unit + engine bundle + both builds + manifest checks + Playwright.
+      # PM_REQUIRE_FULL_SUITE turns every gated skip into a failure — the
+      # compile checks and the Puppeteer spec alike. A check that silently
+      # skips on CI is not a check, and the Puppeteer one did exactly that on
+      # this job's first green run.
+      - run: npm test
+        env:
+          PM_REQUIRE_FULL_SUITE: '1'
+
+      - name: Upload Playwright report
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
-          path: coverage/
+          name: playwright-report
+          path: |
+            test-results/
           retention-days: 14

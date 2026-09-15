@@ -1,0 +1,125 @@
+name: Release dry run
+
+# A rehearsal for release.yml, run by hand from the Actions tab.
+#
+# It builds the same zips and calls the same submit command with `--dry-run`,
+# which authenticates against both stores and stops short of uploading
+# anything. Nothing is submitted, nothing is published, and nothing is
+# reviewed.
+#
+# Worth having because of when the alternative fails. Without this, the first
+# time the store credentials are exercised is on a tag that has already been
+# pushed — and a tag is not a cheap thing to take back once CI has started
+# acting on it. Seven secrets have to be right, three of them minted through a
+# Google Cloud OAuth flow, and the failure mode for a wrong one is an HTTP 401
+# at the last step of a ten-minute job.
+#
+# It also answers the question nobody can answer by reading: whether the
+# secrets that exist in this repo are the ones the stores accept.
+on:
+  # Two ways in, because `workflow_dispatch` only offers its Run workflow
+  # button once the file is on the repository's DEFAULT branch — and ours is
+  # still master, holding 2.5.1, until v3 lands there. Until then, pushing a
+  # `dry-run-*` tag is the way to start it.
+  #
+  # The tag pattern cannot collide with the `v3.*` one release.yml fires on,
+  # which is the only thing that must not be triggered by accident.
+  workflow_dispatch:
+  push:
+    tags: ['dry-run-*']
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Builds the zips, and deliberately NOT the full test suite: this
+      # rehearses the submission, not the release. `npm test` already runs on
+      # every PR, and making a rehearsal ten minutes long is how it stops being
+      # run.
+      #
+      # Not optional either. Skipping the build would mean calling submit with
+      # no zip arguments — a path release.yml never takes, and an untested
+      # branch inside a rehearsal defeats the rehearsal.
+      - run: npm run zip
+
+      - name: What would be submitted
+        run: |
+          ls -la .output/*.zip
+          echo "manifest version: $(node -p "require('./package.json').version")"
+
+      # The same command release.yml runs, with --dry-run in front. If this
+      # passes and the real one fails, the difference is the upload itself and
+      # not the credentials.
+      - name: Authenticate against AMO
+        run: |
+          npx wxt submit --dry-run \
+            --firefox-zip .output/*-firefox.zip \
+            --firefox-sources-zip .output/*-sources.zip
+        env:
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+
+      # Chrome is uploaded by hand until its secrets exist, so their absence is
+      # a stated position rather than something to report as broken.
+      #
+      # Decided in a step rather than with `if: secrets.CHROME_CLIENT_ID != ''`
+      # — the `secrets` context is not available in a step-level `if`, and a
+      # workflow that uses it there is rejected whole, which presents as "this
+      # run likely failed because of a workflow file issue" against a push that
+      # should not have triggered anything.
+      - name: Is Chrome automated?
+        id: chrome
+        env:
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+        run: |
+          if [ -n "$CHROME_CLIENT_ID" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Chrome secrets are not set; only AMO was checked."
+          fi
+
+      - name: Authenticate against the Chrome Web Store
+        if: steps.chrome.outputs.enabled == 'true'
+        run: npx wxt submit --dry-run --chrome-zip .output/*-chrome.zip
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+      - name: Which secrets are missing
+        if: failure()
+        run: |
+          echo "A dry run fails for three reasons: a secret is absent, a secret is wrong,"
+          echo "or the addon id does not resolve. Absent ones are listed below."
+          echo
+          echo "A 404 on 'Getting addon details' with the auth accepted means the id: AMO"
+          echo "takes a slug, a numeric id or a GUID, but a GUID has braces, which are not"
+          echo "URL-safe and are passed through raw. Use the slug: page-modeller"
+          for name in FIREFOX_EXTENSION_ID FIREFOX_JWT_ISSUER FIREFOX_JWT_SECRET; do
+            eval "value=\${$name}"
+            [ -n "$value" ] || echo "  missing: $name"
+          done
+          echo
+          echo "These three are all a release needs: the AMO key and secret from the"
+          echo "Developer Hub, and the gecko id. Chrome is uploaded by hand from the"
+          echo "release-zips artifact, so its secrets are optional."
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}

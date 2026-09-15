@@ -1,0 +1,1078 @@
+import { batched, frameStepFor, generate, resolveCandidate, setTestIdAttribute } from '@/src/engine/candidates';
+import { describeBrief, describeElement } from '@/src/engine/describe';
+import { collectClosedHosts, collectInteractive, hasBox } from '@/src/engine/interactive';
+import { isMessage, type Message, type PickMode } from '@/src/messaging';
+import { frameSelector } from '@/src/locators/frames';
+import { shadowSelector } from '@/src/locators/shadow';
+import type { FrameStep, ShadowStep } from '@/src/engine/types';
+import { loadSettings, watchSettings } from '@/src/settings';
+
+// Inspector overlay: highlight the element under the cursor (like DevTools) and,
+// on click, run the locator engine and report the result to the side panel.
+export default defineContentScript({
+  matches: ['<all_urls>'],
+  allFrames: true,
+  // A srcdoc iframe's URL is `about:srcdoc`, which `<all_urls>` does not match
+  // — so nothing ran inside one and its contents could not be picked at all.
+  // Two flags because the browsers spell it differently: Firefox has only
+  // match_about_blank, Chrome supersedes it with match_origin_as_fallback,
+  // which also covers data: and blob: frames. Both match on the frame's
+  // *initiator* origin, so a sandboxed frame is reached too.
+  matchAboutBlank: true,
+  // Chrome only: Firefox does not know the key, and an unrecognised manifest
+  // key is a warning on an AMO submission.
+  matchOriginAsFallback: { chrome: true, firefox: undefined },
+  main() {
+    let active = false;
+    /** 'add' takes the element itself; 'scan' takes its interactive children. */
+    let mode: PickMode = 'add';
+    let includeHidden = false;
+    // Which attribute holds a test id (SPEC §12). Read at load and watched,
+    // because the eye resolves a testId candidate too and that can happen
+    // without picking ever starting.
+    void loadSettings().then((s) => setTestIdAttribute(s.testIdAttribute));
+    watchSettings((s) => setTestIdAttribute(s.testIdAttribute));
+
+    /** Shared by every frame in the tab for this picking session. */
+    let nonce = '';
+    /**
+     * Where this frame sits, told to it from above (SPEC §16).
+     *
+     * `window.frameElement` cannot work here: it is readable only when the
+     * parent is same-origin, so a cross-origin or sandboxed frame could never
+     * see what embeds it and every such element came out marked opaque — which
+     * then leaked `frameLocator(':root')` into generated code and made two
+     * different frames indistinguishable to the eye.
+     *
+     * Pushed DOWN instead. Only the parent can identify its own child, and it
+     * can always do so: the `<iframe>` is an ordinary element in its document
+     * whatever origin it loads. The top frame knows its path is empty and tells
+     * each child; each child appends nothing, records what it was told, and
+     * tells its own children. No request, no reply, no origin restriction.
+     */
+    let myPath: FrameStep[] = [];
+    let box: HTMLDivElement | null = null;
+    let label: HTMLDivElement | null = null;
+    let current: Element | null = null;
+    /** Last element under the cursor; the floor for walking back down. */
+    let hovered: Element | null = null;
+
+    const Z = '2147483647';
+
+    /** Identifies this frame to the background; see OVERLAY_SHOWN. */
+    const frameToken = Math.random().toString(36).slice(2);
+
+    function ensureOverlay() {
+      if (box) return;
+      box = document.createElement('div');
+      Object.assign(box.style, {
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: Z,
+        background: 'rgba(56,139,253,0.25)',
+        border: '1px solid rgba(56,139,253,0.9)',
+        borderRadius: '2px',
+        transition: 'all 40ms ease-out',
+      } as CSSStyleDeclaration);
+      label = document.createElement('div');
+      label.dataset.pageModeller = 'label';
+      Object.assign(label.style, {
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: Z,
+        font: '11px/1.4 ui-monospace, monospace',
+        color: '#fff',
+        background: '#1f6feb',
+        padding: '1px 6px',
+        borderRadius: '3px',
+        whiteSpace: 'nowrap',
+      } as CSSStyleDeclaration);
+      document.documentElement.append(box, label);
+      // Only on creation, so this is one message per frame entered, not one
+      // per mousemove.
+      browser.runtime.sendMessage({ type: 'OVERLAY_SHOWN', token: frameToken }).catch(() => {});
+    }
+
+    function removeOverlay() {
+      box?.remove();
+      label?.remove();
+      box = label = null;
+      current = hovered = null;
+    }
+
+    /** How many ancestors the breadcrumb shows before eliding. */
+    const CRUMB_DEPTH = 3;
+
+    /**
+     * The chain from a few ancestors down to the target, target emphasised.
+     *
+     * Two jobs: say where you are in the nesting, and make it obvious that
+     * wrappers exist at all — before this there was no way to know a
+     * same-sized parent was there until you accidentally hit it.
+     *
+     * Built as elements rather than innerHTML: the text comes from the page.
+     */
+    function renderBreadcrumb(el: Element) {
+      // Ancestors, and whether each step crossed a shadow boundary — the walk
+      // uses `parentOf`, so it steps out of a component instead of stopping at
+      // it (SPEC §19). The crossing is drawn, because "this element is inside a
+      // web component" changes what the locator will look like and there is
+      // nothing else on screen that says so.
+      const chain: { el: Element; crossed: boolean }[] = [];
+      for (let cur: Element | null = el; cur && cur !== document.documentElement; ) {
+        const up = parentOf(cur);
+        if (!up || up === document.documentElement) break;
+        chain.unshift({ el: up, crossed: cur.parentElement === null });
+        cur = up;
+      }
+      const shown = chain.slice(-CRUMB_DEPTH);
+
+      label!.replaceChildren();
+      if (chain.length > shown.length) label!.appendChild(crumb('…', false));
+      for (const ancestor of shown) {
+        label!.appendChild(crumb(describeBrief(ancestor.el), false));
+      }
+      label!.appendChild(crumb(describeElement(el), true, chain.at(-1)?.crossed ?? false));
+    }
+
+    function crumb(text: string, isTarget: boolean, inShadow = false): HTMLSpanElement {
+      const span = document.createElement('span');
+      // `⛉` marks a shadow boundary: everything after it lives inside a web
+      // component, which is why its locator will be scoped by the host.
+      span.textContent = inShadow ? `⛉ ${text}` : text;
+      Object.assign(span.style, {
+        opacity: isTarget ? '1' : '0.55',
+        fontWeight: isTarget ? '600' : '400',
+      } as CSSStyleDeclaration);
+      if (label!.childNodes.length > 0) {
+        const sep = document.createElement('span');
+        sep.textContent = ' › ';
+        sep.style.opacity = '0.4';
+        label!.appendChild(sep);
+      }
+      return span;
+    }
+
+    /**
+     * A frame with no content script inside it, drawn in the same red as a
+     * hidden element (SPEC §8) rather than the ordinary blue.
+     *
+     * The pointer being inside such a frame is exactly when nothing works and
+     * nothing can say so: the click belongs to that document and there is
+     * nobody there to hear it, so no message is ever sent. But this frame keeps
+     * drawing the overlay the whole time — an unreadable child never takes
+     * ownership — so the warning stays on screen for as long as the pointer is
+     * over it, which is the only moment it is any use.
+     */
+    function setTone(warn: boolean) {
+      Object.assign(box!.style, {
+        background: warn ? 'rgba(211, 47, 47, 0.18)' : 'rgba(56,139,253,0.25)',
+        // Dashed, as for a hidden element: a box around something you cannot
+        // reach should not look like one you can.
+        border: warn ? '2px dashed #d32f2f' : '1px solid rgba(56,139,253,0.9)',
+      } as CSSStyleDeclaration);
+      label!.style.background = warn ? '#d32f2f' : '#1f6feb';
+    }
+
+    function highlight(el: Element) {
+      ensureOverlay();
+      const r = el.getBoundingClientRect();
+      Object.assign(box!.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+      const frameUnreadable = isFrame(el) && !isReadableFrame(el);
+      // A closed root renders content no script can reach — the same situation
+      // as a sandboxed frame, drawn the same way (SPEC §19).
+      const closedRoot = !frameUnreadable && isClosedShadowHost(el);
+      setTone(frameUnreadable || closedRoot);
+      renderBreadcrumb(el);
+      if (frameUnreadable || closedRoot) {
+        label!.appendChild(crumb(closedRoot ? 'cannot be read \u2014 closed shadow root' : 'cannot be read \u2014 sandboxed', true));
+      }
+      label!.style.left = `${r.left}px`;
+      label!.style.top = `${Math.max(0, r.top - 18)}px`;
+    }
+
+    // ---- View Matched Elements (SPEC §8) ----
+    //
+    // Yellow fill, red outline, on every match. Boxes are position:fixed against
+    // the viewport, so they go stale if the page scrolls — acceptable for a
+    // 3s lifetime, and the same trade v2.5.1 made.
+    let marks: HTMLDivElement[] = [];
+    let markTimer: ReturnType<typeof setTimeout> | undefined;
+    const HIGHLIGHT_MS = 3000;
+
+    function clearMarks() {
+      for (const m of marks) m.remove();
+      marks = [];
+      if (markTimer) clearTimeout(markTimer);
+      markTimer = undefined;
+    }
+
+    /**
+     * Where to draw a match, and whether it is really there.
+     *
+     * A hidden element has no box to outline, so with `modelHiddenElements` on
+     * the eye reported "1 element matches" and drew nothing at all — a true
+     * count that looked like a failure. Fall back to the nearest ancestor that
+     * does have a box, which at least says *where* on the page the hidden thing
+     * lives.
+     */
+    function markTarget(el: Element): { anchor: Element | null; hidden: boolean } {
+      if (hasBox(el)) return { anchor: el, hidden: false };
+      for (let cur = el.parentElement; cur; cur = cur.parentElement) {
+        if (hasBox(cur)) return { anchor: cur, hidden: true };
+      }
+      return { anchor: null, hidden: true };
+    }
+
+    function drawMark(rect: DOMRect, hidden: boolean, caption?: string) {
+      const mark = document.createElement('div');
+      // Identifies our overlay to tests and to anyone inspecting the page.
+      mark.dataset.pageModeller = 'highlight';
+      if (hidden) mark.dataset.hidden = 'true';
+      Object.assign(mark.style, {
+        position: 'fixed',
+        pointerEvents: 'none',
+        zIndex: Z,
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        background: 'rgba(255, 235, 59, 0.45)',
+        // Dashed, so a stand-in for something you cannot see does not look like
+        // the thing itself.
+        outline: hidden ? '2px dashed #d32f2f' : '2px solid #d32f2f',
+        outlineOffset: '-1px',
+      } as CSSStyleDeclaration);
+
+      if (caption) {
+        const tag = document.createElement('div');
+        tag.textContent = caption;
+        Object.assign(tag.style, {
+          position: 'absolute',
+          left: '0',
+          top: '0',
+          font: '11px/1.4 ui-monospace, monospace',
+          color: '#fff',
+          background: '#d32f2f',
+          padding: '1px 6px',
+          borderRadius: '0 0 3px 0',
+          whiteSpace: 'nowrap',
+        } as CSSStyleDeclaration);
+        mark.appendChild(tag);
+      }
+
+      document.documentElement.appendChild(mark);
+      marks.push(mark);
+      return mark;
+    }
+
+    function highlightAll(targets: Element[]): { hidden: number } {
+      clearMarks();
+      if (targets.length === 0) return { hidden: 0 };
+
+      const placed = targets.map((t) => ({ target: t, ...markTarget(t) }));
+
+      // Scroll the FIRST match into view before measuring, or every box after
+      // it would be positioned against the pre-scroll viewport. A hidden
+      // element cannot be scrolled to, so scroll to its stand-in.
+      placed.find((p) => p.anchor)?.anchor?.scrollIntoView({ block: 'center', inline: 'nearest' });
+
+      let unplaceable = 0;
+      for (const { anchor, hidden } of placed) {
+        if (!anchor) {
+          unplaceable++;
+          continue;
+        }
+        drawMark(anchor.getBoundingClientRect(), hidden, hidden ? 'hidden element' : undefined);
+      }
+
+      // Nothing on the page to point at — say so rather than drawing nothing.
+      if (unplaceable > 0) {
+        const banner = drawMark(new DOMRect(16, 16, 260, 0), true);
+        banner.style.height = 'auto';
+        banner.style.padding = '8px 10px';
+        banner.style.font = '12px/1.4 ui-monospace, monospace';
+        banner.style.color = '#4a1010';
+        banner.textContent = `${unplaceable} matched element${unplaceable === 1 ? '' : 's'} hidden, with no position on the page`;
+      }
+
+      markTimer = setTimeout(clearMarks, HIGHLIGHT_MS);
+      return { hidden: placed.filter((p) => p.hidden).length };
+    }
+
+    /**
+     * The element actually under the pointer (SPEC §19).
+     *
+     * `e.target` is RETARGETED to the host for any listener outside the shadow
+     * tree, so hovering a web component's input reports the component. On Etsy
+     * that still produced a working locator, because that component mirrors
+     * `name` and `placeholder` onto its host — a component that does not would
+     * have handed back a locator for a wrapper.
+     *
+     * `composedPath()[0]` is the innermost target, and stops at a closed root
+     * of its own accord: a closed tree is absent from the composed path, so
+     * this yields the host, which is the most specific thing there is.
+     */
+    const targetOf = (e: Event): Element | null => {
+      const first = e.composedPath()[0];
+      return first instanceof Element ? first : ((e.target as Element | null) ?? null);
+    };
+
+    const onMove = (e: MouseEvent) => {
+      if (!active) return;
+      const el = targetOf(e);
+      if (!el || el === hovered) return;
+      // Moving the mouse abandons any arrow-key walk and starts again from
+      // whatever is under the cursor.
+      hovered = el;
+      current = el;
+      highlight(el);
+    };
+
+    /**
+     * `mousemove` alone misses a frame you enter quickly.
+     *
+     * Once the pointer is inside a frame, this document gets no further
+     * mousemove — the events belong to the child. So the only mousemove that
+     * can target the frame element is one that lands on its 2px border, which
+     * happens when the pointer crosses slowly and not when it crosses fast.
+     * `mouseover` fires on the frame as the pointer enters it at any speed.
+     */
+    const onOver = (e: MouseEvent) => onMove(e);
+
+    const isFrame = (el: Element) => el.localName === 'iframe' || el.localName === 'frame';
+
+    /**
+     * Whether THIS element is a closed shadow host. Asked of the element's own
+     * parent so the collector's rule is not duplicated: one definition of what
+     * counts, used both for the overlay and for what a scan reports.
+     */
+    const isClosedShadowHost = (el: Element) =>
+      el.parentElement != null && collectClosedHosts(el.parentElement).includes(el);
+
+    /**
+     * Marks the one message this script accepts from another frame. Isolated
+     * worlds do not isolate postMessage, so a page could forge this — which is
+     * why the handler also requires that a scan is genuinely in progress in
+     * this frame. The worst a forgery can then do is what the user was already
+     * doing.
+     */
+    const SCAN_FRAME = '__pageModellerScanFrame';
+    /** Carries a frame its own path, from the document that embeds it. */
+    const FRAME_PATH = '__pageModellerFramePath';
+    /** Arms a frame that loaded after picking started (see NEED_PATH). */
+    const ARM = '__pageModellerArm';
+    /** A frame that loaded after its parent pushed, asking to be told. */
+    const NEED_PATH = '__pageModellerNeedPath';
+    /** A frame confirming it heard a scan request, so silence means something. */
+    const SCAN_ACK = '__pageModellerScanAck';
+    /**
+     * A frame reporting that it AND everything below it has finished.
+     *
+     * Distinct from SCAN_ACK, which only says the request was heard. A scan
+     * fans out across the frame tree and each frame publishes its own haul, so
+     * without a rollup there is no moment anyone can call the end of it: the
+     * panel treated the first haul as the finish, which is the first frame's,
+     * not the last's.
+     */
+    const SCAN_DONE = '__pageModellerScanDone';
+    /** A frame confirming it has a script at all, in answer to its path. */
+    const FRAME_ALIVE = '__pageModellerFrameAlive';
+
+    /**
+     * Where a child frame's document lives, as a `targetOrigin` — or null when
+     * it cannot be named.
+     *
+     * `'*'` delivers to whatever is in the frame, and the page's own scripts
+     * are in there with us: isolated worlds do not isolate postMessage. What
+     * travels this way is not nothing. FRAME_PATH carries selectors lifted
+     * from the embedding document, and ARM and SCAN_FRAME carry the nonce that
+     * authenticates a scan — so every third-party frame on the page, an ad
+     * iframe included, was handed both, and the fact that the extension is
+     * running with them. Naming the origin keeps each message to the document
+     * it was meant for.
+     *
+     * Null means an opaque origin: a sandbox without `allow-same-origin`, or a
+     * `data:` frame. No targetOrigin matches an opaque origin — not even
+     * "null", which postMessage rejects as a literal — so those are the one
+     * case that still has to be addressed with '*'.
+     */
+    function frameOrigin(frame: Element): string | null {
+      const sandbox = frame.getAttribute('sandbox');
+      if (sandbox !== null && !sandbox.split(/\s+/).includes('allow-same-origin')) return null;
+      // srcdoc and about:blank inherit the embedder's origin rather than
+      // deriving one from a URL.
+      if (frame.hasAttribute('srcdoc')) return location.origin;
+      const src = frame.getAttribute('src');
+      if (!src || src === 'about:blank') return location.origin;
+      try {
+        const origin = new URL(src, location.href).origin;
+        return origin === 'null' ? null : origin;
+      } catch {
+        // A relative URL this parser rejects is not one the frame resolved
+        // either; it is showing about:blank, which is our origin.
+        return location.origin;
+      }
+    }
+
+    /** Post to a child frame, naming its origin wherever one exists. */
+    function postToFrame(frame: Element, win: Window, message: object) {
+      // A frame whose named origin has already been shown wrong gets the
+      // broadcast straight away. Chrome logs "the target origin provided does
+      // not match the recipient window's origin" to the CONSOLE for every
+      // attempt — it does not throw, and the message is simply dropped — and
+      // that error surfaces on chrome://extensions, where it reads far more
+      // alarming than it is. Remembering spares the repeat on every push.
+      const origin = namedOriginFailed.has(win) ? null : frameOrigin(frame);
+      win.postMessage(message, origin ?? '*');
+    }
+
+    /**
+     * Answer the frame that just posted to us, on its own origin.
+     *
+     * `e.origin` is the browser's word for who sent it, not the sender's, so
+     * it cannot be spoofed. "null" is the opaque case again — a sandboxed
+     * document — and is not a usable targetOrigin.
+     */
+    function reply(e: MessageEvent, message: object) {
+      (e.source as Window).postMessage(message, e.origin === 'null' || !e.origin ? '*' : e.origin);
+    }
+
+    /**
+     * Child frames known to have a content script inside them.
+     *
+     * On Firefox a sandboxed frame has a null principal and never gets one, so
+     * clicking inside it does nothing — the click belongs to that document and
+     * there is nobody there to hear it. Only its 2px border reaches this frame,
+     * which is not an affordance anyone can be asked to find. So the overlay
+     * says so on hover instead of leaving the user clicking at nothing.
+     *
+     * Liveness costs no extra round trip: a frame that answers its path push
+     * has a script by definition.
+     */
+    /**
+     * Is this window one of the frames THIS document embeds?
+     *
+     * Without it, any window could post FRAME_ALIVE and be marked readable —
+     * including a sandboxed frame's own page, which would then be drawn in the
+     * ordinary blue treatment instead of the red dashed "cannot be read". The
+     * user clicks into it, nothing happens, and the warning SPEC §16 added for
+     * exactly that moment never appears.
+     */
+    /**
+     * Every frame this document embeds, shadow roots included.
+     *
+     * `querySelectorAll` does not enter a shadow root, so an `<iframe>` inside
+     * a web component was invisible to all of this. It was never pushed a
+     * path; its NEED_PATH was answered by a search that could not find it; and
+     * it kept `myPath = []` for ever — which made it answer HIGHLIGHT as
+     * though it were the top document, and its 0 landed on top of the real
+     * count (SPEC §16, §19). It was never scanned either.
+     */
+    function embeddedFrames(root: Document | ShadowRoot | Element = document): Element[] {
+      // The container itself, for the same reason `collectInteractive` needs
+      // it: scanning a component whose shadow root holds an iframe found no
+      // frame to delegate to.
+      const ownRoot = (root as Element).shadowRoot;
+      const out = ownRoot ? embeddedFrames(ownRoot) : [];
+      out.push(...Array.from(root.querySelectorAll('iframe, frame')));
+      for (const el of Array.from(root.querySelectorAll('*'))) {
+        if (el.shadowRoot) out.push(...embeddedFrames(el.shadowRoot));
+      }
+      return out;
+    }
+
+    function isOwnChild(win: Window): boolean {
+      for (const frame of embeddedFrames()) {
+        if ((frame as HTMLIFrameElement).contentWindow === win) return true;
+      }
+      return false;
+    }
+
+    const readableFrames = new WeakSet<Window>();
+
+    function isReadableFrame(el: Element): boolean {
+      const win = (el as HTMLIFrameElement).contentWindow;
+      return !win || readableFrames.has(win);
+    }
+
+    /**
+     * Child frames that have acknowledged a push sent to a named origin, so we
+     * know the origin we derived for them is the one they are actually on.
+     */
+    const namedOriginWorks = new WeakSet<Window>();
+    /**
+     * Frames whose derived origin turned out to be wrong — they redirected
+     * across origins since their `src` was written, or had not navigated yet.
+     *
+     * Nothing breaks when that happens: the message is dropped rather than
+     * misdelivered, and the broadcast fallback below gets the path there. But
+     * Chrome logs a console error each time, and those collect on
+     * chrome://extensions where they read like a fault. Once is diagnosis;
+     * once per push is noise.
+     */
+    const namedOriginFailed = new WeakSet<Window>();
+
+    /** Tell one child frame, or every child frame, where it sits. */
+    function pushPaths(only?: Window) {
+      for (const frame of embeddedFrames()) {
+        const win = (frame as HTMLIFrameElement).contentWindow;
+        if (!win || (only && win !== only)) continue;
+        const message = { [FRAME_PATH]: true, path: [...myPath, frameStepFor(frame)] };
+        postToFrame(frame, win, message);
+
+        // A named origin comes from the `src` ATTRIBUTE, which says where the
+        // frame was pointed, not where it ended up: a frame that redirected
+        // across origins never receives a message addressed to the origin its
+        // src names, and would silently keep the wrong path — and a wrong path
+        // is the eye certifying a locator that resolves to nothing.
+        //
+        // FRAME_ALIVE is already the acknowledgement of a push, so its absence
+        // is the signal. Falling back to '*' puts those frames exactly where
+        // every frame used to be, so nothing is worse off than before; every
+        // frame we can name is now better off.
+        if (frameOrigin(frame) === null || namedOriginWorks.has(win)) continue;
+        setTimeout(() => {
+          if (namedOriginWorks.has(win)) return;
+          namedOriginFailed.add(win);
+          win.postMessage(message, '*');
+        }, 300);
+      }
+    }
+
+    /**
+     * Frames load in no fixed order, so neither direction alone converges: a
+     * parent that pushes before a child's script exists reaches nobody, and a
+     * child that asks before its parent knows its own path gets a wrong answer.
+     * Doing both settles it — the top frame pushes, every frame that learns its
+     * path pushes onward, and a late child asks and is answered.
+     */
+    if (window.top === window) {
+      myPath = [];
+      pushPaths();
+    } else {
+      // Upward is the one direction that must stay '*': a cross-origin child
+      // cannot read its parent's origin, and this carries no data — it is a
+      // request, and the reply comes back on a named origin.
+      window.parent.postMessage({ [NEED_PATH]: true }, '*');
+    }
+
+    window.addEventListener('message', (e: MessageEvent) => {
+      const data = e.data as Record<string, unknown> | null;
+      if (typeof data !== 'object' || data === null) return;
+      // ---- from a child ----
+      //
+      // These three must be handled before the parent-only guard below, or
+      // they are unreachable: a child is by definition not this frame's parent.
+
+      // Asking where it sits. Answered from this frame's own path, and
+      // answered again later if that path changes.
+      //
+      // Also the moment to arm it. START_PICKING is a one-shot broadcast that
+      // reaches the frames existing at that instant; a frame that loads
+      // afterwards — a lazy ad, a consent frame, a chat widget, any
+      // `loading="lazy"` embed — had no nonce and no mode, so hovering it drew
+      // no overlay and clicking it did nothing. Worse, its onClick never ran,
+      // so its preventDefault never ran either: clicking a link to pick it
+      // navigated away and destroyed the page being modelled.
+      if (data[NEED_PATH] && e.source && e.source !== window.parent) {
+        pushPaths(e.source as Window);
+        if (active) reply(e, { [ARM]: nonce, mode, includeHidden });
+        return;
+      }
+
+      // Confirming it has a script inside it, so the overlay knows this frame
+      // can be reached.
+      if (data[FRAME_ALIVE] && e.source && e.source !== window.parent && isOwnChild(e.source as Window)) {
+        readableFrames.add(e.source as Window);
+        // It answered, so the origin the push was addressed to is the one it
+        // is on — later pushes need no broadcast fallback.
+        if (e.origin !== 'null') namedOriginWorks.add(e.source as Window);
+        return;
+      }
+
+      // A child reporting that its whole subtree has finished.
+      if (data[SCAN_DONE] && e.source && e.source !== window.parent) {
+        if (data[SCAN_DONE] === nonce) childSettled(e.source as Window);
+        return;
+      }
+
+      // Confirming it heard a scan request, so silence means something.
+      if (data[SCAN_ACK] && e.source !== window.parent) {
+        const pending = awaitingAck.get(e.source as Window);
+        if (pending && data[SCAN_ACK] === nonce) {
+          clearTimeout(pending);
+          awaitingAck.delete(e.source as Window);
+        }
+        return;
+      }
+
+      // ---- from the parent ----
+      if (e.source !== window.parent) return;
+
+      // Armed late (see NEED_PATH). Same effect as START_PICKING, reaching a
+      // frame that did not exist when the broadcast went out.
+      if (data[ARM] !== undefined && !active) {
+        nonce = String(data[ARM] ?? '');
+        mode = data.mode === 'scan' ? 'scan' : 'add';
+        includeHidden = data.includeHidden === true;
+        start();
+        return;
+      }
+
+      if (data[FRAME_PATH]) {
+        // The top frame never accepts one. Its path is empty by definition, and
+        // `window.parent === window` up here, so the guard above passes for a
+        // page posting to ITSELF — which let any page set `myPath` to whatever
+        // it liked. That is worse than the "a wrong locator in its own model"
+        // this comment used to claim: the forged path becomes this frame's
+        // myPath, so `samePath` matches, and the eye then resolves against the
+        // document and reports a green "1 element matches" for a locator the
+        // generated test can never resolve — the one property SPEC §8 says
+        // must hold.
+        if (window.top === window) return;
+
+        // Below the top, `e.source === window.parent` is a real check: only the
+        // embedding document can post as our parent. A page can still lie to
+        // its own children about their structure, which costs a wrong locator
+        // in its own model — visible in the table, and no worse than that.
+        myPath = (data.path as FrameStep[]) ?? [];
+        // Tell the parent something is alive in here.
+        // '*' for the same reason as NEED_PATH, and it carries a bare flag.
+        window.parent.postMessage({ [FRAME_ALIVE]: true }, '*');
+        // Pass it on: the chain is built one level at a time.
+        pushPaths();
+        return;
+      }
+
+      if (!nonce) return;
+
+      if (data[SCAN_ACK] === nonce) {
+        const pending = awaitingAck.get(e.source as Window);
+        if (pending) {
+          clearTimeout(pending);
+          awaitingAck.delete(e.source as Window);
+        }
+        return;
+      }
+
+      if (data[SCAN_FRAME] !== nonce) return;
+      // Answer before scanning: the parent is timing this.
+      reply(e, { [SCAN_ACK]: nonce });
+      scanDocument({ mine: false });
+    });
+
+    /** Frames asked to scan that have not yet answered. */
+    const awaitingAck = new Map<Window, ReturnType<typeof setTimeout>>();
+
+    /**
+     * Child frames that have been asked to scan and not yet reported finished.
+     *
+     * A frame is done when its OWN scan has finished and every child it
+     * delegated to has said so — which is what makes the root's completion
+     * mean the whole tree, however deep it goes.
+     */
+    const awaitingDone = new Set<Window>();
+    /** Whether this frame is where the scan was started, rather than delegated to. */
+    let scanIsMine = false;
+    /** Whether this frame's own collection has finished. */
+    let ownScanDone = false;
+
+    /**
+     * Report completion once, upwards or outwards.
+     *
+     * A delegated frame answers the parent that asked; the frame the user
+     * actually clicked in tells the background, and that is the one message
+     * the panel treats as the end of the scan.
+     */
+    function finishScanIfDone() {
+      if (!ownScanDone || awaitingDone.size > 0) return;
+      ownScanDone = false;
+      if (scanIsMine) {
+        scanIsMine = false;
+        browser.runtime.sendMessage({ type: 'SCAN_COMPLETE', nonce }).catch(() => {});
+      } else if (window.parent !== window) {
+        window.parent.postMessage({ [SCAN_DONE]: nonce }, '*');
+      }
+    }
+
+    /** Stop waiting on a child, whether it finished or turned out unreachable. */
+    function childSettled(win: Window) {
+      if (awaitingDone.delete(win)) finishScanIfDone();
+    }
+
+    /**
+     * Ask a nested frame to scan itself, and everything below it.
+     *
+     * A frame with no content script inside it cannot answer, and the user sees
+     * nothing happen at all — which is indistinguishable from a bug. So the
+     * frame acknowledges the request, and silence is reported.
+     */
+    function delegateScan(frame: Element) {
+      const win = (frame as HTMLIFrameElement).contentWindow;
+      if (!win) return;
+      postToFrame(frame, win, { [SCAN_FRAME]: nonce });
+      awaitingDone.add(win);
+      awaitingAck.set(
+        win,
+        setTimeout(() => {
+          awaitingAck.delete(win);
+          // No script in there, so no completion is ever coming either — stop
+          // waiting on it, or one unreadable frame would hold the whole scan
+          // open for ever.
+          childSettled(win);
+          // `allow-same-origin` hands the frame its parent's origin back; a
+          // sandbox without it has a null principal, and Firefox will not
+          // inject into one. `allow-scripts` is a red herring — a bare sandbox
+          // stops the page's own scripts, not a content script's isolated
+          // world, so it makes no difference to whether we can read the frame.
+          const sandbox = frame.getAttribute('sandbox');
+          const sandboxed = sandbox !== null && !sandbox.split(/\s+/).includes('allow-same-origin');
+          browser.runtime.sendMessage({ type: 'FRAME_UNREADABLE', sandboxed }).catch(() => {});
+        }, 500)
+      );
+    }
+
+    /**
+     * Everything interactive in THIS document, plus everything in the frames
+     * below it. Choosing a frame means choosing its page, and a page includes
+     * what it embeds (SPEC §16) — stopping one level down was the surprise.
+     *
+     * Each frame reports its own haul, so the model simply gains rows as they
+     * arrive; nothing has to be collected back up the tree.
+     */
+    /**
+     * Walk a shadow path to the root it names, or the document when there is
+     * none. Null when a host along the way is missing — the page has changed
+     * since the element was captured, and reporting zero matches is the honest
+     * answer rather than resolving against the wrong tree.
+     */
+    function shadowRootFor(path: ShadowStep[] | undefined): Document | ShadowRoot | null {
+      let root: Document | ShadowRoot = document;
+      for (const step of path ?? []) {
+        const host: Element | null = root.querySelector((step.host as { value: string }).value);
+        if (!host?.shadowRoot) return null;
+        root = host.shadowRoot;
+      }
+      return root;
+    }
+
+    /**
+     * Say what a scan could not read. A closed root holds real controls and no
+     * script can reach them, so the alternative is a scan that returns fewer
+     * rows than the page has and gives no reason — which is exactly how this
+     * whole area came to be looked at.
+     */
+    function reportClosedRoots(root: Element) {
+      const count = collectClosedHosts(root).length;
+      if (count > 0) browser.runtime.sendMessage({ type: 'SHADOW_UNREADABLE', count }).catch(() => {});
+    }
+
+    /**
+     * `mine` is true in the frame the user clicked in and false in a frame
+     * that was delegated to — it decides who this frame reports completion to.
+     */
+    function scanDocument({ mine }: { mine: boolean }) {
+      const root = document.body ?? document.documentElement;
+      const nested = embeddedFrames();
+      scanIsMine = mine;
+      // Stop first, so the overlay is gone while the work runs — it is drawn
+      // over a page whose main thread is about to be held, and it cannot be
+      // removed again until that finishes.
+      stop({ notify: false });
+      announceScan(() => {
+        const results = batched(() => collectInteractive(root, includeHidden).map((el) => generate(el, myPath)));
+        // Sent even when empty. A scan that found nothing published nothing,
+        // so a page with no eligible controls told the panel nothing at all.
+        // An empty haul is an answer; silence is not.
+        browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results, nonce }).catch(() => {});
+        reportClosedRoots(root);
+        // Delegated BEFORE this frame is marked done, or a frame with children
+        // would declare the whole subtree finished the moment its own
+        // collection ended.
+        for (const frame of nested) delegateScan(frame);
+        ownScanDone = true;
+        finishScanIfDone();
+      });
+    }
+
+    /**
+     * Say a scan has started, then do it on the next macrotask.
+     *
+     * Computing a locator for every control on a large page holds this thread
+     * for seconds, and nothing was said in the meantime: the click landed, the
+     * overlay vanished and the panel sat unchanged until the rows appeared,
+     * which is indistinguishable from a click that missed. The yield is what
+     * makes the message worth sending — dispatched from a thread that is about
+     * to block, it would otherwise reach the panel and be rendered only after
+     * the work it was announcing had already finished.
+     */
+    function announceScan(work: () => void) {
+      browser.runtime.sendMessage({ type: 'SCAN_STARTED' }).catch(() => {});
+      setTimeout(work, 0);
+    }
+
+    /**
+     * Commit the current target. Shared by clicking and by Enter.
+     *
+     * `keepPicking` holds Add open for the next click (SPEC §4). Read from the
+     * event rather than remembered, so it is decided per click: hold it for a
+     * run of elements, let go for the last one.
+     */
+    function pickCurrent(keepPicking = false) {
+      if (!active || !current) return;
+      const target = current;
+      // One-shot unless the modifier says otherwise — and stop BEFORE
+      // reporting, so the overlay is gone by the time the panel re-renders.
+      if (!keepPicking) stop({ notify: false });
+      else removeOverlay();
+
+      // Scanning a frame has to be done BY that frame. An <iframe> has no
+      // descendants in this document — its content is a separate document —
+      // so collectInteractive finds nothing and the scan silently returns
+      // empty. Cross-origin it is worse than awkward: contentDocument throws.
+      //
+      // So the frame scans itself. It is already armed (START_PICKING reaches
+      // every frame) and it knows its own frame path, which is exactly what
+      // the elements need.
+      if (mode === 'scan' && isFrame(target)) {
+        delegateScan(target);
+        return;
+      }
+
+      // Scanning a frame's own document means the same thing as scanning the
+      // frame: everything in it, frames below included. A smaller container
+      // inside it does not, which is the boundary rule (SPEC §16).
+      if (mode === 'scan' && (target === document.body || target === document.documentElement)) {
+        // Clicked here, so this frame owns the scan and reports its end.
+        scanDocument({ mine: true });
+        return;
+      }
+
+      // Scan takes the container's interactive descendants, never the container
+      // itself: you are modelling what is inside the section you chose.
+      if (mode === 'scan') reportClosedRoots(target);
+      if (mode === 'scan') {
+        // Clicking a container is always the start of a scan, never a
+        // delegated one — delegation always scans a whole document.
+        scanIsMine = true;
+        announceScan(() => {
+          const results = batched(() => collectInteractive(target, includeHidden).map((el) => generate(el, myPath)));
+          // A container's frames are scanned too (SPEC §16). An element inside
+          // one is something Playwright and Selenium can drive, so it is
+          // something to model — and the tool exists to model what a test will
+          // interact with.
+          //
+          // This is also what scanning the whole page has always done: only a
+          // container scan stopped, which made the same page give two different
+          // answers depending on where the scan started.
+          for (const frame of embeddedFrames(target)) delegateScan(frame);
+          browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results, nonce }).catch(() => {});
+          ownScanDone = true;
+          finishScanIfDone();
+        });
+        return;
+      }
+
+      const message = { type: 'ELEMENT_PICKED', result: generate(target, myPath), keepPicking, nonce };
+
+      // Rejects when no panel is open; that's fine, drop it.
+      browser.runtime.sendMessage(message).catch(() => {});
+    }
+
+    const onClick = (e: MouseEvent) => {
+      if (!active) return;
+      e.preventDefault();
+      e.stopPropagation();
+      // The CURRENT target, not e.target: the arrows may have walked away from
+      // the element under the cursor, and that is the whole point of them.
+      if (!current) current = e.target as Element;
+      // Either modifier, whatever the platform: Cmd is the one people reach for
+      // on a Mac and Ctrl everywhere else, and accepting both costs nothing.
+      // Scan is already many elements, so this only means anything for Add.
+      pickCurrent(mode === 'add' && (e.metaKey || e.ctrlKey));
+    };
+
+    /** The child of `of` that contains `hovered`, for walking back down. */
+    /**
+     * The element above this one, crossing a shadow boundary where there is
+     * one (SPEC §19).
+     *
+     * `parentElement` is null at the top of a shadow tree — the parent is the
+     * root, which is not an Element — so the ↑ walk stopped dead inside a
+     * component instead of stepping out to it.
+     */
+    function parentOf(el: Element): Element | null {
+      if (el.parentElement) return el.parentElement;
+      const root = el.getRootNode();
+      return root instanceof ShadowRoot ? root.host : null;
+    }
+
+    function childTowardsHovered(of: Element): Element | null {
+      if (!hovered || of === hovered) return null;
+      let cur: Element | null = hovered;
+      while (cur && parentOf(cur) && parentOf(cur) !== of) cur = parentOf(cur);
+      return cur && parentOf(cur) === of ? cur : null;
+    }
+
+    /**
+     * Walk the target up or down the DOM. The mouse alone cannot reliably hit a
+     * nested element: a wrapper <div> and the <div role="button"> inside it
+     * share a bounding box, so selecting the wrapper meant finding a sliver of
+     * padding.
+     */
+    function moveTarget(direction: 'up' | 'down') {
+      if (!active || !current) return;
+      const next =
+        direction === 'up'
+          ? // Stop at <body>: <html> is never a useful target. `parentOf`
+            // crosses a shadow boundary, so ↑ from a component's input steps
+            // out to the component rather than stopping.
+            parentOf(current) && parentOf(current) !== document.documentElement
+            ? parentOf(current)
+            : null
+          : childTowardsHovered(current);
+      if (!next) return;
+      current = next;
+      highlight(next);
+    }
+
+    const onKey = (e: KeyboardEvent) => {
+      if (!active) return;
+      if (e.key === 'Escape') return stop();
+
+      if (e.key === 'Enter') {
+        // Hands are already on the arrows; Enter is the obvious commit.
+        e.preventDefault();
+        e.stopPropagation();
+        return pickCurrent(mode === 'add' && (e.metaKey || e.ctrlKey));
+      }
+
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+      // Swallow the key even at the ends of the chain, so the page does not
+      // scroll out from under a pick that is mid-flight.
+      e.preventDefault();
+      e.stopPropagation();
+      moveTarget(e.key === 'ArrowUp' ? 'up' : 'down');
+    };
+
+    /**
+     * The pointer left this document — into a child frame, into the parent, or
+     * off the window. This script runs in every frame (`allFrames`), so each
+     * one draws its own overlay and, without this, leaves it behind: hovering
+     * through nested frames stacked a highlight and a breadcrumb in every frame
+     * on the way. Only the document under the pointer should show one.
+     *
+     * A null `relatedTarget` is what distinguishes leaving the document from
+     * moving between two elements inside it.
+     */
+    const onOut = (e: MouseEvent) => {
+      if (active && !e.relatedTarget) removeOverlay();
+    };
+
+    function start() {
+      if (active) return;
+      active = true;
+      document.addEventListener('mousemove', onMove, true);
+      document.addEventListener('mouseover', onOver, true);
+      document.addEventListener('mouseout', onOut, true);
+      document.addEventListener('click', onClick, true);
+      document.addEventListener('keydown', onKey, true);
+    }
+
+    /**
+     * `notify: false` when a pick is what stopped us — ELEMENT_PICKED already
+     * tells the panel picking is over, and a second message would race it.
+     */
+    function stop({ notify = true }: { notify?: boolean } = {}) {
+      if (!active) return;
+      active = false;
+      document.removeEventListener('mousemove', onMove, true);
+      document.removeEventListener('mouseover', onOver, true);
+      document.removeEventListener('mouseout', onOut, true);
+      document.removeEventListener('click', onClick, true);
+      document.removeEventListener('keydown', onKey, true);
+      removeOverlay();
+      if (notify) browser.runtime.sendMessage({ type: 'PICKING_STOPPED' }).catch(() => {});
+    }
+
+    /**
+     * Is this frame the one the element was picked in? Compared by selector
+     * rather than by identity: the path in the model was built by this same
+     * code, so the strings line up, including the `:root` marker that stands
+     * for a cross-origin break.
+     */
+    /**
+     * A step's full identity, not just its selector.
+     *
+     * A frame's selector is unique in the tree the frame lives in, which for a
+     * frame rendered by a web component is that component's shadow root — so
+     * two components can each legitimately contain `iframe#editor`. Comparing
+     * selectors alone made both frames accept the same HIGHLIGHT, so both
+     * documents lit up and both reported a count, and the last answer to
+     * arrive replaced the right one. Exactly one frame must answer (SPEC §16).
+     */
+    const stepKey = (step: FrameStep): string =>
+      [
+        frameSelector(step),
+        step.opaque ? 'opaque' : '',
+        ...(step.shadowPath ?? []).map(shadowSelector),
+      ].join('\u0000');
+
+    function samePath(mine: FrameStep[], theirs: FrameStep[] | undefined): boolean {
+      const other = theirs ?? [];
+      if (mine.length !== other.length) return false;
+      return mine.every((step, i) => stepKey(step) === stepKey(other[i]));
+    }
+
+    browser.runtime.onMessage.addListener((msg: unknown) => {
+      if (!isMessage(msg)) return;
+      const m = msg as Message;
+      if (m.type === 'START_PICKING') {
+        mode = m.mode;
+        includeHidden = m.includeHidden;
+        nonce = m.nonce;
+        // Re-seed: frames may have been added since load.
+        if (window.top === window) pushPaths();
+        start();
+      }
+      // notify: false — STOP_PICKING only ever comes from the panel or from the
+      // background disarming the other frames, and both already know.
+      else if (m.type === 'STOP_PICKING') stop({ notify: false });
+      else if (m.type === 'OVERLAY_OWNER') {
+        // Some other frame is under the pointer now.
+        if (m.token !== frameToken) removeOverlay();
+      }
+      else if (m.type === 'CLEAR_HIGHLIGHT') clearMarks();
+      else if (m.type === 'MOVE_TARGET') moveTarget(m.direction);
+      else if (m.type === 'PICK_TARGET') pickCurrent();
+      else if (m.type === 'HIGHLIGHT') {
+        // This script runs in every frame and every frame hears this, so
+        // exactly one must answer or a sub-frame's 0 lands on top of the real
+        // count. The one that answers is the frame the element was picked in:
+        // each recomputes its own path and compares (SPEC §16).
+        //
+        // Decided here rather than by the panel passing a frameId, so the send
+        // is shaped exactly like the ones that work on both browsers — a
+        // DevTools panel on Firefox has no `browser.tabs` to target one with.
+        // Every frame drops whatever it was showing, including the frames
+        // that will not answer: the previous highlight may have been in one of
+        // them, and clicking a second eye while the first was still up left
+        // both elements marked. Cleared before the path check, or only the
+        // answering frame would forget.
+        clearMarks();
+        if (!samePath(myPath, m.framePath)) return;
+        // Resolve where the generated locator resolves: inside the element's
+        // own shadow root, not the document (SPEC §19). A host that mirrors an
+        // attribute onto itself otherwise matches alongside the control inside
+        // it, and the eye contradicts the count the model was built with.
+        const root = shadowRootFor(m.shadowPath);
+        const targets = root ? resolveCandidate(root, m.candidate) : [];
+        const { hidden } = highlightAll(targets);
+        // Answered as a message, not a reply — sendResponse is not portable.
+        browser.runtime.sendMessage({ type: 'HIGHLIGHT_RESULT', count: targets.length, hidden }).catch(() => {});
+      }
+    });
+  },
+});

@@ -1,0 +1,1336 @@
+# Page Modeller v3 — Behavioural Spec
+
+Owns **what the tool does**. Derived from v2.5.1's shipped behaviour, walked through with the author
+2026-09-08. The constraints it must not contradict are in `CONSTRAINTS.md`.
+
+Status key: **[settled]** confirmed by the author · **[inferred]** my reading, not yet reviewed ·
+**[open]** not yet decided.
+
+---
+
+## 1. What it is
+
+Pick elements on a page, build a table of named locators, generate code. Deterministic, no LLM, offline.
+
+Output today is **methods only — no wrapper class**. A full page-object wrapper becomes an *option* on
+generate/export later. **[settled]**
+
+## 2. Surfaces
+
+Chrome side panel · Firefox sidebar · DevTools panel on both. One host-agnostic app. **[built]**
+
+## 3. Toolbar
+
+Left to right: **Scan Page** · **Delete Model** · **framework selector** — spacer — **Add Element** ·
+**Generate Code**.
+
+Enablement: **[settled]**
+
+| Control | Enabled when |
+|---|---|
+| Scan Page | no model yet |
+| Delete Model | model exists |
+| Framework selector | no model yet — locked once picking starts |
+| Add Element | not scanning |
+| Generate Code | model exists |
+
+The framework is chosen up front and locked because locator types are framework-specific (`linkText`
+does not exist in Playwright). The user knows their target before they start.
+
+## 4. Capture
+
+**The overlay labels what you are about to pick**, as a breadcrumb of the nesting ending in the target:
+
+```
+body › main › div › button (div) "Continue to checkout"
+```
+
+Ancestors are role-or-tag only; the target carries its computed role, then the accessible name, with its
+tag shown only when it differs from the role. It previews the locator rather than naming the tag. Capped
+at three ancestors, elided with `…` beyond that. **[settled]**
+
+**Arrow keys move the target up and down the chain** — ↑ to the parent, ↓ back towards the element under
+the cursor; moving the mouse starts again from there. **Enter commits the target**, as does a click —
+whichever is currently targeted, not what is under the pointer. Enter matters because hands are already
+on the arrows by then, and because the Add Element button still has focus: an unhandled Enter would
+re-activate it and cancel the pick.
+The mouse alone cannot reliably hit a nested element: a wrapper `<div>` and the `<div role="button">`
+inside it share a bounding box, so selecting the wrapper meant finding a sliver of padding. Arrow keys
+are swallowed while picking even at the ends of the chain, so the page cannot scroll out from under a
+pick. ↑ stops at `<body>`. **[settled]**
+
+The panel handles these keys too, and only while picking: after clicking Add Element focus is in the
+panel, so the page never receives the keydown — the same reason the panel also handles Escape. It stands
+aside when the keystroke belongs to a control, since the framework dropdown is reachable while the model
+is still empty.
+
+**Scan Page** — pick a *container*: the whole page or any subsection (typically a `div` or `form`). Its
+**interactive descendants** enter the model. Non-interactive elements (`p`, `span`, …) are skipped. The
+container itself is not added, only children. Scan is **once per model**; Add is how you extend it.
+
+**Add Element** — pick **one** element anywhere, unscoped. Any element, interactive or not. This is how
+non-interactive elements get into the model.
+
+Both modes are **one-shot**: selecting an element stops picking. No continuous capture. **[settled]**
+
+**What scan includes.** Descendants that are **interactive**, filtered by `modelHiddenElements` (§14): **[settled]**
+
+| `modelHiddenElements` | Scan includes |
+|---|---|
+| **off** (default) | only elements **exposed to the accessibility tree** — i.e. not excluded by [ARIA tree exclusion](https://www.w3.org/TR/wai-aria-1.2/#tree_exclusion) (`display:none`, `visibility:hidden`, the `hidden` attribute, `aria-hidden="true"`) |
+| **on** | every interactive-role descendant, regardless of a11y-tree exposure |
+
+Off is the same rule Playwright's `getByRole` applies by default (`includeHidden: false`), so the scan
+filter and the locator semantics agree by construction.
+
+**A method is only generated where the helper can drive the element.** The role says what an element
+*is*; the tag says whether WebDriver's helper works on it. `isSelected()` is defined only for
+`input[type=checkbox|radio]` and `<option>` — for anything else it returns `false`, always — so a
+`role="switch"` was wrong 100% of the time: the read said *off* for a switch that was on, and the
+setter clicked it and turned it **off**. A custom toggle is clicked instead, which is always correct.
+The same rule already governs `<select>` and `<option>`. `input[type=color]` leaves the `text` bucket
+for the same reason: measured in Chromium, typing into one leaves the value untouched and `clear()`
+sets it to `#000000`, so a setter reported success and left the control black. **[settled]**
+
+**Interactive means the four buckets of §11** — actionable, text, toggle, select — so anything a scan
+collects is something the generator can write methods for. `static` is deliberately excluded, or a scan
+of a page would return every heading, paragraph and image on it; those go in one at a time with Add.
+
+**Never a native `<option>` or `<optgroup>`.** An option is reached through its `<select>` — Selenium's
+`Select`, Playwright's `selectOption` — so a row for one is a locator nobody can use, sitting beside
+the `<select>` row that already generates the right call. Clicking an `<option>` is the thing
+Selenium's own documentation warns against. A country picker put 250 unusable rows in a model, which
+is how this was noticed. **[settled]**
+
+The rule is the **tag**, not the role: a custom listbox built from divs with `role="option"` has no
+`Select` to drive it, so each option genuinely is clicked and stays collectable. For the same reason a
+native `<option>` added deliberately classifies as `static` rather than actionable — Add Element takes
+any element, but it should not hand back a `click()` that cannot work.
+
+**Plus form controls that HTML-AAM gives no role at all.** `input[type=password]` is the one that
+matters: it has no ARIA role, so a role-only rule skips it, and a scan of a login form that misses the
+password field is plainly broken. The date and time family, colour and file pickers are in the same
+position. `type=hidden` is excluded — never rendered, never interactive.
+
+**Note that "what Playwright includes" is two rules, not one.** `getByRole` uses ARIA tree exclusion;
+`:visible` and actionability use *"non-empty bounding box and does not have `visibility:hidden`"*. They
+disagree in both directions — an `aria-hidden="true"` button is visible but unmatched by `getByRole`; a
+zero-size element is not visible but is not ARIA-excluded. The scan follows `getByRole`, since that is
+what it generates.
+
+**Why the setting survives.** Add Element is *not* an escape hatch here: an element that is not rendered
+cannot be hovered or clicked, so without the setting there is no way to model it at all. And these are
+real page-object targets — the validation message that appears only on a failed submit, modal markup
+present but hidden until opened, a collapsed accordion or inactive tab panel.
+
+Consequence when it is on: a hidden element's generated `getByRole` locator will not resolve until the
+test opens the thing, so the eye reports *0 elements match* at pick time. That reads as a broken locator
+rather than an intentionally-hidden one — handled by the same mechanism as a stale model (§5).
+
+Dropped from v2.5.1 regardless of the setting: the **occlusion test** (it scrolled the window and
+restored it, per candidate element — slow, and it mutated page state mid-scan) and the **`opacity < 0.1`
+rule** (neither ARIA nor Playwright treats transparency as hidden, so `opacity:0` elements are now
+included).
+
+Over-inclusion is cheap to correct: rows can be deleted after a scan.
+
+### Adding several without re-arming **[settled]**
+
+Add is one-shot, which is right for the common case and tiresome for a run of ten. Holding **⌘** (or
+**Ctrl**) while clicking keeps it armed for the next click; releasing it makes the last click behave as
+it always did.
+
+Read from the click event rather than remembered, so it is decided per click — hold it through a run,
+let go on the final element. Either modifier is accepted whatever the platform, because that costs
+nothing; only the *name* shown to the user is platform-specific.
+
+Scan is unaffected: it already takes many elements at once.
+
+### Saying how picking works **[settled]**
+
+Walking the DOM with the arrows, holding the modifier to add several, and Escape are all
+undiscoverable: nothing else in the UI reveals any of them. But this is something you learn once, and a
+permanent strip in the panel is furniture for a lesson — it also shifted the table every time picking
+armed.
+
+So: a **dialog on first use of each mode**, with *Don't show this again*, and a **?** in the toolbar
+that opens the same guidance whenever it is wanted. Per mode, because Add and Scan teach different
+things and meeting the second one is a separate first time.
+
+The dialog opens *with* picking rather than before it. It lives in the panel and the page stays
+clickable behind it, so what it describes can be tried while reading it.
+
+`Don't show this again` is offered only when the dialog opened by itself: having asked to see it, you
+are not asking to be rid of it.
+
+**An unreachable page withdraws it**, and does not count it as seen — teaching someone to scan a page
+that cannot be scanned is noise stacked on an error, and the lesson is still owed the first time picking
+actually starts. Only guidance that opened by itself: one opened from the **?** was asked for, and an
+unrelated failure is no reason to take it away. **[settled]** The two flags live in settings but are not shown on the options page —
+they are dismissal state, not a preference, and the **?** already brings the guidance back.
+
+The strip is **always in the layout** and only made invisible when idle. A row that appears and
+disappears shifts the whole table under the pointer at the moment you are aiming at it. **[settled]**
+
+**A scan ends when the whole frame tree has finished, not when the first haul lands.** A scan fans out:
+each frame collects its own elements and publishes them separately, so the first model to arrive is the
+first frame's finish and says nothing about the rest. Completion rolls up — a delegated frame reports to
+the parent that asked it once its own collection and all of its children are done, and the frame the user
+clicked in reports to the background. That one message is what ends the *Scanning the page…* indicator.
+A frame that never answers is dropped when its acknowledgement times out, so one unreadable frame cannot
+hold the scan open. **[settled]**
+
+**A haul names the picking session it belongs to**, and the background drops one from a session that has
+ended. Without it, a frame still scanning when the user pressed **Delete Model** put the model straight
+back — with a fraction of its rows, which is worse than either keeping it whole or losing it. **[settled]**
+
+**Hidden means one thing.** A scan with the setting off skips an element that is out of the accessibility
+tree *or* that renders no box at all, and both halves are needed:
+
+- Accessibility-tree exposure is what `getByRole` applies, so a scan cannot collect something the
+  generated locator could never find.
+- A box is what a person means. An **empty** `<a>` in a cookie banner is exposed to the accessibility
+  tree — `getByRole('link')` genuinely matches it, measured in `tests/scan-visibility.spec.ts` — and an
+  empty inline element generates no line box, so it draws nothing. The eye could only mark it on its
+  nearest visible ancestor, captioned *hidden element*, immediately after the user had turned hidden
+  elements off.
+
+One definition, `hasBox`, exported from the engine and used by both the scan and the eye, so they cannot
+drift apart again. Width **or** height: a zero-width control with height is still a visible strip. Below
+the fold and screen-reader-only (1×1, clipped) both have boxes and both stay — they are operable, and a
+test drives them. **Resolution is unchanged**: the eye still counts exactly what `getByRole` counts, or
+the predicted count and the real one would part company (§7, §8). This decides what a scan *collects*.
+**[settled]**
+
+## 5. Model lifetime
+
+v2.5.1 never had to decide this — a DevTools panel is inherently per-tab, its model lived in panel
+memory, survived navigation within that tab, and died with the panel. The side panel breaks all three
+assumptions: it is per *window*, it follows the active tab, and it outlives navigation.
+
+**One model per tab, owned by the background.** **[settled]**
+
+| Event | Effect |
+|---|---|
+| Switch tab | table swaps to that tab's model |
+| Navigate within a tab | model kept — may be stale |
+| Close the tab | that model is gone |
+| Close a panel | model survives if another panel is still on that tab |
+| Close the **last panel watching a tab** | that tab's model is dropped |
+| Both surfaces open | **the same model**, and a pick in one appears in the other |
+
+A model can therefore never be displayed against a page it was not built from. A model is session work,
+not a saved artifact: it is held in `chrome.storage.session`, which lives in memory, is cleared when the
+browser closes, and is never written to disk.
+
+**Not in the background's own memory**, which is where it started. An MV3 service worker is terminated
+after 30 seconds of inactivity, and since Chrome 114 an open port does not reset that timer — so every
+model silently vanished after half a minute of not clicking, and appeared to come back only because
+restarting the browser gave you a fresh worker. Panels reconnect their port when the worker restarts,
+or the background stops knowing which tab each panel is on.
+
+**The background owns it, and panels are views** — they render what it broadcasts and mutate it by
+sending commands. Held in a panel it was one model per *panel*: a sidebar and a DevTools panel on the
+same tab showed different rows, and a pick landed in whichever happened to be listening. This is also
+why closing a panel no longer discards the model, which is the better behaviour anyway — closing the
+sidebar should not lose the work.
+
+The framework selection lives in the model for the same reason: two surfaces rendering one model in
+different frameworks would show different locators for the same row.
+
+**A model with no panel watching it is abandoned work.** Panels hold a `runtime.connect` port for their
+lifetime and report which tab they are showing; when a panel closes, that tab's model goes unless another
+panel is still on it. `onDisconnect` covers closing the sidebar, closing DevTools, and the tab hosting
+them going away.
+
+Two things this gets right that simpler rules do not:
+
+- **Evaluated on disconnect, never on a tab change.** A side panel follows the active tab, so dropping
+  whenever no panel is watching would lose tab A's model the moment you looked at tab B. Switching away
+  and back must not lose work; closing the panel is what ends it.
+- **Scoped to the tab the closing panel was on, not to a global count.** A global count meant a panel
+  open on tab 1 kept tab 2's model alive after both of tab 2's panels had been closed.
+
+Because scan is once-per-model (§4), a model kept across a navigation blocks scanning the new page until
+it is deleted, so the panel needs to say the model has gone stale.
+
+**Stale models and hidden elements are one problem, not two.** Both end in the eye reporting *0 elements
+match* when nothing is actually wrong — the model was built on another page, or the element is
+deliberately not rendered yet.
+
+The model records the URL of the page its first element came from, and the **background** decides
+staleness on `tabs.onUpdated`, because a DevTools panel cannot read the tab's URL for itself. The panel
+shows a banner naming that page, with **Delete Model** to hand — the model also blocks scanning the new
+page, since scan is once-per-model (§4). Navigating back makes the model current again rather than
+leaving it flagged. **[settled]**
+
+**The 0-match snackbar reports the count and nothing else.** It could guess at a reason — the model is
+stale, hidden elements are not modelled — but the locator under test is often not the generated one:
+the Edit dialog exists so people can type their own and try it. A guess would be wrong exactly when
+someone is iterating, which is when they are looking at it most. Report the fact; the reader can tell
+why. **[settled]**
+
+## 6. Model table
+
+Columns: **Name** · **Locator** (`type: value`) · **Actions** (eye · pencil · trash).
+
+Empty state: *"Scan the page or start adding elements to build the model"*.
+
+- **Double-click a row** → Edit dialog.
+- **Single-click a row** → View Matched Elements, if the setting is on. **[settled]**
+
+## 7. Locators
+
+**The engine generates a superset** — every strategy it can find, Playwright's and Selenium's alike —
+and the framework decides which are expressible. The candidate an element *starts on* is the first, in
+the framework's own order of preference, that the framework can express and that resolves uniquely.
+
+This matters more than it sounds. Without it a Selenium model selected `getByRole`, displayed it as
+`role: heading — Google`, and the eye reported *1 element matches* — because the in-page resolver
+understands roles even though Selenium cannot express one. A green tick on a locator that cannot exist
+in the target framework is worse than no check at all. **[settled]**
+
+Each element carries the set of locators that were **generated and matched** for it. The type dropdown
+offers the **full framework list**, not just the generated ones — selecting a type with no generated
+value leaves the value field **blank** for the user to type. The generated set is a convenience, never a
+constraint. **[settled]**
+
+The per-framework type lists are in §11. Adding a framework changes those lists, not the model's shape.
+
+### What the css candidate is built from **[settled]**
+
+CSS is not only a structural fallback. For Puppeteer it is the *only* expressible type, so the
+preference the other frameworks get from their type ordering, Puppeteer can only get here. Same order:
+
+1. `[data-testid="…"]` — most change-resistant
+2. `[name="…"]` — author-chosen
+3. `#id` — but only when the id does not look generated, the same rule the `id` candidate uses
+4. `tag[aria-label|placeholder|alt|title|href|type="…"]` — the rest of what a person actually wrote,
+   tag-qualified because `[type="submit"]` says nothing on its own and `button[type="submit"]` does
+5. a `>` path, anchored on the nearest ancestor with a real id
+
+Each step is taken only if it singles the element out, so a radio group's shared name falls through.
+
+Without this, Facebook's email field came out as `css: #_R_1h6kqsqppb6amH1_` — a React `useId` value,
+sitting next to `name="email"`. Under Selenium that was cosmetic, because its `name` type ranks first
+anyway. Under Puppeteer it was the whole locator.
+
+## 8. View Matched Elements (the eye)
+
+Runs the locator live against the page: highlights **every** match (yellow fill, red outline), scrolls
+the **first** match into view, and reports the count in a snackbar. Highlight clears after ~3s, or
+immediately on **Close** — dismissing the count takes the highlight with it, so the page is never left
+marked up with no explanation. Available from the table row *and* from inside the Edit dialog, so a
+locator can be tested before saving. **[settled]**
+
+| Matches | Icon | Message |
+|---|---|---|
+| 1 | green tick | *1 element matches that locator* |
+| 0 | red error | *0 elements match that locator* |
+| >1 | amber warning | *N elements match that locator* |
+
+**A hidden match is still shown, and said.** With `modelHiddenElements` on (§14) a locator can resolve to
+something with no box to outline, and the eye then reported *1 element matches* while drawing nothing —
+a true count that reads as a failure. Such a match is marked on its **nearest visible ancestor**, dashed
+rather than solid and captioned *hidden element*, so it says where on the page the thing lives without
+pretending to be it. With no visible ancestor at all, a banner says how many matches have no position.
+The count appends *— it is hidden* / *— N hidden*. **[settled]**
+
+**Every candidate must find the element it was generated from.** A locator can be well-formed, resolve
+to something, and still be useless: `getByRole` excludes a11y-hidden elements, so a hidden button's role
+candidate finds the *other* buttons; `getByText` matches the innermost element, so a `<fieldset>`'s text
+candidate finds its `<legend>`. Candidates that do not find their own element are dropped rather than
+offered in the Edit dialog. **[settled]**
+
+**The count has to be the count the generated test will get.** The in-page resolver is our own
+approximation of Playwright's matching, and the eye reports from it, so any drift means showing the user
+a number their test will not reproduce. Three behaviours this forces, all found by asserting every
+candidate against real Playwright rather than reasoning about it:
+
+- **`exact` is honoured.** `exact: true` is case-sensitive whole-string; the default is case-insensitive
+  substring. Whitespace is normalised either way — exact match still trims, and matching by text collapses
+  runs and turns line breaks into spaces. Generated candidates always set `exact: true` (§12), but a
+  hand-edited locator may not, and the resolver must follow the locator rather than the convention.
+- **Role candidates exclude elements hidden from the accessibility tree**, since `getByRole` defaults to
+  `includeHidden: false`. The same ARIA tree exclusion as §4.
+- **Text candidates match the innermost element only.** Playwright matches the smallest element
+  containing the text, so an ancestor whose text comes entirely from a matching descendant does not
+  count — otherwise a `<fieldset>` matches alongside its `<legend>`.
+
+## 9. Edit dialog
+
+Title **Edit Element**. Fields: **Name** · locator **type** dropdown · the fields that type needs · eye.
+CANCEL / SAVE. **[settled]**
+
+- **Name** is required, unique within the model, and cannot contain spaces — v2.5.1's rules.
+- **Type** offers the full framework list (§7). Switching to a type the engine generated fills the
+  fields in; switching to one it did not leaves them blank to type.
+- The **eye** tests what is currently in the fields, not what is saved, so a locator can be checked
+  before committing to it. It is **disabled, along with Save, while a required field is blank** — blank
+  does not mean "match anything": an empty `label` matches every control with no accessible name.
+  `getByRole`'s accessible name is the one optional field, since `getByRole('navigation')` is a real
+  locator.
+- A hand-edited locator that happens to equal a generated one is stored as that **selection** rather
+  than an override, so it keeps tracking the engine's own verification.
+- `exact: true` survives editing. The dialog does not expose `exact`, so dropping it on save would
+  quietly loosen the locator (§12).
+
+## 10. Delete Model
+
+Confirm dialog — *"Really delete the model?"* — YES / CANCEL, with **Yes** styled as destructive.
+Same for deleting a single element. **[settled]**
+
+Both set their button colours explicitly: Quasar's dialog plugin defaults to `isDark() ? 'amber' :
+'primary'`, which made a delete confirm yellow on a dark panel and gave it the same weight as any other
+dialog.
+
+## 11. Generate Code
+
+Read-only view of the generated code, titled with the framework, with a **copy to clipboard** button.
+**[settled]**
+
+### Output shapes **[settled]**
+
+The same locators, arranged the way that framework's users arrange them. The dialog offers the shapes
+its framework has; the first is the default. Shape is a dialog-local choice — it does not touch the
+model.
+
+The selector sits on **its own row** under the title, left-aligned, taking the width it needs up to a
+cap. In the sidebar there is no width to share — three shapes plus Copy beside the title truncated it to
+*Seleniu…* — and at DevTools width a full-bleed segmented control reads as a banner rather than a
+choice. **[settled]**
+
+| Framework | Shapes |
+|---|---|
+| Selenium — Java, C#, Python | **Methods** (default) · Locators only |
+| Playwright — TypeScript, Python | **Page object** (default) · Locators only |
+| Puppeteer | **Page object** (default) · Locators only |
+
+Puppeteer's page object is TypeScript, emitted by the same code as Playwright's — Puppeteer 20's
+`page.locator()` is a lazy handle like Playwright's, so the shape is identical and only the import and
+the selector syntax differ. Puppeteer ships its own types and its docs are TS-first; a JS user deletes
+the annotations. **[settled]**
+
+Shape ids are shared, so `Locators only` means the same thing in every framework — and the choice is
+**remembered for as long as the panel lives**, so someone who works in locators-only does not re-pick
+it every time. Not a setting: it lasts the session and no longer. A remembered shape the current
+framework does not offer falls back to that framework's first, since `methods` means nothing to
+Playwright. **[settled]**
+
+**Locators only** exists for every framework: locator declarations and nothing else, for the many teams
+with their own page-object conventions. Our locators, none of our opinions — and the one output still
+useful when the surrounding structure is wrong for them.
+
+Each language declares them the way that language declares locators:
+
+```java
+private final By emailAddress = By.name("email");         // Java
+```
+```csharp
+private readonly By _emailAddress = By.Name("email");     // C#, underscore per .NET convention
+```
+```python
+EMAIL_ADDRESS = (By.NAME, "email")                        # Python — a locator is a tuple
+```
+```ts
+const emailAddress = page.getByLabel('Email address', { exact: true });   // Playwright
+```
+
+User-supplied templates are deliberately **not** offered. Two shapes cover the split that matters —
+take our structure, or take just the locators. **[settled]**
+
+### Selenium's Methods shape
+
+Per element: a banner comment, a getter, and interaction methods keyed to what the element is.
+**[settled]**
+
+```java
+/*
+ * TableofContents
+ * ****************************
+ */
+
+public WebElement getTableofContentsElement() {
+    return driver.findElement(By.cssSelector("button[class*='toc-header']"));
+}
+
+public void clickTableofContents() {
+    getTableofContentsElement().click();
+}
+```
+
+### Method mapping
+
+Classification is by **computed a11y role**, not `tagName`. Five buckets: **[settled]**
+
+| Bucket | Roles | Methods (Selenium Java shown) |
+|---|---|---|
+| **actionable** | button, link, menuitem, tab, option | `click{Name}()` |
+| **text** | textbox, searchbox, spinbutton | `get{Name}()` · `set{Name}(String)` · `set{Name}(String, boolean clearFirst)` |
+| **toggle** | checkbox, switch | `is{Name}Checked()` · `set{Name}(boolean)` |
+| **select (single)** | combobox | `get{Name}Select()` · `get{Name}Text()` · `get{Name}Value()` · `set{Name}ByValue()` · `set{Name}ByText()` |
+| **select (multi)** | listbox | `get{Name}Select()` · `get{Name}Texts()` · `get{Name}Values()` · `set{Name}ByValues(...)` · `set{Name}ByTexts(...)` · `deselectAll{Name}()` |
+| **radio** | radio | `is{Name}Selected()` · `select{Name}()` |
+| **static** | everything else | `get{Name}()` → text, or `get{Name}AltText()` for an image |
+
+Every element also gets a banner comment and `get{Name}Element()`.
+
+### Fixes to v2.5.1's templates **[settled]**
+
+1. **Role, not `tagName`.** `isClickable`/`isInteractive` keyed off `A, BUTTON, IMG, INPUT, SELECT,
+   TEXTAREA`, so `<div role="button">` — ubiquitous in modern UIs — got no `click()` and fell through to
+   `getText()`. Same for `role="tab"`, `role="menuitem"`, `role="option"`, `<summary>`. Conversely an
+   `<a>` with no `href` was treated as a link when it has no link role.
+2. **`getDomProperty("value")`, not `getAttribute("value")`.** The attribute is the *initial* value; it
+   does not change as the user types. Selenium 4.5+ exposes the live DOM property.
+3. **`clear()` before `sendKeys()`.** The setter appended to existing content. Clearing is the default,
+   not the only option: `set{Name}(value)` clears, `set{Name}(value, clearFirst)` does not have to.
+   Swapping one hard-coded behaviour for the other would just be a different wrong default. Languages
+   with default arguments express this as one method; Java needs the overload.
+4. **`img` is static, not clickable.** It was in both `isClickable` and `isInteractive`, so images got
+   `click{Name}()` and no text accessor. The accessor must read **`alt`** (or the accessible name) —
+   `getText()` returns an empty string for an image.
+5. **Radio `set(false)` was a no-op.** Clicking a checked radio does not uncheck it, so a radio gets
+   `is{Name}Selected()` and `select{Name}()` — selecting is the only verb that means anything — rather
+   than a `set{Name}(boolean)` half of which silently did nothing.
+
+6. **Multi-selects were silently wrong.** On a `<select multiple>`, `selectByValue()` *adds* to the
+   selection rather than replacing it, so the generated `set{Name}ByValue()` left prior selections in
+   place; and `getFirstSelectedOption()` returned one option out of N. See below.
+
+### Selects **[settled]**
+
+Role already separates them: per HTML-AAM a `<select>` with `multiple` or `size > 1` is **`listbox`**, a
+plain one is **`combobox`**. Multi setters call `deselectAll()` first, so `set` means set. Collections are
+**varargs** — reads best at the call site and maps cleanly to C# `params` and Python `*values`.
+
+```java
+public void setToppingsByValues(String... values) {
+    Select s = getToppingsSelect();
+    s.deselectAll();
+    for (String v : values) s.selectByValue(v);
+}
+```
+
+`deselectAll{Name}()` is emitted for `listbox` only — `deselectAll()` throws
+`UnsupportedOperationException` on a single-select.
+
+**Role decides which methods; tag decides whether the `Select` helper is usable.** Selenium's `Select`
+requires a real `<select>` (`new Select(div)` throws `UnexpectedTagNameException`), and Playwright's
+`selectOption()` has the same constraint. A custom `<div role="combobox">` or `role="listbox"` therefore
+falls back to **actionable** methods — `click{Name}()` to open, with the options modelled as their own
+elements. Revisit if a real DOM turns up that needs better. **[settled]**
+
+### Sliders are not text **[settled]**
+
+`role="slider"` looks like a text field — it carries a value — and Selenium's text setter is *actively
+wrong* on one. Measured on `<input type="range" min="0" max="10" value="3">`:
+
+| | |
+|---|---|
+| `clear()` | moves it to **5**, the middle of its span, silently |
+| `send_keys("7")` | does nothing at all |
+
+So `set{Name}("7")` would leave it on 5 and report success. Its own bucket, driven by the keyboard,
+which is the whole API a range offers:
+
+| Method | |
+|---|---|
+| `get{Name}()` | the value |
+| `increment{Name}()` · `decrement{Name}()` | one step, `ARROW_RIGHT` / `ARROW_LEFT` |
+| `set{Name}ToMin()` · `set{Name}ToMax()` | `HOME` / `END` |
+| `set{Name}(value)` | steps toward the target from wherever it is |
+
+The setter reads the current value and steps toward the target rather than resetting to min first:
+fewer presses, and neither `min` nor `step` ever has to be read. It stops when the value stops changing
+— a range clamps at its ends — or when a step carries it past a target it cannot land on.
+
+Only Selenium is affected. Playwright and Puppeteer bind locators and emit no methods, so buckets do
+not reach them. (`fill()` does drive a range correctly, for what it is worth.)
+
+Also: the templates emit a stray leading space on every line.
+
+### Language idiom, not translation **[settled]**
+
+Same decisions, each language's spelling. Where a language has a feature Java lacks, the output uses
+it rather than carrying Java's workaround across:
+
+| | Java | C# | Python |
+|---|---|---|---|
+| clear-before-type | two overloads | `bool clearFirst = true` | `clear_first=True` |
+| varargs | `String...` | `params string[]` | `*values` |
+| read a property | `getText()` | `.Text` | `.text` |
+| collections | `stream().map().collect()` | `.Select().ToList()` | list comprehension |
+| braces / layout | K&R | Allman | PEP 8, two blank lines |
+
+C# `checked` is a keyword, so the toggle setter takes `isChecked`.
+
+### Locator lists per framework
+
+Selenium Java / C# / Python: `name, id, linkText, partialLinkText, css, xpath, className, tagName`.
+
+**`name` ahead of `id`, unlike v2.5.1.** A name is author-chosen and essentially never
+framework-generated; ids are generated constantly — React's `useId` gave Facebook's password field
+`id="_r_6_"` alongside `name="pass"`. It is not only form controls that carry one — `<a>`, `<iframe>`,
+`<map>` and `<object>` do too — but wherever it exists it was written by hand, which is the point. A
+shared name (a radio group) is never chosen, because a candidate must resolve uniquely (§7).
+Puppeteer: `css, xpath`. Robot Framework and Protractor are dropped.
+
+**Puppeteer's P-selectors were tried and rejected.** `::-p-aria` and `::-p-text` looked like they would
+buy role and text parity. `tests/puppeteer.fidelity.spec.ts` resolved them in a real Puppeteer and they
+cannot be generated reliably: **[settled]**
+
+- `::-p-text` is **substring** matching with no exact variant, so `::-p-text("Sign in")` also matched the
+  heading *Sign in to your account*. §12 emits `exact: true` precisely to stop that.
+- `::-p-aria([role=…])` wants **Chrome's** AX role names, not ARIA's — `img` is `image` there — and
+  `role="presentation"` is not in the tree at all.
+- `::-p-aria([name=…])` compares exactly against Chrome's own name string, which keeps whitespace we
+  normalise away: `<a>  Read   more  </a>` is named `"Read more "`, trailing space included.
+
+What closes the gap instead is a better css candidate (§7): `a[href="/forgot"]` rather than seven levels
+of `div:nth-of-type`. XPath keeps Puppeteer's `xpath/` prefix, so an absolute path doubles the slash —
+`xpath//html[1]/body[1]` is correct.
+
+Playwright: `testId, role, label, placeholder, text, altText, title, css, xpath` **[settled]** —
+Playwright's own documented preference, with css and xpath last as structural fallbacks.
+
+**`testId` leads.** There is no reason to add a `data-testid` to an element except to be tested against
+it, so where one exists it is an instruction. It costs teams who do not use them nothing: it is only
+ever a candidate when the attribute is actually present.
+
+These lists are also the **order of preference** for choosing an element's starting locator (§7).
+
+## 12. Playwright
+
+### Locator shape **[settled]**
+
+A locator is a **type plus the fields that type needs**, not a flat `type: value` pair — `getByRole`
+takes a role *and* a name. The table's Locator column renders the framework expression; the Edit dialog
+shows the fields the chosen type requires, and the eye tests whatever is currently in them.
+
+```
+TABLE
+  SignIn      getByRole('button', { name: 'Sign in' })
+  Email       getByLabel('Email address')
+
+EDIT (type = role)          EDIT (type = css)
+  Type  [ role      v ]       Type  [ css       v ]
+  Role  [ button      ]       Value [ button.submit ]  (eye)
+  Name  [ Sign in     ]  (eye)
+```
+
+Selenium is unaffected — all its types stay single-field.
+
+### Disambiguation — deferred, not built **[open]**
+
+**What happens today:** a role+name that matches more than one element simply loses to the next
+candidate that *is* unique, which is almost always css. Two "About" links give
+`locator('a[href="/about"]')`. Unique, resolves, and brittle in exactly the way the idea below exists to
+avoid.
+
+**The idea, for after release.** Scope under an ancestor — Playwright's own idiom, and far more durable
+than a positional index or a generated CSS path:
+
+```js
+// Two "About" links — nav and footer
+page.getByRole('navigation').getByRole('link', { name: 'About', exact: true })
+page.getByRole('contentinfo').getByRole('link', { name: 'About', exact: true })
+```
+
+It is the largest behavioural change left: the IR needs a chained candidate, and the engine needs to
+find a scoping ancestor and verify that the ancestor is itself unique. Scoping cannot save a genuinely
+repeated element — the delete button in the third table row — so a full chain would be
+**scope → `.nth()` within the scope → CSS/XPath**, and whether `.nth()` belongs there at all is part of
+what is deferred.
+
+### XPath needs its prefix **[settled]**
+
+`page.locator('xpath=…')`, always. Playwright infers XPath only from a leading `//` or `..`; the
+engine's fallback path starts with a single `/`, which is parsed as CSS and throws. Prefixed
+unconditionally — `//` would survive bare, but two spellings of one thing is one more thing to get
+wrong.
+
+### Name matching **[settled]**
+
+Always emit `exact: true`. The engine certifies uniqueness at pick time and substring matching
+undermines that afterwards: a later "About us" link turns a unique `About` locator into an ambiguous
+one. `exact` still trims surrounding whitespace. A renamed element then fails loudly rather than
+drifting onto the wrong target.
+
+### Page object shape **[settled]**
+
+Not a translation of the Selenium template. `readonly` fields assigned in the constructor — the shape
+Playwright's own docs show.
+
+```ts
+import { type Locator, type Page } from '@playwright/test';
+
+export class LoginPage {
+  readonly emailAddress: Locator;
+  readonly signIn: Locator;
+
+  constructor(private readonly page: Page) {
+    this.emailAddress = page.getByLabel('Email address', { exact: true });
+    this.signIn = page.getByRole('button', { name: 'Sign in', exact: true });
+  }
+}
+```
+
+**No per-element action wrappers.** A `Locator` is lazy, reusable and *is* the action API, so
+`clickSignIn()` wrapping `.click()` adds a name and nothing else — `loginPage.signIn.click()` reads
+better. Those wrappers earn their place in Selenium, where `findElement` returns something that goes
+stale; here they are ceremony, and they multiply per bucket into a wall of code nobody asked for.
+
+**No composite methods.** `login(email, password)` is the point of a page object and needs domain
+knowledge this tool does not have. The user adds those — the tool exists to shortcut the locators.
+
+Field names are the element name, lower-camel. Assignment reads the constructor **parameter** `page`,
+not `this.page`: the parameter property is not assigned until the constructor body completes.
+
+Class name comes from the last path segment of the model's URL — `/account/login.html` → `LoginPage`,
+`facebook.com` → `FacebookPage`, no URL → `GeneratedPage`.
+
+**It is editable in the code dialog**, because the derivation is a guess: `/checkout/step2` yields
+`Step2Page` and `/p/B08N5WRWNW` yields worse. The name only ever appears in generated code, so
+correcting it after copying means correcting it again on every regeneration. The field shows the
+derived name as its placeholder — that is what typing nothing gives you — and is offered only by the
+shapes that emit a class. Held for the panel session like the shape, and not on the model: it belongs
+to the code being read, not to the elements captured. **[settled]**
+
+No banner comments. Field names carry the same information in a fifth of the lines.
+
+### Test IDs **[settled]**
+
+`testId` ranks first: there is no reason to add one except to be tested against it, so where one exists
+it is an instruction. It costs teams who do not use them nothing, being a candidate only when the
+attribute is present.
+
+**Which attribute is a setting**, defaulting to `data-testid`. Playwright, Cypress and Testing Library
+each let a project choose, and `data-qa` and `data-test` are common; hardcoded, those teams got no
+test-id candidates at all and no hint as to why. It must agree with the test runner's own setting —
+`getByTestId` resolves against Playwright's `testIdAttribute` — which the options page says.
+
+The engine reads it at load and watches it, because the eye resolves a `testId` candidate too and that
+happens without picking ever starting.
+
+## 13. Naming
+
+Derived, with fallbacks. v2.5.1 uses an ordered rule list (first non-empty wins) then cleans and formats.
+Four agreed changes: **[settled]**
+
+1. **Fix the word-boundary bug.** `cleanName` strips whitespace *before* camelCase runs, destroying word
+   boundaries — hence `TableofContents` and `DocumentUploadandQuery`. Case first, then strip:
+   `TableOfContents`, `DocumentUploadAndQuery`.
+2. **Use the computed accessible name** (`dom-accessibility-api`) in place of the hand-rolled label /
+   `aria-label` rules, which are a partial reimplementation of accname. **The text-content rule stays**,
+   ranked just below it: accname derives a name from content only for roles that support it, so a plain
+   `<span>` or `<div>` computes to nothing — and those are exactly what Add Element captures (§4).
+   Capped at 80 characters, since a container's `textContent` can be most of the page.
+3. **Rank the accessible name above `name` and `id`.** Today a button with `id="btn-1"` and text
+   "Submit" is named `Btn1`; what a human calls the element should win.
+4. **Drop the ng-model and ng-binding rules.**
+
+Keep v2.5.1's **plain names** by default — `About`, not `AboutLink`. The user can rename before
+exporting.
+
+**A name the user types must be an identifier**, not merely non-empty and unspaced. It becomes a field
+and a method name in five languages: `Sign-In` compiled in none of them, `2fa` in none, and Python
+alone appeared to work because `snake()` silently dropped the punctuation — one model, a working file
+in one language and a broken one in four. Letters, digits and underscore, not starting with a digit,
+which is narrower than any single target allows and is the intersection of all of them. The same rule
+governs the class-name override (§12), and the generator applies it again so an unusable name cannot
+reach a file by another route. **[settled]**
+
+**A trailing validity marker is dropped.** Etsy's sign-in labels are `Email address*`, where the
+asterisk carries an accessible *"Required"* — so the accname is literally "Email address Required" and
+every required field on the form was named `SomethingRequired`. One trailing `Required` or `Optional`
+comes off, and only when something is left to be called: a field genuinely labelled *Required* keeps
+its name. **[settled]**
+
+The **accessible name is untouched**, because `getByLabel('Email address Required')` has to keep the
+word to match anything. The name is an identifier the user can rename; the locator is not.
+
+**`appendTypeToName`** (§14, off by default) turns the suffix on: `FeelTheMagic` becomes
+`FeelTheMagicLink`. The vocabulary is the one test authors use rather than raw ARIA — `textbox`
+and `searchbox` become `Input`, `combobox` and `listbox` become `Select`, `img` becomes `Image` — since
+these names are read by people writing page objects. A role with no entry falls back to the role itself,
+so an unmapped one still produces something sensible, and a name already ending in its type is left
+alone rather than becoming `SubmitButtonButton`. Read per pick, so the setting takes effect at once.
+**[settled]**
+
+**Build-generated identifiers are skipped**, in both the class-name and `id` rules. `Xtvsq51` is not a
+name anyone would choose, and it changes on the next build of the site under test. Detected by known
+CSS-in-JS shapes (emotion, styled-components, CSS Modules, leading-underscore hashes, React `useId`) and
+by a run of four or more consonants, which real words and abbreviations — `btn`, `nav`, `col` — stay
+under. React's `useId` is covered in both its forms: `:r6:` / `«r6»` from React 18, `_r_6_` from 19. Deliberately conservative in the cheap direction: a false positive only falls through to the next
+rule, while a false negative ships a name that rots. **[settled]**
+
+De-dupe by counter: a second `About` becomes `About2`.
+
+Name churn versus v2.5.1 is acceptable — no stored model survives the upgrade, so nothing breaks.
+
+Truncation runs to the nearest **word boundary** at or under 25 characters, rather than cutting
+mid-word as v2.5.1 does. **[inferred]**
+
+**A generated-looking id is judged per word, at five consonants.** Across the whole string and at
+four, the rule rejected ordinary ids: a camelCase join makes a run neither word has — `firstName` →
+`rstN`, `btnSubmit`, `lblName`, `searchBtn` — and real words trip it alone: `length`, `strength`,
+`months`, `html`. That is not cosmetic, because a rejected id loses the `id` candidate *and* the
+`#id` css, so `firstName` fell to `body > form > div:nth-of-type(1) > input` and was named `Input1`
+while `lastName` beside it was fine. **[settled]**
+
+## 14. Settings
+
+Stored in `chrome.storage.sync` under the key `options`. Defaults as shipped: **[settled]**
+
+| Key | Default | Effect |
+|---|---|---|
+| `showTooltips` | `true` | Tooltips on toolbar and row action buttons |
+| `theme` | `system` | Panel theme; `system` follows the browser and DevTools |
+| `modelHiddenElements` | `false` | Include non-visible elements when scanning |
+| `clickTableRowsToViewMatchedElements` | `false` | Single-click a row highlights matches |
+| `appendTypeToName` | `false` | Append the element's type to its derived name |
+
+v2.5.1's `darkMode` boolean is replaced by `theme`; the rest keep their keys so an in-place upgrade
+keeps the user's choices (NFR-6).
+
+**Applying the theme moves two things**, and both surfaces go through one function: our CSS tokens,
+stamped on the root, and Quasar's own dark mode, which paints its dialogs, notifications and the body
+background. Setting only the first gives dark text on Quasar's dark ground.
+
+Settings are read live — the options page is a separate tab, so a change reaches an open panel only
+through `storage.onChanged`.
+
+### v3 changes **[settled]**
+
+- **`modelHiddenElements` is kept, redefined.** Off (default) = exposed to the accessibility tree **and
+  rendering a box**. On = include interactive-role elements regardless. See §4 — including why it is not
+  redundant with Add Element. The occlusion and opacity tests behind the old definition are dropped. See §4 — including why it is
+  not redundant with Add Element. The occlusion and opacity tests behind the old definition are dropped.
+- **`darkMode` becomes a three-way theme: System / Light / Dark, defaulting to System.** v2.5.1 had to ask
+  because it could not know; v3 can — `chrome.devtools.panels.themeName` in the DevTools panel,
+  `prefers-color-scheme` in the side panel and sidebar. The panel matches DevTools when docked there
+  without anyone touching a setting.
+- `showTooltips` and `clickTableRowsToViewMatchedElements` carry over unchanged.
+
+Options page is a full tab (`options_ui.open_in_tab`), titled *Page Modeller Options*, one toggle per row.
+
+For reference, **hidden** in v2.5.1 (`dom.isVisible`) meant: `display: none`, `visibility !== visible`,
+`opacity < 0.1`, `input[type=hidden]`, or occluded by another element at its centre point. Superseded by §4.
+
+## 15. Toolbar-icon popup
+
+v2.5.1 shows a popup: version, *"To use the Page Modeller extension, please open DevTools"* with a
+platform-aware shortcut (`Command+Option+I` on Mac, `Control+Shift+I` elsewhere), and **SUPPORT** →
+the GitHub repo, **OPTIONS** → `runtime.openOptionsPage()`.
+
+Its reason for existing — DevTools being the only surface — is gone in v3. **The popup is dropped: the
+toolbar click opens the panel** (side panel on Chrome, sidebar toggle on Firefox), because a click
+should get you working rather than show you a menu. **[settled]**
+
+**Except where there is no panel to open.** Opera implements no `chrome.sidePanel` at all — it parses
+the `side_panel` manifest key and ignores the feature — so the click had nothing to do and did nothing
+whatever: no panel, no popup, no error. There DevTools is the only surface again, exactly as in v2.5.1,
+and the popup comes back with it: version, *"This browser has no side panel, so please open DevTools"*,
+the platform's shortcut, **Support** and **Options**. Set with `action.setPopup` at runtime on finding
+`sidePanel` undefined, never declared — one Chromium build serves every Chromium browser, and a
+declared `default_popup` would replace the side panel with a leaflet on Chrome. Brave and Vivaldi both
+have the API and are unaffected. **[settled]**
+
+The panel cannot simply open in a tab instead: it finds the page it is modelling with
+`tabs.query({ active: true, currentWindow: true })`, so in a tab of its own it would target itself.
+
+**Right-clicking the toolbar icon carries what the popup did**, via `contextMenus` with
+`contexts: ['action']` — but only what the browser does not already offer. Chrome puts **Options** on
+that menu itself (along with *Open side panel*), so adding our own would show it twice; Firefox offers
+*Manage Extension*, which goes to `about:addons` rather than the options page. So **Support** on both,
+**Options** on Firefox only. **[settled]**
+
+Created on every worker start, not on install: `onInstalled` does not reliably fire when an unpacked
+extension is reloaded — which is every rebuild in dev — and the menu is then simply absent.
+
+## 16. Frames
+
+New in v3 — v2.5.1 has no frame support. An element records its **frame path**: the frames containing
+it, outermost first, each identified by its own generated locator. **[settled]**
+
+A frame is located by the ordinary candidate machinery — the document holding an `<iframe>` is just a
+document — with one restriction: **css or xpath only**. `frameLocator` takes a *selector*, not a
+locator, and so does every other frame API in reach, so `getByTitle('Payment')` cannot address a frame
+however well it identifies one. `cssFor` already prefers a test id, then a name, then an id (§7), so
+little is lost.
+
+**An unreadable frame is drawn as one.** Hovering it during Add or Scan shows the overlay in the red
+dashed treatment a hidden element gets (§8), labelled *cannot be read — sandboxed*. That moment is the
+only one where saying anything is any use: a click inside such a frame belongs to that document, and
+there is nobody in there to hear it, so no message is ever sent and nothing can report it afterwards.
+The frame keeps drawing the overlay throughout, because an unreadable child never takes ownership.
+**[settled]**
+
+Entry is detected on `mouseover`, not `mousemove`. Once the pointer is inside a frame this document
+gets no further mousemove — the events belong to the child — so the only mousemove that can target the
+frame element is one landing on its 2px border, which happens when the pointer crosses slowly and not
+when it crosses fast.
+
+Liveness costs no extra round trip — a frame that answers the frame-path push has a script by
+definition.
+
+**An unreachable frame says so.** A frame asked to scan itself acknowledges the request before it
+starts, so the parent can tell the difference between "scanning" and "nothing there". No answer within
+half a second and the panel says *This frame is sandboxed and cannot be read in Firefox*, or *This frame
+could not be read* when there is no sandbox to blame. Silence is indistinguishable from a bug, which is
+how the case below presented. **[settled]**
+
+**A sandboxed frame cannot be reached on Firefox.** `sandbox="allow-scripts"` without
+`allow-same-origin` gives the document a **null** principal. Firefox's `match_about_blank` injects only
+where the document *inherits* its parent's principal, so there is nothing to inherit and no content
+script runs; Chrome's `match_origin_as_fallback` exists for exactly this case and Firefox has no
+equivalent. `allow-scripts` is not the deciding token — a bare `sandbox` stops the page's own scripts,
+not a content script's isolated world, and Chrome reads such a frame perfectly well. The parent cannot reach in either — the frame's origin is opaque to it too. Verified by
+hand: on Firefox every other frame kind works and the sandboxed one does not. **[settled]**
+
+**Reaching a frame at all** comes first. A `srcdoc` iframe's URL is `about:srcdoc`, which `<all_urls>`
+does not match, so no content script ran inside one and its contents could not be picked. The manifest
+needs `match_about_blank`, and on Chrome `match_origin_as_fallback`, which supersedes it and also covers
+`data:` and `blob:` frames — Firefox does not know that key, and an unrecognised manifest key is a
+warning on an AMO submission, so it is Chrome-only. Both match on the frame's **initiator** origin, so a
+sandboxed frame is reached too. `scripts/check-manifests.mjs` guards all of this: nothing else notices a
+content script that simply never runs. **[settled]**
+
+**The path is pushed down, not looked up.** `window.frameElement` is readable only when the parent is
+same-origin, so a cross-origin or sandboxed frame can never see what embeds it — every such element came
+out marked opaque, which leaked the marker into generated code as `frameLocator(':root')` and made two
+different frames indistinguishable to the eye.
+
+Only the parent can identify its own child, and it always can: the `<iframe>` is an ordinary element in
+its document whatever origin it loads. The top frame knows its path is empty and tells each child; each
+child records what it was told and tells its own children. No request, no reply, no origin restriction.
+**[settled]**
+
+Frames load in no fixed order, so neither direction alone converges — a parent that pushes before a
+child's script exists reaches nobody, and a child that asks before its parent knows its own path gets a
+wrong answer. Both are done: push from the top at load and again when picking arms, and a late child
+asks its parent and is answered.
+
+The push is guarded by `event.source === window.parent`, not by the picking nonce, because it happens at
+load before any nonce exists. A hostile page could therefore lie about its own frame structure and get a
+wrong locator into its own model — visible in the table, and no worse than that. **[settled]**
+
+`opaque` survives as the marker for a chain that could not be completed, but the push means nothing
+should produce one.
+
+### Carrying it, or admitting you cannot **[settled]**
+
+| Target | How |
+|---|---|
+| Playwright | `frameLocator(…)` chains, so the locator is self-contained — nothing to explain, nothing to switch |
+| Selenium | methods switch in and out for themselves; the locators shape gets the `switchTo` chain as a comment |
+| Puppeteer | `page.locator` is page-scoped and there is no `frameLocator`: a comment walks down to the frame |
+
+The comment carries the **code**, not an instruction to go and write it: **[settled]**
+
+```java
+// In frame: #same-frame › #deep-frame
+// driver.switchTo().defaultContent();
+// driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));
+// driver.switchTo().frame(driver.findElement(By.cssSelector("#deep-frame")));
+private final By emailInput = By.name("email");
+```
+
+```js
+// In frame: #same-frame › #deep-frame
+// const frame1 = await (await page.$('#same-frame')).contentFrame();
+// const frame2 = await (await frame1.$('#deep-frame')).contentFrame();
+// Then use frame2.locator(...) in place of page.locator(...).
+```
+
+An **opaque** chain gets the warning and *no* switch to paste: half a chain would switch into the wrong
+document and look like it worked.
+
+### Selenium methods switch for themselves **[settled]**
+
+`switchTo()` mutates driver state for everything after it, so a method that leaves the driver inside a
+frame breaks the next one. Every framed method switches to default content, into the chain, acts, and
+switches back **in a `finally`** — which is what makes generated methods safe to call in any order.
+
+```java
+public void clickSubmit() {
+    driver.switchTo().defaultContent();
+    driver.switchTo().frame(driver.findElement(By.cssSelector("#same-frame")));
+    driver.switchTo().frame(driver.findElement(By.cssSelector("#deep-frame")));
+    try {
+        driver.findElement(By.id("go")).click();
+    } finally {
+        driver.switchTo().defaultContent();
+    }
+}
+```
+
+**A framed element gets no `get{Name}Element()`** — nor a `Select` helper, which holds one. A
+`WebElement` goes stale the moment the driver switches away, so handing one back is handing back a
+guaranteed failure. The element is found inline instead, inside the switch.
+
+The banner carries the frame as **context only**: repeating the switch there is noise the reader has to
+check against the code below it.
+
+Two things are deliberately not wrapped: a method that never touches the driver (the convenience
+overload just calls its sibling, which switches for itself), and an element behind an **opaque** chain,
+which keeps its getter and leaves the switch to the caller — there is no correct switch to emit.
+
+Without that comment a framed Selenium or Puppeteer locator is indistinguishable from a main-frame one
+and silently resolves against the wrong document.
+
+The **model table** shows the chain for the same reason — two rows differing only by frame otherwise
+read identically. The **Edit dialog** shows it too, read-only: the chain is where the element *is*, not
+part of how it is found within that frame, so editing it would be editing the page.
+
+### Scanning a frame **[settled]**
+
+Scanning an `<iframe>` scans **inside** it. An iframe has no descendants in its parent's document — its
+content is a separate document — so the obvious reading returns nothing at all, which is what it did.
+
+The frame scans itself rather than the parent reaching in: `contentDocument` throws across an origin,
+and the frame knows its own path, so every element comes out with the right chain for free. The parent
+asks via `postMessage`, the one message this script accepts from another frame.
+
+**It cascades.** Choosing a frame means choosing its page, and a page includes what it embeds — so the
+scan carries on into frames below, however deep. Each frame reports its own haul, so the model simply
+gains rows as they arrive and nothing is collected back up the tree.
+
+Authenticated by a **nonce** carried in `START_PICKING`, shared by every frame in the tab for that
+picking session. Isolated worlds do not isolate `postMessage`, so a page could otherwise forge a scan;
+a page cannot read the nonce. Not by "is this frame still armed", which was the first attempt: a
+cascading scan reaches frames after the background has disarmed everyone, and a frame that refused then
+would be a hole in the middle of the tree.
+
+Shadow roots are the same problem in a different shape, and are specified in §19.
+
+**A scan crosses frame boundaries.** Scanning any container collects its own controls and the contents
+of every frame inside it, however deep. **[settled]**
+
+This reverses the original rule, which was that a container scan stopped at the boundary and a frame's
+contents came only when the scan was rooted at that frame. Two things decided it:
+
+**An element inside a frame is something the target framework can drive.** Playwright and Selenium both
+reach it — that is what §16 exists to generate — so it is a legitimate thing to model, and the tool's
+job is to model what a test will interact with. The old rule was reasoned from locator *quality*, that
+a third-party embed's locators are least likely to survive, which is a judgement for the user to make
+about rows they can see, not a reason to withhold them.
+
+**And the old rule was not even consistent.** Scanning the whole page always cascaded into frames; only
+a container scan stopped. The same page therefore gave two different answers depending on where the
+scan started, and the "an ad might get swept in" argument did not hold for the case already permitted.
+
+The cost is over-inclusion on a page full of embeds, and §4 already answers that: *over-inclusion is
+cheap to correct — rows can be deleted after a scan*. The reverse is not cheap. Scanning a form and
+getting nothing back, with no reason given, reads as the tool being broken — which is exactly how it
+was reported, on a contact page whose form is an embedded frame.
+
+### The eye **[settled]**
+
+**A new highlight clears the last one first, in every frame** — including the frames that will not
+answer, because the previous highlight may have been in one of them. Clicking a second eye inside the
+3-second window otherwise left both elements marked.
+
+Every frame hears a `HIGHLIGHT`, and exactly one must answer or a sub-frame's 0 lands on top of the real
+count. The one that answers is the frame the element was picked in: each recomputes its own path and
+compares. Before this, only the top frame answered, so anything inside a frame reported *0 elements
+match that locator* while its locator was perfectly good.
+
+### One picker, many frames **[settled]**
+
+The content script runs in every frame, so `START_PICKING` arms every frame. Two rules follow, and
+neither can be inferred from pointer events:
+
+- **One-shot is per tab, not per frame.** Only the clicked frame stops itself; the background disarms
+  the rest. Without that, one pick on a framed page recorded three elements as the user carried on
+  clicking.
+- **One overlay at a time.** A frame announces that it has drawn and the background tells the others to
+  clear. A parent frame gets *no* `mouseout` when the pointer crosses into a child, so hovering down
+  through nested frames otherwise left a highlight and a breadcrumb in every frame on the way.
+
+### Fixtures **[settled]**
+
+`tests/fixtures/frames.html` and `frameset.html`, exercising every shape a real page uses:
+
+| Frame | Why it is there |
+|---|---|
+| same-origin `iframe` | the ordinary case, and it nests one deeper |
+| cross-origin `iframe` | `127.0.0.1` against `localhost` — one server, two origins, no second process |
+| `srcdoc` | same-origin with no URL at all; nothing to identify it by but the element |
+| `sandbox="allow-scripts"` | an opaque origin, which is what a third-party widget usually is |
+| two identical `iframe`s | the frame itself needs a positional locator — the case a path can get wrong |
+| `frameset` / `frame` | `frame` is a different element from `iframe`; a selector for one misses the other |
+
+**Nine buttons across the tree share the accessible name *Submit*.** Without a frame path a locator
+cannot tell them apart, which is the property every frame test leans on.
+
+The fixtures are served over http, never `file://`: Chrome gives every `file://` document an opaque
+origin, so `localhost` against `127.0.0.1` would prove nothing. `scripts/serve-fixtures.mjs` substitutes
+the cross-origin base at request time, so it follows `FIXTURES_PORT`. An element records the **frame path**: the ordered list of
+iframes containing it, each identified by its own generated locator.
+
+### Playwright
+
+Stateless and chains, composing with §12 scoping. Nothing special needed.
+
+```js
+page.frameLocator('#checkout').getByRole('button', { name: 'Pay', exact: true })
+```
+
+### Selenium **[settled]**
+
+`switchTo().frame()` mutates driver state for everything after it, so generated methods are
+**self-contained**: switch to default content, switch into the frame chain, act, switch back. Every
+method then works standalone regardless of call order, which is what makes generated code safe to paste.
+
+```java
+public void clickPay() {
+    driver.switchTo().defaultContent();
+    driver.switchTo().frame(driver.findElement(By.id("checkout")));
+    driver.findElement(By.cssSelector("button.pay")).click();
+    driver.switchTo().defaultContent();
+}
+```
+
+**Consequence: in-frame elements get action methods, not an element getter.** A returned `WebElement`
+goes stale the moment the driver switches away, so `get{Name}Element()` would hand the caller a
+guaranteed-broken reference. Emit the actions only. **[settled]**
+
+Nested frames extend the chain — one `switchTo().frame()` per level, outermost first.
+
+## 17. Selenium page-object wrapper
+
+A third Selenium shape — **Methods** (default) · Page object · Locators only. Imports, a class
+declaration, and a constructor taking the `driver` the methods otherwise reference bare. **[settled]**
+
+Imports are computed from the buckets present: `Select` only when there is a select, `List` and
+`Collectors` only when there is a multi-select. Unused imports are legal and are also the first thing a
+reviewer notices.
+
+**Python is not a wrapper.** Java and C# have an implicit receiver, so the fragment drops into a class
+unchanged. Python does not: every definition gains `self` and every call site a `self.` prefix, so the
+generator is receiver-aware rather than wrapped. **[settled]**
+
+Class name is derived as it is for Playwright (§12), and editable in the dialog the same way.
+
+## 18. Still open
+
+Nothing is unanswered. What remains is everything marked **[inferred]** — decisions taken on my reading
+rather than confirmed, flagged so they are visible rather than silent:
+
+| § | Inferred |
+|---|---|
+| 13 | Truncation at a word boundary |
+
+**Deferred, and marked `[open]` where it is described:** ancestor scoping for an ambiguous role+name
+(§12). Not built, and the spec no longer reads as though it were.
+
+**Release blocker:** none outstanding. The AMO `gecko.id` is recorded and guarded (see `RELEASE-PLAN.md`).
+
+## 19. Shadow DOM
+
+New in v3. Numbered here rather than beside §16 only because §17 is referenced from seven places in
+the code; read it as the sibling of Frames, because it is the same problem in a different shape.
+
+**Web components hide their controls.** Etsy's sign-up form is `<clg-text-input>` elements whose real
+`<input>` lives in an open shadow root. `querySelectorAll('*')` does not cross that boundary, so a scan
+of the dialog returned the four buttons around the form and none of the form. It read as the tool
+being broken, which is how it was reported.
+
+An element records its **shadow path**: the hosts between its document and itself, outermost first,
+each located by its own generated selector — exactly as `framePath` records the frames (§16). The two
+compose; an element can be inside a frame inside a shadow root.
+
+**Hosts are located by css only.** A shadow root is entered through its host element, and every API
+that does so takes a CSS selector — `>>>` in Puppeteer, `.shadow_root` in Selenium. `cssFor` already
+prefers a test id, then a name, then a non-generated id (§7), so little is lost.
+
+**The element's own locator is relative to its shadow root.** Ids are scoped to a shadow root, so a
+`>` path anchored inside one is shorter and more stable than a document-wide path would have been.
+
+### What each framework can express **[settled]**
+
+Measured, not read off the documentation — `tests/shadow.probe.spec.ts` asserts every row against a
+real engine, because six generators are built to this table and a wrong assumption in it propagates
+everywhere. Three of the first draft's rows were wrong.
+
+| | Crosses an open shadow root |
+|---|---|
+| Playwright `getByRole` / `getByLabel` / `getByPlaceholder` / `getByText` / `getByAltText` / `getByTitle` / `getByTestId` | **yes**, natively |
+| Playwright css | yes |
+| Playwright xpath | **no** |
+| Puppeteer css | only through the `>>>` deep combinator — but **one `>>>` spans any depth**, so only the outermost host is needed |
+| Selenium, from the host's `shadowRoot` | `name`, `id`, `linkText`, `partialLinkText`, `css`, `className` **all work** |
+| Selenium `xpath` and `tagName`, from a `shadowRoot` | **no** — `invalid locator` |
+| Selenium, from the document | nothing reaches in; the chain is always required |
+
+So **xpath is the only thing v3 generates that cannot cross a boundary**, and it is excluded for a
+shadow element in every framework rather than only in Playwright. Everything else needs no change to
+the locator itself:
+
+- **Playwright** needs nothing at all. Its engines pierce, so a locator generated as though the page
+  were flat already resolves. The path is still recorded, because it is what scopes one of two
+  identical components.
+- **Puppeteer** joins the outermost host to the element's css with `>>>`.
+- **Selenium** walks the chain, one `shadowRoot` at a time, the same shape as its `switchTo().frame()`
+  chain — and the element it arrives at is an ordinary `WebElement`: `send_keys`, `click`,
+  `get_property` and `is_displayed` all work through a boundary.
+
+### The eye pierces, and says so by over-counting **[settled]**
+
+The resolver has to pierce, and the reason is the opposite of the expected one. It is not about
+shadow elements — those are resolved within their own root, where the question does not arise. It is
+about **light-DOM** ones: Playwright's engines pierce, so a plain `<button>Submit</button>` on a page
+whose components each contain their own Submit is not unique at all. The engine called it unique and a
+real Playwright run resolved six, which `tests/engine.fidelity.spec.ts` now catches on
+`shadow.html/top-submit`.
+
+Selenium does not pierce, so where the two differ this reports **more** matches than a Selenium run
+would. That is the safe direction and it is deliberate: an amber *6 elements match* sends the user to
+look, where a green tick on a locator that really matches six would not. The inverse — under-counting
+— is the failure §7 warns about.
+
+A per-framework resolver would be exact, and is not worth what it costs: the framework is fixed before
+picking starts (§3), so it could be threaded through, but the divergence only appears when identical
+content exists both inside and outside a component on the same page.
+
+### The chain is visible, and locked **[settled]**
+
+Exactly as a frame chain is (§16), and for exactly the same reason: a shadow host is **where the
+element is**, not part of how it is found within that component, so editing it would be editing the
+page.
+
+Until this it was neither. The table's Locator column and the Edit dialog both showed the element's
+own locator, and the host chain appeared for the first time in the generated code — so the line a user
+read in the table was not the line they were going to get, and someone overriding a locator could not
+see, let alone manage, the part of it that reached the component.
+
+So the chain is shown wherever the locator is shown: in the table row, and as a read-only **Shadow**
+row in the Edit dialog beside **Frame**. The element's own locator stays fully editable, which is the
+part a user can meaningfully change.
+
+The row reads as the target writes it, so the table is the generated line:
+
+| | |
+|---|---|
+| Playwright | `locator('#join_neu_email_field').locator('[name="email"]')` |
+| Puppeteer | `locator('#join_neu_email_field >>> [name="email"]')` |
+| Selenium | `#join_neu_email_field › css: [name="email"]` — neither chain is expressible in a `By`, so both read as the path they are |
+
+One consequence worth stating: **the table and the generated code are built by the same code**.
+`display.ts` already owned the locator spelling for that reason, and the Puppeteer generator had grown
+its own copy of the `>>>` join — which is how the two came to disagree in the first place. It defers
+again.
+
+### Uniqueness is asked the way the frameworks ask it **[settled]**
+
+Both halves of this were wrong in the first implementation, in the same way and
+one layer apart.
+
+**The eye** resolved against the document. Etsy's `<clg-text-input name="password">` mirrors `name`
+onto its host, so `[name=password]` found the host *and* the control inside it and reported *2 elements
+match* for a locator the model had counted as unique. The eye now resolves in the root the locator is
+relative to, so `HIGHLIGHT` carries the shadow path exactly as it carries the frame path.
+
+**The selector builder** then made the same mistake about the host itself. `cssFor` called
+`[name="email"]` unique because it is the only match a plain `querySelectorAll` finds — and Playwright,
+whose css pierces, resolves two. A host selector that is not unique in the framework consuming it
+produces a strict-mode violation from a locator we called good.
+
+So every uniqueness check pierces, because every framework that consumes the answer does. Selenium does
+not, and over-counting is the safe direction (see above).
+
+### Picking **[settled]**
+
+`event.target` is retargeted to the host for any listener outside the shadow tree, so picking inside a
+web component selected the component, not the control. It happened to work on Etsy because that
+component mirrors `name` and `placeholder` onto its host; a component that does not would have yielded
+a locator for a wrapper. `composedPath()[0]` is the real target.
+
+The ↑/↓ walk (§4) steps out through `getRootNode().host` at a shadow boundary, rather than stopping at
+a `parentElement` of `null`. The breadcrumb marks the crossing, so it is visible that the element is
+inside a component rather than a plain `<div>`.
+
+### Closed roots cannot be read **by us** **[settled]**
+
+`element.shadowRoot` is `null` for a closed root, and the picker is JavaScript in the page, so there is
+nothing to pick and nothing to generate.
+
+Worth recording that this is *our* limit and not the ecosystem's: **WebDriver reads closed roots
+perfectly well** — `shadow_root` returns one and finds inside it — because it uses the element's
+internal slot rather than the JS accessor. Playwright cannot. So a Selenium locator for a closed-root
+element is a thing that could exist; we simply cannot see the element to write one. Nothing to build,
+but it is the answer to "why not just support it".
+
+Hovering one during Add or Scan shows the same red dashed treatment a sandboxed frame gets (§16),
+labelled *cannot be read — closed shadow root*, and a scan that skips one says so rather than silently
+returning less. Silence is indistinguishable from a bug — which is exactly how this whole section came
+to be written.
+
+### Verification
+
+The same three layers frames got: fixtures in `tests/fixtures/`, every expression resolved in real
+Playwright and real Puppeteer by the fidelity specs, and the generated Python **run** in a real browser
+by `selenium.run.spec.ts` and `playwright-python.run.spec.ts`. Nothing here is believed until it has
+resolved against a real engine — Selenium's "css only from a shadow root" restriction included, which
+the run spec is the arbiter of.
+
+**The container chosen can itself be the component.** Hovering a web component highlights the host,
+because everything it draws is inside it — so choosing it is the obvious thing to do. Its light DOM is
+empty, and every walk entered only a shadow root found among the *descendants*, so scanning a component
+found nothing, and scanning a closed one reported nothing to explain it either. All three walks — what
+is collected, what is reported unreadable, and which frames to delegate to — look at the container's own
+root first. **[settled]**
+
+**A frame inside a shadow root needs a different answer per engine**, measured rather than reasoned
+about (`tests/frames-in-shadow.spec.ts`, `tests/shadow.probe.spec.ts`):
+
+| Target | Reaches `#in-shadow` from the document? | So the frame step carries |
+|---|---|---|
+| Playwright (TS, Python) | ✅ its css engine pierces | nothing extra — the bare selector resolves |
+| Puppeteer | ❌ plain css does not pierce; `page.$` answers **null**, and `.contentFrame()` then throws on it | the hosts joined with `>>>` |
+| Selenium (Python, Java, C#) | ❌ a document-rooted find reaches no shadow content at all | a `shadowRoot` walk before the switch |
+
+So `FrameStep` carries the host chain, and each target spends it or ignores it. Getting this from "it is
+a shadow root, so it needs the chain" would have been wrong for Playwright and right for the other two
+— which is why each is run. **[settled]**
+
+**A frame inside a shadow root is still a frame.** `querySelectorAll` does not enter a shadow root, so
+an `<iframe>` inside a web component was invisible to the frame machinery: never pushed a path, never
+answered when it asked for one, never asked to scan itself. It kept an empty path, which also made it
+answer the eye as though it were the top document — its 0 landing on top of the real count, which is
+exactly what §16's path check exists to stop. Frame enumeration pierces. **[settled]**
+
+## 20. Telling a version 2 user what happened
+
+**Once, in a tab, on 2.x → 3.x.** **[settled]**
+
+Mozilla documents this as *upboarding* and asks for it. Chrome documents the same pattern for a first
+install and asks only that extensions cause minimal distraction. Neither forbids it; only one endorses
+it.
+
+**A tab, because the alternatives cost more than they are worth.** `action.openPopup()` is Chrome 127+
+against a declared floor of 114, is rejected for an unfocused window, and is undocumented from
+`onInstalled` — where there may be no focused window and the worker is still starting. A notification
+needs the `notifications` permission, and adding a required permission on an **update** makes Chrome
+disable the extension until the user re-accepts it: paying for a what's-new with "your extension is
+switched off" is a bad trade.
+
+**Its first job is not the feature list.** The surfaces moved: version 2 was DevTools-only and version
+3 adds a side panel. Someone opening DevTools finds it changed whether or not we say anything, so the
+page leads with *where to find it* and only then says what is new. That is also what makes the tab
+defensible rather than promotional — it answers a question the user is about to have.
+
+**Gated on the major version changing**, which is what keeps it honest. Three things follow, and each
+is a bug without the gate:
+
+| | |
+|---|---|
+| Reloading an unpacked extension fires `update` | with the same version, on every rebuild in dev — Chrome documents this |
+| A patch or minor release | 3.0.1 does not earn a tab |
+| A fresh install | is not an upgrade and has nothing to catch up on, so `install` is not handled at all — the store listing is the onboarding |
+
+`previousVersion` comes from the browser, so nothing has to be stored and nothing can be left behind
+to fire a second time. `scripts/check-manifests.mjs` asserts the page is actually emitted: a wrong
+path would open an error page on the one occasion this ever runs, and nothing else would notice.
