@@ -55,13 +55,17 @@ export default defineBackground(() => {
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (!changeInfo.url) return;
     const url = changeInfo.url;
+    // `mutateExisting`, not `mutate`: this fires for every URL change in every
+    // tab, so creating on read meant a browsing session with no panel ever
+    // opened still woke the worker and rewrote the whole map on each
+    // navigation, leaving an empty record behind for every tab visited.
     void store
-      .mutate(tabId, (model) => {
+      .mutateExisting(tabId, (model) => {
         if (model.url == null) return;
         // Navigating back to where it was built makes it current again.
         model.stale = model.url !== url;
       })
-      .then((model) => publish(tabId, model));
+      .then((model) => model && publish(tabId, model));
   });
 
   // A model with no panel watching it is abandoned work (SPEC §5). Each panel
@@ -103,6 +107,14 @@ export default defineBackground(() => {
       // Only once no panel is left on the tab — the guard above — because two
       // panels can watch one tab, and the one still open can still receive a
       // pick.
+      //
+      // Scoped to the tab this panel was on, and NOT swept across every tab
+      // nobody is watching. A roaming side panel is usually not on the tab
+      // whose model it built by the time it closes, so a sweep would take that
+      // model with it — which SPEC §5 settles the other way: "switching away
+      // and back must not lose work". A model no panel is watching is held in
+      // storage.session, which is memory-only and never written to disk, and
+      // it goes when the tab does (`tabs.onRemoved`).
       stopEveryFrame(wasOn);
       void store
         .clear(wasOn)

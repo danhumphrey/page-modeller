@@ -56,6 +56,13 @@ export async function loadSettings(): Promise<Settings> {
   }
 }
 
+/**
+ * Rejects when sync storage refuses the write — over quota, or the write rate
+ * exceeded. Deliberately not swallowed the way `loadSettings` swallows a read:
+ * a read that fails has a sensible answer (the defaults) and a write that fails
+ * has none, and a settings page that says nothing while silently keeping none
+ * of the changes is worse than one that reports it.
+ */
 export async function saveSettings(settings: Settings): Promise<void> {
   await browser.storage.sync.set({ [KEY]: settings });
 }
@@ -70,6 +77,26 @@ export function watchSettings(onChange: (settings: Settings) => void): () => voi
     if (area !== 'sync' || !changes[KEY]) return;
     onChange({ ...defaultSettings, ...(changes[KEY].newValue as Partial<Settings> | undefined) });
   };
-  browser.storage.onChanged.addListener(listener);
-  return () => browser.storage.onChanged.removeListener(listener);
+  // Guarded where `loadSettings` is guarded, and for a worse failure than its.
+  // This runs at the top of the content script and at panel setup, so a throw
+  // here does not lose a setting — it takes the whole script with it, and the
+  // page then reports "Page Modeller can't reach this page" with nothing to
+  // suggest settings had anything to do with it.
+  //
+  // `storage.onChanged` is absent in a Firefox devtools document, which is
+  // granted `devtools.*` and `runtime.*` and little else — the same shape as
+  // the `browser.tabs` gap the panel already routes around, and invisible on
+  // Chrome and in every test we can run.
+  try {
+    browser.storage.onChanged.addListener(listener);
+  } catch {
+    return () => {};
+  }
+  return () => {
+    try {
+      browser.storage.onChanged.removeListener(listener);
+    } catch {
+      // Nothing to remove if adding never took.
+    }
+  };
 }

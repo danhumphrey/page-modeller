@@ -364,12 +364,66 @@ export default defineContentScript({
     const SCAN_FRAME = '__pageModellerScanFrame';
     /** Carries a frame its own path, from the document that embeds it. */
     const FRAME_PATH = '__pageModellerFramePath';
+    /** Arms a frame that loaded after picking started (see NEED_PATH). */
+    const ARM = '__pageModellerArm';
     /** A frame that loaded after its parent pushed, asking to be told. */
     const NEED_PATH = '__pageModellerNeedPath';
     /** A frame confirming it heard a scan request, so silence means something. */
     const SCAN_ACK = '__pageModellerScanAck';
     /** A frame confirming it has a script at all, in answer to its path. */
     const FRAME_ALIVE = '__pageModellerFrameAlive';
+
+    /**
+     * Where a child frame's document lives, as a `targetOrigin` — or null when
+     * it cannot be named.
+     *
+     * `'*'` delivers to whatever is in the frame, and the page's own scripts
+     * are in there with us: isolated worlds do not isolate postMessage. What
+     * travels this way is not nothing. FRAME_PATH carries selectors lifted
+     * from the embedding document, and ARM and SCAN_FRAME carry the nonce that
+     * authenticates a scan — so every third-party frame on the page, an ad
+     * iframe included, was handed both, and the fact that the extension is
+     * running with them. Naming the origin keeps each message to the document
+     * it was meant for.
+     *
+     * Null means an opaque origin: a sandbox without `allow-same-origin`, or a
+     * `data:` frame. No targetOrigin matches an opaque origin — not even
+     * "null", which postMessage rejects as a literal — so those are the one
+     * case that still has to be addressed with '*'.
+     */
+    function frameOrigin(frame: Element): string | null {
+      const sandbox = frame.getAttribute('sandbox');
+      if (sandbox !== null && !sandbox.split(/\s+/).includes('allow-same-origin')) return null;
+      // srcdoc and about:blank inherit the embedder's origin rather than
+      // deriving one from a URL.
+      if (frame.hasAttribute('srcdoc')) return location.origin;
+      const src = frame.getAttribute('src');
+      if (!src || src === 'about:blank') return location.origin;
+      try {
+        const origin = new URL(src, location.href).origin;
+        return origin === 'null' ? null : origin;
+      } catch {
+        // A relative URL this parser rejects is not one the frame resolved
+        // either; it is showing about:blank, which is our origin.
+        return location.origin;
+      }
+    }
+
+    /** Post to a child frame, naming its origin wherever one exists. */
+    function postToFrame(frame: Element, win: Window, message: object) {
+      win.postMessage(message, frameOrigin(frame) ?? '*');
+    }
+
+    /**
+     * Answer the frame that just posted to us, on its own origin.
+     *
+     * `e.origin` is the browser's word for who sent it, not the sender's, so
+     * it cannot be spoofed. "null" is the opaque case again — a sandboxed
+     * document — and is not a usable targetOrigin.
+     */
+    function reply(e: MessageEvent, message: object) {
+      (e.source as Window).postMessage(message, e.origin === 'null' || !e.origin ? '*' : e.origin);
+    }
 
     /**
      * Child frames known to have a content script inside them.
@@ -383,6 +437,45 @@ export default defineContentScript({
      * Liveness costs no extra round trip: a frame that answers its path push
      * has a script by definition.
      */
+    /**
+     * Is this window one of the frames THIS document embeds?
+     *
+     * Without it, any window could post FRAME_ALIVE and be marked readable —
+     * including a sandboxed frame's own page, which would then be drawn in the
+     * ordinary blue treatment instead of the red dashed "cannot be read". The
+     * user clicks into it, nothing happens, and the warning SPEC §16 added for
+     * exactly that moment never appears.
+     */
+    /**
+     * Every frame this document embeds, shadow roots included.
+     *
+     * `querySelectorAll` does not enter a shadow root, so an `<iframe>` inside
+     * a web component was invisible to all of this. It was never pushed a
+     * path; its NEED_PATH was answered by a search that could not find it; and
+     * it kept `myPath = []` for ever — which made it answer HIGHLIGHT as
+     * though it were the top document, and its 0 landed on top of the real
+     * count (SPEC §16, §19). It was never scanned either.
+     */
+    function embeddedFrames(root: Document | ShadowRoot | Element = document): Element[] {
+      // The container itself, for the same reason `collectInteractive` needs
+      // it: scanning a component whose shadow root holds an iframe found no
+      // frame to delegate to.
+      const ownRoot = (root as Element).shadowRoot;
+      const out = ownRoot ? embeddedFrames(ownRoot) : [];
+      out.push(...Array.from(root.querySelectorAll('iframe, frame')));
+      for (const el of Array.from(root.querySelectorAll('*'))) {
+        if (el.shadowRoot) out.push(...embeddedFrames(el.shadowRoot));
+      }
+      return out;
+    }
+
+    function isOwnChild(win: Window): boolean {
+      for (const frame of embeddedFrames()) {
+        if ((frame as HTMLIFrameElement).contentWindow === win) return true;
+      }
+      return false;
+    }
+
     const readableFrames = new WeakSet<Window>();
 
     function isReadableFrame(el: Element): boolean {
@@ -390,12 +483,34 @@ export default defineContentScript({
       return !win || readableFrames.has(win);
     }
 
+    /**
+     * Child frames that have acknowledged a push sent to a named origin, so we
+     * know the origin we derived for them is the one they are actually on.
+     */
+    const namedOriginWorks = new WeakSet<Window>();
+
     /** Tell one child frame, or every child frame, where it sits. */
     function pushPaths(only?: Window) {
-      for (const frame of document.querySelectorAll('iframe, frame')) {
+      for (const frame of embeddedFrames()) {
         const win = (frame as HTMLIFrameElement).contentWindow;
         if (!win || (only && win !== only)) continue;
-        win.postMessage({ [FRAME_PATH]: true, path: [...myPath, frameStepFor(frame)] }, '*');
+        const message = { [FRAME_PATH]: true, path: [...myPath, frameStepFor(frame)] };
+        postToFrame(frame, win, message);
+
+        // A named origin comes from the `src` ATTRIBUTE, which says where the
+        // frame was pointed, not where it ended up: a frame that redirected
+        // across origins never receives a message addressed to the origin its
+        // src names, and would silently keep the wrong path — and a wrong path
+        // is the eye certifying a locator that resolves to nothing.
+        //
+        // FRAME_ALIVE is already the acknowledgement of a push, so its absence
+        // is the signal. Falling back to '*' puts those frames exactly where
+        // every frame used to be, so nothing is worse off than before; every
+        // frame we can name is now better off.
+        if (frameOrigin(frame) === null || namedOriginWorks.has(win)) continue;
+        setTimeout(() => {
+          if (!namedOriginWorks.has(win)) win.postMessage(message, '*');
+        }, 300);
       }
     }
 
@@ -410,6 +525,9 @@ export default defineContentScript({
       myPath = [];
       pushPaths();
     } else {
+      // Upward is the one direction that must stay '*': a cross-origin child
+      // cannot read its parent's origin, and this carries no data — it is a
+      // request, and the reply comes back on a named origin.
       window.parent.postMessage({ [NEED_PATH]: true }, '*');
     }
 
@@ -423,15 +541,27 @@ export default defineContentScript({
 
       // Asking where it sits. Answered from this frame's own path, and
       // answered again later if that path changes.
+      //
+      // Also the moment to arm it. START_PICKING is a one-shot broadcast that
+      // reaches the frames existing at that instant; a frame that loads
+      // afterwards — a lazy ad, a consent frame, a chat widget, any
+      // `loading="lazy"` embed — had no nonce and no mode, so hovering it drew
+      // no overlay and clicking it did nothing. Worse, its onClick never ran,
+      // so its preventDefault never ran either: clicking a link to pick it
+      // navigated away and destroyed the page being modelled.
       if (data[NEED_PATH] && e.source && e.source !== window.parent) {
         pushPaths(e.source as Window);
+        if (active) reply(e, { [ARM]: nonce, mode, includeHidden });
         return;
       }
 
       // Confirming it has a script inside it, so the overlay knows this frame
       // can be reached.
-      if (data[FRAME_ALIVE] && e.source && e.source !== window.parent) {
+      if (data[FRAME_ALIVE] && e.source && e.source !== window.parent && isOwnChild(e.source as Window)) {
         readableFrames.add(e.source as Window);
+        // It answered, so the origin the push was addressed to is the one it
+        // is on — later pushes need no broadcast fallback.
+        if (e.origin !== 'null') namedOriginWorks.add(e.source as Window);
         return;
       }
 
@@ -448,13 +578,35 @@ export default defineContentScript({
       // ---- from the parent ----
       if (e.source !== window.parent) return;
 
+      // Armed late (see NEED_PATH). Same effect as START_PICKING, reaching a
+      // frame that did not exist when the broadcast went out.
+      if (data[ARM] !== undefined && !active) {
+        nonce = String(data[ARM] ?? '');
+        mode = data.mode === 'scan' ? 'scan' : 'add';
+        includeHidden = data.includeHidden === true;
+        start();
+        return;
+      }
+
       if (data[FRAME_PATH]) {
-        // Not authenticated by the picking nonce: this runs at load, before
-        // any nonce exists. `e.source === window.parent` is the guard. A page
-        // could lie about its own frame structure and get a wrong locator into
-        // its own model — visible in the table, and no worse than that.
+        // The top frame never accepts one. Its path is empty by definition, and
+        // `window.parent === window` up here, so the guard above passes for a
+        // page posting to ITSELF — which let any page set `myPath` to whatever
+        // it liked. That is worse than the "a wrong locator in its own model"
+        // this comment used to claim: the forged path becomes this frame's
+        // myPath, so `samePath` matches, and the eye then resolves against the
+        // document and reports a green "1 element matches" for a locator the
+        // generated test can never resolve — the one property SPEC §8 says
+        // must hold.
+        if (window.top === window) return;
+
+        // Below the top, `e.source === window.parent` is a real check: only the
+        // embedding document can post as our parent. A page can still lie to
+        // its own children about their structure, which costs a wrong locator
+        // in its own model — visible in the table, and no worse than that.
         myPath = (data.path as FrameStep[]) ?? [];
         // Tell the parent something is alive in here.
+        // '*' for the same reason as NEED_PATH, and it carries a bare flag.
         window.parent.postMessage({ [FRAME_ALIVE]: true }, '*');
         // Pass it on: the chain is built one level at a time.
         pushPaths();
@@ -474,7 +626,7 @@ export default defineContentScript({
 
       if (data[SCAN_FRAME] !== nonce) return;
       // Answer before scanning: the parent is timing this.
-      (e.source as Window).postMessage({ [SCAN_ACK]: nonce }, '*');
+      reply(e, { [SCAN_ACK]: nonce });
       scanDocument();
     });
 
@@ -491,7 +643,7 @@ export default defineContentScript({
     function delegateScan(frame: Element) {
       const win = (frame as HTMLIFrameElement).contentWindow;
       if (!win) return;
-      win.postMessage({ [SCAN_FRAME]: nonce }, '*');
+      postToFrame(frame, win, { [SCAN_FRAME]: nonce });
       awaitingAck.set(
         win,
         setTimeout(() => {
@@ -546,7 +698,7 @@ export default defineContentScript({
     function scanDocument() {
       const root = document.body ?? document.documentElement;
       const results = collectInteractive(root, includeHidden).map((el) => generate(el, myPath));
-      const nested = Array.from(document.querySelectorAll('iframe, frame'));
+      const nested = embeddedFrames();
       stop({ notify: false });
       if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
       reportClosedRoots(root);
@@ -605,7 +757,7 @@ export default defineContentScript({
       // container scan stopped, which made the same page give two different
       // answers depending on where the scan started.
       if (mode === 'scan') {
-        for (const frame of Array.from(target.querySelectorAll('iframe, frame'))) delegateScan(frame);
+        for (const frame of embeddedFrames(target)) delegateScan(frame);
       }
 
       // Rejects when no panel is open; that's fine, drop it.

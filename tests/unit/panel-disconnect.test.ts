@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { emptyModel } from '@/src/model';
 
 // The background's panel lifecycle (SPEC §5), which nothing else covers.
 //
@@ -27,7 +28,12 @@ interface FakePort {
 const listeners = {
   connect: [] as Listener[],
   installed: [] as Listener[],
+  updated: [] as Listener[],
+  message: [] as Listener[],
 };
+
+/** Everything the background sent to panels via runtime.sendMessage. */
+const broadcast: Array<{ type: string; tabId?: number; message?: { type: string } }> = [];
 
 /** Tabs the background opened of its own accord. */
 const tabsCreated: string[] = [];
@@ -44,9 +50,12 @@ vi.mock('wxt/browser', () => ({
   browser: {
     runtime: {
       onConnect: { addListener: (cb: Listener) => listeners.connect.push(cb) },
-      onMessage: { addListener: () => {} },
+      onMessage: { addListener: (cb: Listener) => listeners.message.push(cb) },
       onInstalled: { addListener: (cb: Listener) => listeners.installed.push(cb) },
-      sendMessage: () => Promise.resolve(),
+      sendMessage: (message: { type: string }) => {
+        broadcast.push(message);
+        return Promise.resolve();
+      },
       getURL: (path: string) => `chrome-extension://test${path}`,
       getManifest: () => ({ version: manifestVersion }),
     },
@@ -56,7 +65,7 @@ vi.mock('wxt/browser', () => ({
         return Promise.resolve();
       },
       onRemoved: { addListener: () => {} },
-      onUpdated: { addListener: () => {} },
+      onUpdated: { addListener: (cb: Listener) => listeners.updated.push(cb) },
       query: () => Promise.resolve([]),
       create: (opts: { url?: string }) => {
         tabsCreated.push(opts?.url ?? '');
@@ -109,6 +118,9 @@ function connectPanel(): FakePort {
 async function startBackground() {
   listeners.connect.length = 0;
   listeners.installed.length = 0;
+  listeners.updated.length = 0;
+  listeners.message.length = 0;
+  broadcast.length = 0;
   sentToTabs.length = 0;
   tabsCreated.length = 0;
   manifestVersion = '3.0.0';
@@ -119,6 +131,23 @@ async function startBackground() {
 }
 
 const stopsSentTo = (tabId: number) => sentToTabs.filter((s) => s.tabId === tabId && s.message.type === 'STOP_PICKING');
+
+/** Seed a model for `tabId`, as picking an element would. */
+function seedModel(tabId: number, url = 'https://example.test/one') {
+  const models = (sessionStore.models ??= {}) as Record<number, unknown>;
+  models[tabId] = { ...emptyModel('playwright-ts'), url, elements: [{ name: 'field' }] };
+}
+
+const modelledTabs = () => Object.keys((sessionStore.models ?? {}) as object).map(Number).sort();
+
+/** Drive `tabs.onUpdated`, as a navigation does. */
+async function navigate(tabId: number, url: string) {
+  for (const cb of listeners.updated) await cb(tabId, { url });
+  await flush();
+}
+
+/** Let the store's serialised queue drain. */
+const flush = () => new Promise((r) => setTimeout(r, 0));
 
 describe('closing the last panel on a tab', () => {
   beforeEach(startBackground);
@@ -167,6 +196,94 @@ describe('closing the last panel on a tab', () => {
     panel.disconnect();
 
     expect(sentToTabs).toHaveLength(0);
+  });
+});
+
+describe('re-broadcasting what a frame said (FROM_TAB)', () => {
+  beforeEach(startBackground);
+
+  /** Deliver a content-script message, as runtime.onMessage does. */
+  const fromContent = (message: object, sender: object) => {
+    for (const cb of listeners.message) cb(message, sender);
+  };
+
+  const relayed = () => broadcast.filter((m) => m.type === 'FROM_TAB');
+
+  it('stamps the sending tab, because Firefox does not', () => {
+    // A content script's runtime.sendMessage arrives at a Firefox DevTools
+    // page with no `sender.tab` at all, so a panel filtering on it would drop
+    // every message. The background always sees the sender, so it stamps the
+    // tab and re-broadcasts; panels filter on that instead.
+    fromContent({ type: 'HIGHLIGHT_RESULT', count: 2, hidden: 0 }, { tab: { id: 7 } });
+
+    expect(relayed()).toHaveLength(1);
+    expect(relayed()[0].tabId, 'the tab the content script is in').toBe(7);
+    expect(relayed()[0].message?.type).toBe('HIGHLIGHT_RESULT');
+  });
+
+  it('says nothing when it cannot tell which tab it came from', () => {
+    // Unstamped, the message would reach every panel and each would have to
+    // guess — and a panel on another tab showing another tab's frame warning
+    // is worse than showing nothing.
+    fromContent({ type: 'HIGHLIGHT_RESULT', count: 2, hidden: 0 }, {});
+    fromContent({ type: 'FRAME_UNREADABLE', sandboxed: true }, { tab: {} });
+
+    expect(relayed()).toHaveLength(0);
+  });
+
+  it('ignores a message it does not recognise', () => {
+    fromContent({ type: 'NOT_OURS' }, { tab: { id: 7 } });
+    fromContent({ nope: true }, { tab: { id: 7 } });
+    fromContent(null as unknown as object, { tab: { id: 7 } });
+
+    expect(relayed()).toHaveLength(0);
+  });
+
+  it('relays each of the notices a frame can raise', () => {
+    // Every one of these is a frame saying it could not do what was asked, and
+    // each has its own snackbar in the panel. A missing case here is silence.
+    fromContent({ type: 'FRAME_UNREADABLE', sandboxed: false }, { tab: { id: 7 } });
+    fromContent({ type: 'SHADOW_UNREADABLE', count: 3 }, { tab: { id: 7 } });
+    fromContent({ type: 'PICKING_STOPPED' }, { tab: { id: 7 } });
+
+    expect(relayed().map((m) => m.message?.type)).toEqual([
+      'FRAME_UNREADABLE',
+      'SHADOW_UNREADABLE',
+      'PICKING_STOPPED',
+    ]);
+    expect(new Set(relayed().map((m) => m.tabId))).toEqual(new Set([7]));
+  });
+});
+
+describe('navigation (SPEC §7)', () => {
+  beforeEach(startBackground);
+
+  it('does not create a model for a tab that has none', async () => {
+    // `tabs.onUpdated` fires for every URL change in every tab, panel or no
+    // panel. Reading through `mutate` created on read, so ordinary browsing
+    // woke the worker and left an empty record behind for each tab visited.
+    await navigate(4, 'https://example.test/somewhere');
+
+    expect(modelledTabs()).toEqual([]);
+  });
+
+  it('still marks an existing model stale when its tab navigates away', async () => {
+    seedModel(7, 'https://example.test/one');
+
+    await navigate(7, 'https://example.test/two');
+
+    const models = sessionStore.models as Record<number, { stale: boolean }>;
+    expect(models[7].stale).toBe(true);
+  });
+
+  it('clears stale when the tab comes back to where the model was built', async () => {
+    seedModel(7, 'https://example.test/one');
+
+    await navigate(7, 'https://example.test/two');
+    await navigate(7, 'https://example.test/one');
+
+    const models = sessionStore.models as Record<number, { stale: boolean }>;
+    expect(models[7].stale).toBe(false);
   });
 });
 

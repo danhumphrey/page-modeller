@@ -28,6 +28,10 @@ const EXPECT = {
     'icons': (m) => m.icons?.['128'] != null,
     'sidebar_action.default_panel': (m) => m.sidebar_action?.default_panel === 'sidepanel.html',
     'no sidePanel permission': (m) => !m.permissions?.includes('sidePanel'),
+    // Firefox does not know the key and an unrecognised manifest key is a
+    // warning on an AMO submission — the same cost match_origin_as_fallback is
+    // kept off Firefox to avoid.
+    'no minimum_chrome_version': (m) => m.minimum_chrome_version === undefined,
     'devtools_page': (m) => m.devtools_page === 'devtools.html',
     'background.scripts': (m) => Array.isArray(m.background?.scripts),
     'gecko.id': (m) => typeof m.browser_specific_settings?.gecko?.id === 'string',
