@@ -91,6 +91,10 @@ sites. Do a pass on one of those too.
     is the case a Chrome-only pass cannot see.
 24. `frameset.html`: the legacy `<frameset>` shape, including the nested frameset, picks and resolves.
 
+> **`shadow.html` embeds an iframe inside a web component.** A page scan must model the gift-card
+> field inside it, and the eye on that row must find it — a frame inside a shadow root is still a frame
+> (SPEC §16, §19).
+
 ## Generate Code (SPEC §11)
 
 25. For **each** of the six targets: the dialog is titled with the framework, the code is read-only and

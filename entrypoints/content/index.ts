@@ -446,8 +446,26 @@ export default defineContentScript({
      * user clicks into it, nothing happens, and the warning SPEC §16 added for
      * exactly that moment never appears.
      */
+    /**
+     * Every frame this document embeds, shadow roots included.
+     *
+     * `querySelectorAll` does not enter a shadow root, so an `<iframe>` inside
+     * a web component was invisible to all of this. It was never pushed a
+     * path; its NEED_PATH was answered by a search that could not find it; and
+     * it kept `myPath = []` for ever — which made it answer HIGHLIGHT as
+     * though it were the top document, and its 0 landed on top of the real
+     * count (SPEC §16, §19). It was never scanned either.
+     */
+    function embeddedFrames(root: Document | ShadowRoot | Element = document): Element[] {
+      const out = Array.from(root.querySelectorAll('iframe, frame'));
+      for (const el of Array.from(root.querySelectorAll('*'))) {
+        if (el.shadowRoot) out.push(...embeddedFrames(el.shadowRoot));
+      }
+      return out;
+    }
+
     function isOwnChild(win: Window): boolean {
-      for (const frame of document.querySelectorAll('iframe, frame')) {
+      for (const frame of embeddedFrames()) {
         if ((frame as HTMLIFrameElement).contentWindow === win) return true;
       }
       return false;
@@ -468,7 +486,7 @@ export default defineContentScript({
 
     /** Tell one child frame, or every child frame, where it sits. */
     function pushPaths(only?: Window) {
-      for (const frame of document.querySelectorAll('iframe, frame')) {
+      for (const frame of embeddedFrames()) {
         const win = (frame as HTMLIFrameElement).contentWindow;
         if (!win || (only && win !== only)) continue;
         const message = { [FRAME_PATH]: true, path: [...myPath, frameStepFor(frame)] };
@@ -675,7 +693,7 @@ export default defineContentScript({
     function scanDocument() {
       const root = document.body ?? document.documentElement;
       const results = collectInteractive(root, includeHidden).map((el) => generate(el, myPath));
-      const nested = Array.from(document.querySelectorAll('iframe, frame'));
+      const nested = embeddedFrames();
       stop({ notify: false });
       if (results.length > 0) browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
       reportClosedRoots(root);
@@ -734,7 +752,7 @@ export default defineContentScript({
       // container scan stopped, which made the same page give two different
       // answers depending on where the scan started.
       if (mode === 'scan') {
-        for (const frame of Array.from(target.querySelectorAll('iframe, frame'))) delegateScan(frame);
+        for (const frame of embeddedFrames(target)) delegateScan(frame);
       }
 
       // Rejects when no panel is open; that's fine, drop it.

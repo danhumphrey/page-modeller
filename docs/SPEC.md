@@ -1221,6 +1221,12 @@ by `selenium.run.spec.ts` and `playwright-python.run.spec.ts`. Nothing here is b
 resolved against a real engine — Selenium's "css only from a shadow root" restriction included, which
 the run spec is the arbiter of.
 
+**A frame inside a shadow root is still a frame.** `querySelectorAll` does not enter a shadow root, so
+an `<iframe>` inside a web component was invisible to the frame machinery: never pushed a path, never
+answered when it asked for one, never asked to scan itself. It kept an empty path, which also made it
+answer the eye as though it were the top document — its 0 landing on top of the real count, which is
+exactly what §16's path check exists to stop. Frame enumeration pierces. **[settled]**
+
 ## 20. Telling a version 2 user what happened
 
 **Once, in a tab, on 2.x → 3.x.** **[settled]**

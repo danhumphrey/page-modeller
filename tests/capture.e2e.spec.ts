@@ -1398,11 +1398,29 @@ test('the eye resolves inside the shadow root it was given (SPEC §19)', async (
   await collectMessages(sw as never);
 
   const marks = page.locator('[data-page-modeller="highlight"]');
-  const highlight = (message: object) =>
-    sw.evaluate(
+
+  // A component has no shadow root until its `connectedCallback` has run, and
+  // a HIGHLIGHT that arrives first walks a path whose host has no root — which
+  // is a correct 0 for the wrong reason, and a flake on a slower machine.
+  await page.waitForFunction(
+    () =>
+      !!document.querySelector('#twin-two')?.shadowRoot &&
+      !!document.querySelector('outer-panel')?.shadowRoot?.querySelector('inner-field')?.shadowRoot
+  );
+
+  /** Send one HIGHLIGHT, having cleared what came before it. */
+  const highlight = async (message: object) => {
+    await sw.evaluate(() => {
+      (globalThis as unknown as { __picks: unknown[] }).__picks = [];
+    });
+    await sw.evaluate(
       ([id, m]) => chrome.tabs.sendMessage(id as number, m as object),
       [tabId, message] as [number, object]
     );
+  };
+
+  // Undefined until THIS highlight has answered, so the poll can never read the
+  // previous one's count and call it a pass.
   const lastCount = async () =>
     (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string; count?: number }[] }).__picks))
       .filter((m) => m.type === 'HIGHLIGHT_RESULT')
@@ -1444,6 +1462,74 @@ test('the eye resolves inside the shadow root it was given (SPEC §19)', async (
   await expect.poll(lastCount, 'a host that has gone').toBe(0);
   await expect(marks, 'and the previous highlight is cleared, not left behind').toHaveCount(0);
 
+  await page.close();
+});
+
+test('a scan reaches an iframe that lives inside a shadow root (SPEC §16, §19)', async () => {
+  // `querySelectorAll` does not enter a shadow root, so an <iframe> inside a
+  // web component was invisible to every part of the frame machinery: never
+  // pushed a path, never answered when it asked for one, never delegated a
+  // scan. It kept `myPath = []` for ever, which also made it answer HIGHLIGHT
+  // as though it were the top document — its 0 landing on top of the real
+  // count, which is the one thing SPEC §16 has the path check to prevent.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'shadow-frame', 'shadow.html');
+  await page.waitForFunction(() => !!document.querySelector('frame-host')?.shadowRoot?.querySelector('iframe'));
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  await panel.evaluate(
+    (id) =>
+      chrome.runtime.sendMessage({
+        type: 'RELAY_TO_TAB',
+        tabId: id,
+        message: { type: 'START_PICKING', mode: 'scan', includeHidden: false, nonce: 'n' },
+      }),
+    tabId
+  );
+  await page.evaluate(() => {
+    document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  });
+
+  const elements = async () =>
+    (
+      await panel.evaluate(
+        () =>
+          (window as unknown as { __msgs: { type: string; model?: { elements: { name: string; framePath?: unknown[] }[] } }[] })
+            .__msgs
+      )
+    )
+      .filter((m) => m.type === 'MODEL')
+      .at(-1)
+      ?.model?.elements ?? [];
+
+  // The input inside that iframe — `<input name="giftcard">`, which is in no
+  // other document on the page.
+  await expect.poll(async () => (await elements()).some((e) => /Gift/i.test(e.name)), {
+    message: 'the control inside the shadow-embedded iframe',
+  }).toBe(true);
+
+  // And it is recorded as being in a frame, not as top-level content: an empty
+  // path is what made that frame answer for the whole document.
+  const gift = (await elements()).find((e) => /Gift/i.test(e.name))!;
+  expect(gift.framePath?.length, 'recorded as framed').toBeGreaterThan(0);
+
+  await panel.close();
   await page.close();
 });
 
