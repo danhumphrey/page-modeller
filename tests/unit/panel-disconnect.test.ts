@@ -369,6 +369,21 @@ describe("the what's new tab (SPEC §20)", () => {
     expect(tabsCreated).toEqual(['chrome-extension://test/whatsnew.html']);
   });
 
+  it('opens for a 2.x user landing on a later 3.x patch', () => {
+    // The gate is on the MAJOR version, not on arriving exactly at 3.0.0. A
+    // user who never installed 3.0.0 — because a patch shipped before their
+    // browser got round to updating them — has just as much to catch up on.
+    manifestVersion = '3.0.1';
+    install('update', '2.5.1');
+    expect(tabsCreated).toEqual(['chrome-extension://test/whatsnew.html']);
+  });
+
+  it('opens for a 2.x user landing on a much later 3.x release', () => {
+    manifestVersion = '3.4.2';
+    install('update', '2.1.0');
+    expect(tabsCreated).toEqual(['chrome-extension://test/whatsnew.html']);
+  });
+
   it('stays shut for a minor or patch release', () => {
     // 3.0.1 has nothing a user needs to be told in a tab, and a tab per patch
     // is how an extension earns a one-star review.
