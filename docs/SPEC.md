@@ -1221,6 +1221,13 @@ by `selenium.run.spec.ts` and `playwright-python.run.spec.ts`. Nothing here is b
 resolved against a real engine — Selenium's "css only from a shadow root" restriction included, which
 the run spec is the arbiter of.
 
+**The container chosen can itself be the component.** Hovering a web component highlights the host,
+because everything it draws is inside it — so choosing it is the obvious thing to do. Its light DOM is
+empty, and every walk entered only a shadow root found among the *descendants*, so scanning a component
+found nothing, and scanning a closed one reported nothing to explain it either. All three walks — what
+is collected, what is reported unreadable, and which frames to delegate to — look at the container's own
+root first. **[settled]**
+
 **A frame inside a shadow root is still a frame.** `querySelectorAll` does not enter a shadow root, so
 an `<iframe>` inside a web component was invisible to the frame machinery: never pushed a path, never
 answered when it asked for one, never asked to scan itself. It kept an empty path, which also made it

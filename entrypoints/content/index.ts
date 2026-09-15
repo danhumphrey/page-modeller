@@ -457,7 +457,12 @@ export default defineContentScript({
      * count (SPEC §16, §19). It was never scanned either.
      */
     function embeddedFrames(root: Document | ShadowRoot | Element = document): Element[] {
-      const out = Array.from(root.querySelectorAll('iframe, frame'));
+      // The container itself, for the same reason `collectInteractive` needs
+      // it: scanning a component whose shadow root holds an iframe found no
+      // frame to delegate to.
+      const ownRoot = (root as Element).shadowRoot;
+      const out = ownRoot ? embeddedFrames(ownRoot) : [];
+      out.push(...Array.from(root.querySelectorAll('iframe, frame')));
       for (const el of Array.from(root.querySelectorAll('*'))) {
         if (el.shadowRoot) out.push(...embeddedFrames(el.shadowRoot));
       }

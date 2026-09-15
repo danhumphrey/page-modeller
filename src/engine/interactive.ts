@@ -99,6 +99,17 @@ export function isInteractive(el: Element): boolean {
  */
 export function collectInteractive(root: Element | ShadowRoot, includeHidden: boolean): Element[] {
   const found: Element[] = [];
+  // The container CHOSEN can itself be a component, and choosing it is the
+  // obvious thing to do: the overlay highlights the host, because everything
+  // the component draws is inside it. Its light DOM is empty — all of that is
+  // in its shadow root — and the walk below only enters a root found among the
+  // DESCENDANTS, so scanning a component returned nothing at all.
+  //
+  // Collected first, which is where the root's own rendered content sits in
+  // the order a descendant host's would.
+  const ownRoot = (root as Element).shadowRoot;
+  if (ownRoot) found.push(...collectInteractive(ownRoot, includeHidden));
+
   for (const el of Array.from(root.querySelectorAll('*'))) {
     if (isInteractive(el) && (includeHidden || !ariaHidden(el))) found.push(el);
     // A web component's controls live in its shadow root, which
@@ -161,6 +172,13 @@ function isClosedHost(el: Element): boolean {
  */
 export function collectClosedHosts(root: Element | ShadowRoot): Element[] {
   const out: Element[] = [];
+  // Same blind spot as `collectInteractive`: the container itself. Scanning a
+  // closed component returned nothing AND said nothing about why, which is the
+  // one outcome SPEC §19 says a scan must not have.
+  const self = root as Element;
+  if (self.shadowRoot) out.push(...collectClosedHosts(self.shadowRoot));
+  else if (self.nodeType === 1 && isClosedHost(self)) out.push(self);
+
   for (const el of Array.from(root.querySelectorAll('*'))) {
     if (el.shadowRoot) {
       out.push(...collectClosedHosts(el.shadowRoot));

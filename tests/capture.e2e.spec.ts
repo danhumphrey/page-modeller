@@ -1533,6 +1533,79 @@ test('a scan reaches an iframe that lives inside a shadow root (SPEC §16, §19)
   await page.close();
 });
 
+test('scanning the component itself reaches what it renders (SPEC §4, §19)', async () => {
+  // Reported from hand-testing: choosing <mirrored-field> — the obvious thing
+  // to do, since the overlay highlights the host — found no elements. Its
+  // light DOM is empty and every walker only entered a shadow root it found
+  // among the DESCENDANTS, never the container's own.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'scan-component', 'shadow.html');
+  await page.waitForFunction(() => !!document.querySelector('frame-host')?.shadowRoot?.querySelector('iframe'));
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  const names = async () =>
+    (
+      await panel.evaluate(
+        () => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string }[] } }[] }).__msgs
+      )
+    )
+      .filter((m) => m.type === 'MODEL')
+      .at(-1)
+      ?.model?.elements.map((e) => e.name) ?? [];
+
+  /** Arm a scan and commit it on one element, the way a click does. */
+  async function scanContainer(selector: string) {
+    await panel.evaluate(
+      (id) =>
+        chrome.runtime.sendMessage({
+          type: 'RELAY_TO_TAB',
+          tabId: id,
+          message: { type: 'START_PICKING', mode: 'scan', includeHidden: false, nonce: 'n' },
+        }),
+      tabId
+    );
+    await page.evaluate((sel) => {
+      const host = document.querySelector(sel)!;
+      host.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      host.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    }, selector);
+  }
+
+  // The component that mirrors its attributes: an <input> and a Submit, both
+  // of which exist only inside its shadow root.
+  await scanContainer('mirrored-field');
+  await expect.poll(async () => (await names()).length, { message: 'what the component renders' }).toBe(2);
+  expect(await names()).toEqual(['EmailAddress', 'Submit']);
+
+  // And a component whose shadow root holds an IFRAME: the scan has to be
+  // delegated into it, which needs the same blind spot fixed in the frame walk.
+  await panel.evaluate((id) => chrome.runtime.sendMessage({ type: 'DELETE_MODEL', tabId: id }), tabId);
+  await scanContainer('frame-host');
+  await expect
+    .poll(async () => (await names()).some((n) => /Gift/i.test(n)), {
+      message: 'the control inside the iframe the component renders',
+    })
+    .toBe(true);
+
+  await panel.close();
+  await page.close();
+});
+
 test('a scan says what it could not read: a closed shadow root (SPEC §19)', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
