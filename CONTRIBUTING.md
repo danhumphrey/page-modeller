@@ -124,10 +124,10 @@ in this tree builds it.
 
 ## Pull requests
 
-Branch from **`v3-rewrite`** and target it: `gh pr create --base v3-rewrite`. `gh` otherwise defaults
-to `master`, and because PRs here are squash-merged, a PR aimed at `master` collapses the entire
-branch difference into it rather than the one change you meant.
+Branch from **`master`** and target it, which is what `gh pr create` does by default. Until 3.0.0
+shipped this said `v3-rewrite`, because `master` still held the old Webpack extension while v3 was
+built on a long-lived branch; v3 has since landed on `master` and that branch is history.
 
-For the same reason, branch from `v3-rewrite` itself rather than from whichever branch you happen to
-be on — a branch cut from another branch carries commits that land again under a different identity,
-and every file both touched then conflicts even though the content is identical.
+Branch from `master` itself rather than from whichever branch you happen to be on. PRs here are
+squash-merged, so a branch cut from another branch carries commits that land again under a different
+identity, and every file both touched then conflicts even though the content is identical.

@@ -96,5 +96,9 @@ v3 moves to the root and v2.5.1 retires. Do this first: everything else touches 
 
 - **`<all_urls>` invites scrutiny.** CWS asks why, in writing, and broad host permissions slow review.
 - **AMO reviews source** because the upload is bundled. Phase 2.9 is not cosmetic.
-- **Settings must survive the upgrade.** v3 reads the same `storage.sync` key (`options`) and the same
-  names as v2.5.1 — asserted by code, never by a test against real v2.5.1 data. Worth one.
+- **Settings must survive the upgrade.** ✅ Hand-verified before 3.0.0: v2.5.1 installed, options set,
+  upgraded in place, settings intact — confirmed alongside the what's-new tab, which only opens on
+  `runtime.onInstalled` with reason `update` and so is itself evidence the upgrade path ran rather than
+  a fresh install. v3 reads the same `storage.sync` key (`options`) and the same names. Still worth an
+  automated test against real v2.5.1 data; there is none, and that is the only claim in the release
+  resting on a single manual run.
