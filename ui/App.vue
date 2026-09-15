@@ -237,13 +237,22 @@ function onPanelKey(e: KeyboardEvent) {
   const target = e.target as HTMLElement | null;
   if (target?.closest('input, textarea, select, [contenteditable="true"], [role="listbox"], [role="menu"], .q-menu')) return;
 
-  // A dialog owns its own keys, all of them. Picking does not stop while one
-  // is open — Keep picking leaves the session armed, and a row can be opened
-  // for editing from under it — and on the capture phase these arrive here
-  // first: Escape stopped the pick instead of closing the dialog, and Enter on
-  // a focused dialog button picked whatever the pointer was over instead of
-  // activating it.
-  if (target?.closest('.q-dialog')) return;
+  // A dialog owns the keys it USES, and no more. Picking does not stop while
+  // one is open — Keep picking leaves the session armed, the guidance dialog
+  // opens on the first use of each mode, and a row can be opened for editing
+  // from under it — and on the capture phase these arrive here first: Escape
+  // stopped the pick instead of closing the dialog, and Enter on a focused
+  // dialog button picked whatever the pointer was over instead of activating
+  // it.
+  //
+  // The arrows are NOT among them. Taking every key was the wider rule and it
+  // broke the thing the guidance dialog exists to explain: that dialog is on
+  // screen telling you to walk the DOM with ↑ and ↓ at exactly the moment it
+  // was swallowing them. Quasar focuses a dialog when it opens, so every
+  // keystroke arrives with a target inside it until it is dismissed. Arrows
+  // that a dialog's own control needs are already handled above, by the
+  // input/select/listbox/menu check.
+  if (target?.closest('.q-dialog') && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
 
   if (e.key === 'Escape') {
     e.preventDefault();

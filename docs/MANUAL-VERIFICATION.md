@@ -32,6 +32,9 @@ sites. Do a pass on one of those too.
    without pressing Add must not add a second row.
    - The overlay label is a breadcrumb ending in the target:
      `body › main › div › button (div) "Log in"`.
+   - **↑ / ↓ must still walk while the guidance dialog is open** — it is on screen explaining them on
+     the first use of each mode, and Quasar gives it focus, so this is the state most people meet the
+     arrows in. Escape there closes the dialog; it does not stop the pick.
    - **↑ / ↓** walk the target up and down the nesting; moving the mouse starts again from the cursor.
      **Enter** or a click picks the walked-to element, not what is under the pointer. The page must not
      scroll, and Enter must not re-trigger the Add Element button.
