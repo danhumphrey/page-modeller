@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, inject, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useQuasar } from 'quasar';
 import { browser } from 'wxt/browser';
 import AppToolbar from './AppToolbar.vue';
@@ -113,6 +113,17 @@ const showCode = ref(false);
 /** Survive closing the dialog, not reloading the panel (SPEC §11, §12). */
 const codeShape = ref<string | undefined>();
 const codeClassName = ref<string | undefined>();
+
+// The class name is the ONE of those two that belongs to a model rather than
+// to the person: the shape is how you like your code, and the class name is
+// what this page's page object is called. It outlived its model — switch tab,
+// or delete the model and build another, and the name typed for the last one
+// was still overriding a default derived from the new page's URL. Keyed on the
+// model's own URL, so it survives picking more elements into the same model.
+watch(
+  () => model.value.url,
+  () => (codeClassName.value = undefined)
+);
 
 const rows = computed<ModelRow[]>(() =>
   model.value.elements.map((el) => ({
@@ -228,6 +239,23 @@ function onPanelKey(e: KeyboardEvent) {
   const target = e.target as HTMLElement | null;
   if (target?.closest('input, textarea, select, [contenteditable="true"], [role="listbox"], [role="menu"], .q-menu')) return;
 
+  // A dialog owns the keys it USES, and no more. Picking does not stop while
+  // one is open — Keep picking leaves the session armed, the guidance dialog
+  // opens on the first use of each mode, and a row can be opened for editing
+  // from under it — and on the capture phase these arrive here first: Escape
+  // stopped the pick instead of closing the dialog, and Enter on a focused
+  // dialog button picked whatever the pointer was over instead of activating
+  // it.
+  //
+  // The arrows are NOT among them. Taking every key was the wider rule and it
+  // broke the thing the guidance dialog exists to explain: that dialog is on
+  // screen telling you to walk the DOM with ↑ and ↓ at exactly the moment it
+  // was swallowing them. Quasar focuses a dialog when it opens, so every
+  // keystroke arrives with a target inside it until it is dismissed. Arrows
+  // that a dialog's own control needs are already handled above, by the
+  // input/select/listbox/menu check.
+  if (target?.closest('.q-dialog') && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
   if (e.key === 'Escape') {
     e.preventDefault();
     stopPicking();
@@ -338,10 +366,18 @@ function reportViewing() {
 
 onMounted(async () => {
   settings.value = await loadSettings();
-  applyTheme($q, settings.value.theme);
+  // `hostTheme` is what System resolves to on this surface: DevTools' own
+  // theme in a DevTools panel, and nothing at all in a side panel or sidebar,
+  // which leaves prefers-color-scheme to answer (SPEC §14).
+  let hostTheme = host.hostTheme();
+  applyTheme($q, settings.value.theme, hostTheme);
+  host.onHostThemeChanged((next) => {
+    hostTheme = next;
+    applyTheme($q, settings.value.theme, hostTheme);
+  });
   unwatchSettings = watchSettings((next) => {
     settings.value = next;
-    applyTheme($q, next.theme);
+    applyTheme($q, next.theme, hostTheme);
   });
 
   tabId.value = await host.getTabId();

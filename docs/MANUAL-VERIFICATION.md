@@ -32,7 +32,14 @@ sites. Do a pass on one of those too.
    without pressing Add must not add a second row.
    - The overlay label is a breadcrumb ending in the target:
      `body › main › div › button (div) "Log in"`.
+   - **↑ / ↓ must still walk while the guidance dialog is open** — it is on screen explaining them on
+     the first use of each mode, and Quasar gives it focus, so this is the state most people meet the
+     arrows in. Escape there closes the dialog; it does not stop the pick.
    - **↑ / ↓** walk the target up and down the nesting; moving the mouse starts again from the cursor.
+     ↓ is a *return* path (SPEC §4): it retraces toward the element the mouse last sat on. So from a
+     freshly-hovered container it does nothing — you are already at that element — and ↑ is the only
+     direction with anywhere to go. Working as specced, not a bug; reaching a child means putting the
+     pointer on it.
      **Enter** or a click picks the walked-to element, not what is under the pointer. The page must not
      scroll, and Enter must not re-trigger the Add Element button.
 5. **Hold ⌘ (or Ctrl) while clicking** and picking stays armed for the next click; release it and the
@@ -52,6 +59,9 @@ sites. Do a pass on one of those too.
 
 10. Name and locator read correctly and stay **on one line** — Name, Locator, Actions across, not
     stacked, down to the narrowest sidebar width, with the headers still visible.
+    - **Drag the sidebar as narrow as it goes.** The locator column stops shrinking and the table
+      scrolls sideways rather than ellipsising every row down to `css: div.`; at ordinary widths no
+      horizontal scrollbar appears at all.
 11. A second element deriving the same name becomes `About2`. With **Append type to name** on,
     `About` becomes `AboutLink`.
 12. **Eye** highlights every match in yellow with a red outline, scrolls the first into view, and
@@ -59,7 +69,9 @@ sites. Do a pass on one of those too.
     **Close**, and clicking repeatedly replaces the message rather than stacking.
 13. A hidden row's eye marks its nearest visible ancestor with a dashed outline captioned *hidden
     element*, and the count says so.
-14. **Edit** (pencil or double-click): blank, spaced and duplicate names are rejected; switching type
+14. **Edit** (pencil or double-click): **Escape closes the dialog** and **Enter activates the focused
+    button** — including while a pick is still armed, which Keep picking leaves it. Blank, spaced and
+    duplicate names are rejected; switching type
     fills the fields from a generated locator or blanks them; the eye tests what is **typed**, not what
     is saved, and is disabled alongside Save while a required field is blank. Save updates the row in
     **both** surfaces.
@@ -101,6 +113,10 @@ sites. Do a pass on one of those too.
 
 ## Generate Code (SPEC §11)
 
+> A class name typed here belongs to **this** model. Switch tab or delete the model and the field
+> goes back to the name derived from the page's URL; the chosen output shape is a preference and
+> stays.
+
 25. For **each** of the six targets: the dialog is titled with the framework, the code is read-only and
     scrolls, and Copy puts it on the clipboard.
 26. The **shape selector** sits on its own row and offers that framework's shapes. The choice is
@@ -115,6 +131,11 @@ sites. Do a pass on one of those too.
 29. Every setting on the options page takes effect in an **already-open** panel, without reloading it.
 30. **Show tooltips** off silences every tooltip in the panel and the dialogs.
 31. **Theme** moves both the panel tokens and Quasar's dark mode; `System` follows the browser.
+    - On `System`, a **DevTools panel follows DevTools' theme, not the desktop's** (SPEC §14). Set
+      DevTools to Dark with a light desktop: the panel goes dark with it. On Firefox it follows a
+      change live; Chrome has no event for it, so there it is read when the panel opens.
+36. Tab through the **options page** with a screen reader on (VoiceOver: ⌘F5): every toggle, the test
+    id field and the theme select announce their own label, not just "checkbox".
 32. **Test id attribute** changes which attribute the CSS candidate prefers; emptied, it falls back to
     `data-testid` rather than turning test ids off.
 33. Right-click the toolbar icon → Options and Support both open.

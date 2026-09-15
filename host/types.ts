@@ -15,6 +15,18 @@ export interface PanelHost {
   getTabId(): Promise<number | undefined>;
   /** Fires when the driven tab changes. A side panel follows the active tab; a DevTools panel never moves. */
   onTabChanged(cb: (tabId: number | undefined) => void): void;
+  /**
+   * The theme the surface is sitting in, when the surface knows — or undefined
+   * to let `prefers-color-scheme` answer.
+   *
+   * SPEC §14 promises a DevTools panel follows DEVTOOLS' theme on the System
+   * setting, not the operating system's. Those disagree whenever someone runs
+   * a light desktop with DevTools set to dark, which is common enough to be
+   * the first thing a tester notices: a white panel in a black DevTools.
+   */
+  hostTheme(): 'dark' | 'light' | undefined;
+  /** Fires when that changes, where the host reports it at all. */
+  onHostThemeChanged(cb: (theme: 'dark' | 'light' | undefined) => void): void;
 }
 
 export const hostKey: InjectionKey<PanelHost> = Symbol('page-modeller-host');
