@@ -7,7 +7,7 @@
 // document.
 import type { FrameStep } from '../engine/types';
 import { singleQuoted, doubleQuoted } from '../quote';
-import { puppeteerShadowSelector } from './shadow';
+import { playwrightShadowPrefix, playwrightPyShadowPrefix, puppeteerShadowSelector } from './shadow';
 
 /**
  * The selector string for one step, in PLAYWRIGHT's spelling.
@@ -50,14 +50,29 @@ type Path = FrameStep[] | undefined;
 /** True when the chain is incomplete because a document in it is cross-origin. */
 export const isOpaque = (path: Path) => (path ?? []).some((s) => s.opaque);
 
-/** `frameLocator('#a').frameLocator('#b').`, or '' for the main frame. */
+/**
+ * `frameLocator('#a').frameLocator('#b').`, or '' for the main frame.
+ *
+ * Each step is scoped through its own host chain where it has one. Playwright
+ * PIERCES, which is what makes the bare selector resolve at all — and is
+ * exactly why the chain is still needed: a frame's selector is certified
+ * unique within the shadow root it lives in, so two components may each hold
+ * `iframe#editor` quite legitimately, and `frameLocator('#editor')` then
+ * pierces both roots and addresses both frames. Unique where it was measured,
+ * ambiguous where it is used — the same shape as the host that mirrors an
+ * attribute onto itself (SPEC §19).
+ */
 export function playwrightFramePrefix(path: Path): string {
-  return (path ?? []).map((s) => `frameLocator(${singleQuoted(frameSelector(s))}).`).join('');
+  return (path ?? [])
+    .map((s) => `${playwrightShadowPrefix(s.shadowPath)}frameLocator(${singleQuoted(frameSelector(s))}).`)
+    .join('');
 }
 
 /** The Python spelling of the same chain. */
 export function playwrightPyFramePrefix(path: Path): string {
-  return (path ?? []).map((s) => `frame_locator(${doubleQuoted(frameSelector(s))}).`).join('');
+  return (path ?? [])
+    .map((s) => `${playwrightPyShadowPrefix(s.shadowPath)}frame_locator(${doubleQuoted(frameSelector(s))}).`)
+    .join('');
 }
 
 /** How a step reads to a person: no Playwright `xpath=` prefix in prose. */

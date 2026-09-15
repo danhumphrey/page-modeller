@@ -248,7 +248,12 @@ function attrSelector(el: Element, attr: string): string | null {
   //
   // CSS.escape is not the answer here: it is for identifiers, and would render
   // `/forgot` as `\/forgot` — valid, but nobody writes that.
-  const sel = `${prefix}[${attr}="${cssString(value)}"]`;
+  // The attribute NAME is escaped as well as its value. `data:qa` and
+  // `data.qa` are legal HTML attribute names that `getAttribute` is happy
+  // with, and both are invalid CSS unescaped — `querySelectorAll` then THROWS
+  // rather than returning nothing, which took the whole scan with it for
+  // anyone who configured one (SPEC §12 lets them).
+  const sel = `${prefix}[${CSS.escape(attr)}="${cssString(value)}"]`;
   return unique(el, sel) ? sel : null;
 }
 
@@ -500,7 +505,8 @@ export function resolveCandidate(root: Document | ShadowRoot, c: LocatorCandidat
   const all = () => renderedIn(doc);
   switch (c.kind) {
     case 'testId':
-      return pierce(doc, `[${testIdAttribute}="${CSS.escape(c.value)}"]`);
+      // Name escaped as well as value — see `attrSelector`.
+      return pierce(doc, `[${CSS.escape(testIdAttribute)}="${CSS.escape(c.value)}"]`);
     case 'role':
       return withRole(doc, c.role)
         .filter((e) => c.name === undefined || matchesText(safeName(e), c.name, c.exact))

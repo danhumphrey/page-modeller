@@ -3,6 +3,7 @@ import { describeBrief, describeElement } from '@/src/engine/describe';
 import { collectClosedHosts, collectInteractive } from '@/src/engine/interactive';
 import { isMessage, type Message, type PickMode } from '@/src/messaging';
 import { frameSelector } from '@/src/locators/frames';
+import { shadowSelector } from '@/src/locators/shadow';
 import type { FrameStep, ShadowStep } from '@/src/engine/types';
 import { loadSettings, watchSettings } from '@/src/settings';
 
@@ -916,10 +917,27 @@ export default defineContentScript({
      * code, so the strings line up, including the `:root` marker that stands
      * for a cross-origin break.
      */
+    /**
+     * A step's full identity, not just its selector.
+     *
+     * A frame's selector is unique in the tree the frame lives in, which for a
+     * frame rendered by a web component is that component's shadow root — so
+     * two components can each legitimately contain `iframe#editor`. Comparing
+     * selectors alone made both frames accept the same HIGHLIGHT, so both
+     * documents lit up and both reported a count, and the last answer to
+     * arrive replaced the right one. Exactly one frame must answer (SPEC §16).
+     */
+    const stepKey = (step: FrameStep): string =>
+      [
+        frameSelector(step),
+        step.opaque ? 'opaque' : '',
+        ...(step.shadowPath ?? []).map(shadowSelector),
+      ].join('\u0000');
+
     function samePath(mine: FrameStep[], theirs: FrameStep[] | undefined): boolean {
       const other = theirs ?? [];
       if (mine.length !== other.length) return false;
-      return mine.every((step, i) => frameSelector(step) === frameSelector(other[i]));
+      return mine.every((step, i) => stepKey(step) === stepKey(other[i]));
     }
 
     browser.runtime.onMessage.addListener((msg: unknown) => {
