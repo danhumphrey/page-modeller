@@ -32,6 +32,19 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # Asked before anything is built, because it is the question the rest of
+      # this workflow assumes. A key can be valid, read the add-on's details
+      # and upload a ZIP, and still be refused at the last step with a 403 —
+      # that is what happened to 3.0.0, and nothing here caught it: `--dry-run`
+      # stops BEFORE the submit call, so it exercises the credentials without
+      # ever testing whether they may publish.
+      - name: Can these credentials publish this add-on?
+        run: node scripts/check-amo-access.mjs
+        env:
+          FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+
       - run: npm ci
       - run: npm run typecheck
       - run: npx playwright install --with-deps chromium

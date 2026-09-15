@@ -88,6 +88,15 @@ v3 moves to the root and v2.5.1 retires. Do this first: everything else touches 
     and runs the same submit command with `--dry-run`: authentication only, nothing uploaded. Do this
     before tagging — otherwise the first time the credentials are exercised is on a tag that has
     already been pushed.
+
+    **`--dry-run` is not enough on its own**, which 3.0.0 found out. It stops *before* the submit call,
+    so it proves the key authenticates and never that the key may publish *this* add-on. The first
+    attempt failed at the last step with a 403 after building, uploading and validating: the key was
+    valid and belonged to a second Mozilla account that owned no add-ons. `scripts/check-amo-access.mjs`
+    now asks that question directly — it reads the key's own account id and checks it against the
+    add-on's authors — and runs first in **both** workflows, so a doomed release stops in seconds
+    rather than ten minutes in. A slug returning 200 proves only that the listing exists; it is public,
+    and it resolves for anybody.
 18. **Tag and push.** `v3.0.0`. The workflow runs the full suite with `PM_REQUIRE_FULL_SUITE=1`,
     checks the tag agrees with `package.json`, zips, and submits to both stores. Submitting is not
     publishing: both gate on review, and AMO reviews the sources zip as well.
