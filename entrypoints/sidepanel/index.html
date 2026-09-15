@@ -6,6 +6,21 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/icon/32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icon/16.png" />
     <link rel="icon" type="image/png" sizes="128x128" href="/icon/128.png" />
+    <!--
+      Firefox draws the SIDEBAR's icon from `sidebar_action.default_icon` and
+      from nowhere else. MDN: "This property is optional: if it is omitted, the
+      sidebar doesn't get an icon." There is no fallback to the `icons` key the
+      toolbar button uses, so Firefox drew its generic extension placeholder in
+      the sidebar rail beside a toolbar button showing the real icon.
+
+      Declared here rather than in wxt.config.ts because WXT generates
+      `sidebar_action` from this entrypoint and overwrites whatever the config
+      puts there; this meta is the documented way in.
+    -->
+    <meta
+      name="manifest.default_icon"
+      content="{ '16': 'icon/16.png', '32': 'icon/32.png', '48': 'icon/48.png', '128': 'icon/128.png' }"
+    />
     <title>Page Modeller</title>
   </head>
   <body>
