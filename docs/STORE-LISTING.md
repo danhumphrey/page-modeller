@@ -36,17 +36,7 @@ Shared by both stores.
 > Pick an element on any page — or scan a whole form at once — and Page Modeller names it, works out a
 > locator that resolves to it, and generates page object style code you can paste into your tests.
 >
-> Currently generates code for:
->
-> - Playwright (TypeScript)
-> - Playwright (Python)
-> - Selenium WebDriver Java
-> - Selenium WebDriver C#
-> - Selenium WebDriver Python
-> - Puppeteer
->
-> Each target offers a full page object or just the locators, and Selenium also generates methods —
-> so it fits whatever conventions your project already has.
+> Currently generates code for Playwright, Selenium WebDriver and Puppeteer.
 >
 > Version 3 is a complete rewrite. It runs in Chrome and Firefox, reaches elements inside iframes and
 > inside a web component's shadow DOM, prefers accessible roles and names over brittle CSS paths, and
@@ -54,6 +44,21 @@ Shared by both stores.
 >
 > Suggestions and bug reports are welcome on GitHub:
 > https://github.com/danhumphrey/page-modeller/issues
+
+**Do not list the targets as bullets.** An earlier draft broke them out one per line — *Playwright
+(TypeScript), Playwright (Python), Selenium WebDriver Java, Selenium WebDriver C#, Selenium WebDriver
+Python, Puppeteer* — and the Chrome Web Store **rejected 3.0.0** for it on 16 September 2026:
+
+> **Violation type:** Spam and Placement in the Store
+> **Violation:** Having excessive keywords in the item's description.
+> **How to rectify:** Remove the excessive keywords in the description and resubmit the item.
+
+The store renders those bullets as one line, so six product names in a row read as keyword stuffing
+however they are formatted in the box. Naming the three families once, in a sentence, says the same
+thing and passes. The language variants belong on the framework selector, not in the listing.
+
+Worth knowing: **2.5.1's listing had the same shape and was approved in 2020.** The policy tightened;
+the old listing is not evidence that a new one will pass.
 
 **Settled: the beta line goes.** Today's listings both say the extension "is actively developed and is
 considered a beta release". After a rewrite released as 3.0.0 that reads as less confidence than the
