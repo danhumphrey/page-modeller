@@ -2,7 +2,7 @@ import { test, expect, chromium, type BrowserContext } from '@playwright/test';
 import { resolve } from 'node:path';
 
 // E2E: load the built extension into a real browser and confirm each panel
-// surface renders. (Run `npm run build` first; the `test` script does this.)
+// surface renders. (Run `npm run build:chrome` first; the `test` script does this.)
 // Firefox can't be driven this way — its build is covered by
 // scripts/check-manifests.mjs and by the manual pass.
 const EXT_PATH = resolve('.output/chrome-mv3');
