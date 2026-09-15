@@ -8,15 +8,21 @@ v2.5.1 — the Webpack/Vue 2 extension this replaces — is gone from the tree a
 `v2.5.1-final` tag. Nothing here builds it, and nothing here should be judged against how it did
 things (see "v2.5.1 is not the default" below).
 
-**Branch from `v3-rewrite`, not from the branch you happen to be on.** PRs here are squash-merged, so a
+**`master` is the trunk.** v3 landed there in #107 and shipped as `v3.0.0`; `v3-rewrite` is history
+now, not a base. Branch from `master`, PR to `master`, and let `gh pr create` default the base — the
+advice that used to be here said the opposite, because `master` still held v2.5.1 while v3 was built
+on a long-lived branch.
+
+**Branch from `master`, not from the branch you happen to be on.** PRs here are squash-merged, so a
 branch cut from another branch carries commits that land again under a different identity — and every
 file both touched then conflicts, even though the content is identical. Recovery is
-`git rebase --onto origin/v3-rewrite <last commit of the parent branch> <your branch>`, which replays
-only your own commits.
+`git rebase --onto origin/master <last commit of the parent branch> <your branch>`, which replays only
+your own commits.
 
-**Always `gh pr create --base v3-rewrite`.** `gh` defaults the base to the repo's default branch,
-`master`. A branch PR'd that way does not carry one commit — squash-merging it collapses the whole
-`v3-rewrite`..branch difference into `master` (97 files the one time it happened, #75/#76).
+The rewrite's 61 commits are not on `master`: #107 was squashed deliberately, on the view that a bug
+from here is worked from the source, the tests and the report rather than from how the code arrived.
+They remain on the `v3-rewrite` branch and in #107 — **do not delete that branch**, it is the only
+ordinary reference to them.
 
 ## The docs
 
