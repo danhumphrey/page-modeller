@@ -57,7 +57,18 @@ export default defineConfig({
     // The frameworks people search the stores for. v2.5.1 was "Page Modeller
     // (Selenium, Robot Framework etc)"; Robot Framework and Protractor are
     // gone and Playwright leads now.
-    name: 'Page Modeller (Playwright, Selenium, Puppeteer etc.)',
+    //
+    // The stores disagree on how long a name may be: Chrome allows 75, AMO
+    // allows 45 and REJECTS the upload beyond it — `JSON_INVALID: "/name" must
+    // NOT have more than 45 characters`, which arrives as a flat
+    // `400 Bad Request: {"upload":["Upload is not valid."]}` from the submit
+    // API, naming neither the field nor the limit. So Firefox drops Puppeteer
+    // from the list; it is the least-searched of the three and the only word
+    // that has to go. `check-manifests.mjs` holds both ends.
+    name:
+      browser === 'firefox'
+        ? 'Page Modeller (Playwright, Selenium, etc.)'
+        : 'Page Modeller (Playwright, Selenium, Puppeteer etc.)',
     // Shown under the icon in the Chrome store, where the full name will not
     // fit. Carried over from v2.5.1 unchanged.
     short_name: 'PageModeller',

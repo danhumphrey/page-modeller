@@ -111,4 +111,12 @@ jobs:
         with:
           name: release-zips
           path: .output/*.zip
+          # `.output` starts with a dot, and upload-artifact treats a dotted
+          # path segment as hidden and skips it — so the glob matched nothing
+          # and the step "succeeded" having uploaded zero files, with only a
+          # warning to say so. The Chrome zip is uploaded BY HAND from this
+          # artifact, so losing it quietly means the release produced nothing
+          # anyone can ship.
+          include-hidden-files: true
           retention-days: 90
+          if-no-files-found: error
