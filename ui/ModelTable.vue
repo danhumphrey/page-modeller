@@ -69,12 +69,22 @@ defineEmits<{
   overflow-x: auto;
   /* v2.5.1 insets the table from the panel edges rather than running it flush. */
   padding: 8px var(--pm-gutter) 0;
+  /* Pairs with the table's min-width: the table stops shrinking, and this is
+     what lets the rest be reached. */
+  overflow-x: auto;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  /* A floor, not a width. Name takes 34% and Actions a fixed 104px, so in a
+     narrow Firefox sidebar the locator column was down to about a dozen
+     characters — every row ellipsised to `css: div.` and the column carrying
+     no information at all. Below this the container scrolls sideways instead
+     of the column being crushed; at any ordinary panel width nothing changes
+     and no scrollbar appears. */
+  min-width: 380px;
 }
 
 th {

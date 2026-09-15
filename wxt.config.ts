@@ -71,7 +71,7 @@ export default defineConfig({
     // here has — without this the store would offer the extension to browsers
     // where the panel silently does not exist. Firefox's floor is declared as
     // gecko.strict_min_version below.
-    minimum_chrome_version: '114',
+
     // `storage` covers storage.session, where the per-tab models live (SPEC §5)
     // — the service worker is terminated after 30s idle and cannot hold them —
     // and storage.sync for settings (SPEC §14).
@@ -81,6 +81,10 @@ export default defineConfig({
     // key there is no toolbar button at all.
     action: { default_title: 'Page Modeller' },
     host_permissions: ['<all_urls>'],
+    // Chrome only. Firefox does not know the key, and an unrecognised manifest
+    // key is a warning on an AMO submission — the same cost this file already
+    // avoids by keeping `match_origin_as_fallback` off Firefox.
+    ...(browser !== 'firefox' && { minimum_chrome_version: '114' }),
     ...(browser === 'firefox' && {
       browser_specific_settings: {
         gecko: {

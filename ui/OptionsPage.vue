@@ -1,3 +1,10 @@
+<!--
+  Every control's visible text sits in a sibling, so nothing associated it with
+  the control itself: a screen reader announced "checkbox, unchecked" with no
+  name at all, three times over, and then an unlabelled text field and an
+  unlabelled combobox. `aria-labelledby` points at the text already on screen
+  rather than repeating it in an `aria-label`, so the two cannot drift apart.
+-->
 <template>
   <main class="options">
     <h1 class="title">Page Modeller Options</h1>
@@ -6,11 +13,13 @@
       <q-toggle
         :model-value="settings[option.key] as boolean"
         :data-testid="`option-${option.key}`"
+        :aria-labelledby="`label-${option.key}`"
+        :aria-describedby="`hint-${option.key}`"
         @update:model-value="set(option.key, $event)"
       />
       <div class="option-text">
-        <div class="option-label">{{ option.label }}</div>
-        <div class="option-hint">{{ option.hint }}</div>
+        <div :id="`label-${option.key}`" class="option-label">{{ option.label }}</div>
+        <div :id="`hint-${option.key}`" class="option-hint">{{ option.hint }}</div>
       </div>
     </div>
 
@@ -22,12 +31,14 @@
         class="attr-input"
         placeholder="data-testid"
         data-testid="option-testIdAttribute"
+        aria-labelledby="label-testIdAttribute"
+        aria-describedby="hint-testIdAttribute"
         @blur="commitTestIdAttribute"
         @keydown.enter="commitTestIdAttribute"
       />
       <div class="option-text">
-        <div class="option-label">Test ID attribute</div>
-        <div class="option-hint">
+        <div id="label-testIdAttribute" class="option-label">Test ID attribute</div>
+        <div id="hint-testIdAttribute" class="option-hint">
           Where a test id lives. Playwright, Cypress and Testing Library each let a project choose;
           <code>data-qa</code> and <code>data-test</code> are common. Must match your test runner’s own setting, or the
           generated <code>getByTestId</code> will not resolve.
@@ -45,10 +56,12 @@
         class="theme-select"
         :options="themeOptions"
         data-testid="option-theme"
+        aria-labelledby="label-theme"
+        aria-describedby="hint-theme"
       />
       <div class="option-text">
-        <div class="option-label">Theme</div>
-        <div class="option-hint">System follows the browser, and DevTools when the panel is docked there.</div>
+        <div id="label-theme" class="option-label">Theme</div>
+        <div id="hint-theme" class="option-hint">System follows the browser, and DevTools when the panel is docked there.</div>
       </div>
     </div>
   </main>
@@ -132,7 +145,19 @@ async function set<K extends keyof Settings>(key: K, value: Settings[K]) {
   // This page follows its own setting, so the choice is visible here rather
   // than only after opening the panel.
   applyTheme($q, settings.value.theme);
-  await saveSettings(settings.value);
+  try {
+    await saveSettings(settings.value);
+  } catch {
+    // Sync storage refuses a write when it is over quota or being written too
+    // often. The control has already moved, so saying nothing leaves a page
+    // showing a setting that is not stored anywhere.
+    $q.notify({
+      position: 'bottom',
+      color: 'negative',
+      icon: 'error',
+      message: 'That setting could not be saved — browser sync storage refused the write',
+    });
+  }
 }
 </script>
 

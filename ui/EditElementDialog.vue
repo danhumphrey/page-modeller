@@ -236,7 +236,7 @@ function save() {
 
 .frame-warn {
   font-size: 12px;
-  color: var(--pm-warn, #d29922);
+  color: var(--pm-warning-fg);
 }
 
 .edit-card {

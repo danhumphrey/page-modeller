@@ -1284,6 +1284,74 @@ test('scan adds a container\'s interactive descendants, not the container (SPEC 
   expect(elements).toHaveLength(4);
 });
 
+test('modelHiddenElements carries all the way into a scan (SPEC §4, §14)', async () => {
+  // The setting was unit-tested at `collectInteractive` and never once reached
+  // a real scan: the wiring from the options page through START_PICKING to the
+  // content script had no coverage at all, so a scan could have ignored the
+  // flag entirely and every test would still have passed.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  /** Scan the whole page with the flag set one way, and say what was modelled. */
+  async function scanWith(includeHidden: boolean, caseName: string): Promise<string[]> {
+    const { page, tabId } = await openFixture(sw as never, caseName, 'edgecases.html');
+    const panel = await context.newPage();
+    await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+    await panel.evaluate(() => {
+      (window as unknown as { __msgs: unknown[] }).__msgs = [];
+      chrome.runtime.onMessage.addListener((m) => {
+        (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+      });
+    });
+
+    await panel.evaluate(
+      ([id, hidden]) =>
+        chrome.runtime.sendMessage({
+          type: 'RELAY_TO_TAB',
+          tabId: id as number,
+          message: { type: 'START_PICKING', mode: 'scan', includeHidden: hidden as boolean, nonce: 'n' },
+        }),
+      [tabId, includeHidden] as [number, boolean]
+    );
+
+    // Scanning the body means the whole document (SPEC §16).
+    await page.evaluate(() => document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true })));
+    await page.evaluate(() => {
+      const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+      document.body.dispatchEvent(ev);
+    });
+
+    const names = async () =>
+      (
+        await panel.evaluate(
+          () => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string }[] } }[] }).__msgs
+        )
+      )
+        .filter((m) => m.type === 'MODEL')
+        .at(-1)
+        ?.model?.elements.map((e) => e.name) ?? [];
+
+    await expect.poll(async () => (await names()).length).toBeGreaterThan(0);
+    const out = await names();
+    await panel.close();
+    await page.close();
+    return out;
+  }
+
+  const visibleOnly = await scanWith(false, 'hidden-off');
+  const everything = await scanWith(true, 'hidden-on');
+
+  // `<button aria-hidden="true">Ghost action</button>` is removed from the
+  // accessibility tree, which is the rule `getByRole` applies — so with the
+  // setting off it must not be modelled, and with it on it must.
+  expect(visibleOnly, 'aria-hidden is out by default').not.toContain('GhostAction');
+  expect(everything, 'and in when the setting says so').toContain('GhostAction');
+  // The setting adds; it never takes anything away.
+  for (const name of visibleOnly) expect(everything, name).toContain(name);
+  expect(everything.length).toBeGreaterThan(visibleOnly.length);
+});
+
 test('a hidden match is marked on its nearest visible ancestor', async () => {
   let [sw] = context.serviceWorkers();
   if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
@@ -1324,6 +1392,227 @@ test('a hidden match is marked on its nearest visible ancestor', async () => {
         .at(-1)?.hidden
     )
     .toBe(1);
+});
+
+test('the eye resolves inside the shadow root it was given (SPEC §19)', async () => {
+  // HIGHLIGHT carries a shadowPath for the same reason it carries a framePath:
+  // a locator has to be resolved where the generated test will resolve it. It
+  // was never once SENT with one, so `shadowRootFor` — the walk that turns the
+  // path into a root, and the null it returns when a host has gone — had no
+  // coverage on the message path at all.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+
+  const { page, tabId } = await openFixture(sw as never, 'shadow-eye', 'shadow.html');
+  await collectMessages(sw as never);
+
+  const marks = page.locator('[data-page-modeller="highlight"]');
+
+  // A component has no shadow root until its `connectedCallback` has run, and
+  // a HIGHLIGHT that arrives first walks a path whose host has no root — which
+  // is a correct 0 for the wrong reason, and a flake on a slower machine.
+  await page.waitForFunction(
+    () =>
+      !!document.querySelector('#twin-two')?.shadowRoot &&
+      !!document.querySelector('outer-panel')?.shadowRoot?.querySelector('inner-field')?.shadowRoot
+  );
+
+  /** Send one HIGHLIGHT, having cleared what came before it. */
+  const highlight = async (message: object) => {
+    await sw.evaluate(() => {
+      (globalThis as unknown as { __picks: unknown[] }).__picks = [];
+    });
+    await sw.evaluate(
+      ([id, m]) => chrome.tabs.sendMessage(id as number, m as object),
+      [tabId, message] as [number, object]
+    );
+  };
+
+  // Undefined until THIS highlight has answered, so the poll can never read the
+  // previous one's count and call it a pass.
+  const lastCount = async () =>
+    (await sw.evaluate(() => (globalThis as unknown as { __picks: { type: string; count?: number }[] }).__picks))
+      .filter((m) => m.type === 'HIGHLIGHT_RESULT')
+      .at(-1)?.count;
+
+  // `#coupon-field` exists in THREE shadow roots — one plain-field and two
+  // twins. Scoped to one host it is unique; that is the entire point.
+  await highlight({
+    type: 'HIGHLIGHT',
+    candidate: { kind: 'css', value: '#coupon-field' },
+    shadowPath: [{ host: { kind: 'css', value: '#twin-two' } }],
+  });
+  await expect.poll(lastCount, 'scoped to one component').toBe(1);
+  await expect(marks).toHaveCount(1);
+
+  // The same locator with no path resolves from the document — and the
+  // resolver pierces, because Playwright's css does (SPEC §19), so it finds all
+  // three. Which is the whole reason the path has to be carried: without it the
+  // eye contradicts the count the model was built with.
+  await highlight({ type: 'HIGHLIGHT', candidate: { kind: 'css', value: '#coupon-field' } });
+  await expect.poll(lastCount, 'unscoped, it is one of three').toBe(3);
+
+  // Two boundaries deep, which a one-step walk would get wrong.
+  await highlight({
+    type: 'HIGHLIGHT',
+    candidate: { kind: 'css', value: '[data-spike="nested-input"]' },
+    shadowPath: [{ host: { kind: 'css', value: 'outer-panel' } }, { host: { kind: 'css', value: 'inner-field' } }],
+  });
+  await expect.poll(lastCount, 'two hosts deep').toBe(1);
+
+  // A host that is not on the page any more: zero, and no exception — the page
+  // has changed since the element was captured, and reporting nothing found is
+  // the honest answer rather than resolving against the wrong tree.
+  await highlight({
+    type: 'HIGHLIGHT',
+    candidate: { kind: 'css', value: '#coupon-field' },
+    shadowPath: [{ host: { kind: 'css', value: 'no-such-component' } }],
+  });
+  await expect.poll(lastCount, 'a host that has gone').toBe(0);
+  await expect(marks, 'and the previous highlight is cleared, not left behind').toHaveCount(0);
+
+  await page.close();
+});
+
+test('a scan reaches an iframe that lives inside a shadow root (SPEC §16, §19)', async () => {
+  // `querySelectorAll` does not enter a shadow root, so an <iframe> inside a
+  // web component was invisible to every part of the frame machinery: never
+  // pushed a path, never answered when it asked for one, never delegated a
+  // scan. It kept `myPath = []` for ever, which also made it answer HIGHLIGHT
+  // as though it were the top document — its 0 landing on top of the real
+  // count, which is the one thing SPEC §16 has the path check to prevent.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'shadow-frame', 'shadow.html');
+  await page.waitForFunction(() => !!document.querySelector('frame-host')?.shadowRoot?.querySelector('iframe'));
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  await panel.evaluate(
+    (id) =>
+      chrome.runtime.sendMessage({
+        type: 'RELAY_TO_TAB',
+        tabId: id,
+        message: { type: 'START_PICKING', mode: 'scan', includeHidden: false, nonce: 'n' },
+      }),
+    tabId
+  );
+  await page.evaluate(() => {
+    document.body.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  });
+
+  const elements = async () =>
+    (
+      await panel.evaluate(
+        () =>
+          (window as unknown as { __msgs: { type: string; model?: { elements: { name: string; framePath?: unknown[] }[] } }[] })
+            .__msgs
+      )
+    )
+      .filter((m) => m.type === 'MODEL')
+      .at(-1)
+      ?.model?.elements ?? [];
+
+  // The input inside that iframe — `<input name="giftcard">`, which is in no
+  // other document on the page.
+  await expect.poll(async () => (await elements()).some((e) => /Gift/i.test(e.name)), {
+    message: 'the control inside the shadow-embedded iframe',
+  }).toBe(true);
+
+  // And it is recorded as being in a frame, not as top-level content: an empty
+  // path is what made that frame answer for the whole document.
+  const gift = (await elements()).find((e) => /Gift/i.test(e.name))!;
+  expect(gift.framePath?.length, 'recorded as framed').toBeGreaterThan(0);
+
+  await panel.close();
+  await page.close();
+});
+
+test('scanning the component itself reaches what it renders (SPEC §4, §19)', async () => {
+  // Reported from hand-testing: choosing <mirrored-field> — the obvious thing
+  // to do, since the overlay highlights the host — found no elements. Its
+  // light DOM is empty and every walker only entered a shadow root it found
+  // among the DESCENDANTS, never the container's own.
+  let [sw] = context.serviceWorkers();
+  if (!sw) sw = await context.waitForEvent('serviceworker', { timeout: 10_000 });
+  const extId = new URL(sw.url()).host;
+
+  for (const open of context.pages()) {
+    if (open.url().startsWith('chrome-extension://')) await open.close();
+  }
+
+  const { page, tabId } = await openFixture(sw as never, 'scan-component', 'shadow.html');
+  await page.waitForFunction(() => !!document.querySelector('frame-host')?.shadowRoot?.querySelector('iframe'));
+
+  const panel = await context.newPage();
+  await panel.goto(`chrome-extension://${extId}/devtools-panel.html`);
+  await panel.evaluate(() => {
+    (window as unknown as { __msgs: unknown[] }).__msgs = [];
+    chrome.runtime.onMessage.addListener((m) => {
+      (window as unknown as { __msgs: unknown[] }).__msgs.push(m);
+    });
+  });
+
+  const names = async () =>
+    (
+      await panel.evaluate(
+        () => (window as unknown as { __msgs: { type: string; model?: { elements: { name: string }[] } }[] }).__msgs
+      )
+    )
+      .filter((m) => m.type === 'MODEL')
+      .at(-1)
+      ?.model?.elements.map((e) => e.name) ?? [];
+
+  /** Arm a scan and commit it on one element, the way a click does. */
+  async function scanContainer(selector: string) {
+    await panel.evaluate(
+      (id) =>
+        chrome.runtime.sendMessage({
+          type: 'RELAY_TO_TAB',
+          tabId: id,
+          message: { type: 'START_PICKING', mode: 'scan', includeHidden: false, nonce: 'n' },
+        }),
+      tabId
+    );
+    await page.evaluate((sel) => {
+      const host = document.querySelector(sel)!;
+      host.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+      host.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    }, selector);
+  }
+
+  // The component that mirrors its attributes: an <input> and a Submit, both
+  // of which exist only inside its shadow root.
+  await scanContainer('mirrored-field');
+  await expect.poll(async () => (await names()).length, { message: 'what the component renders' }).toBe(2);
+  expect(await names()).toEqual(['EmailAddress', 'Submit']);
+
+  // And a component whose shadow root holds an IFRAME: the scan has to be
+  // delegated into it, which needs the same blind spot fixed in the frame walk.
+  await panel.evaluate((id) => chrome.runtime.sendMessage({ type: 'DELETE_MODEL', tabId: id }), tabId);
+  await scanContainer('frame-host');
+  await expect
+    .poll(async () => (await names()).some((n) => /Gift/i.test(n)), {
+      message: 'the control inside the iframe the component renders',
+    })
+    .toBe(true);
+
+  await panel.close();
+  await page.close();
 });
 
 test('a scan says what it could not read: a closed shadow root (SPEC §19)', async () => {

@@ -48,6 +48,34 @@ test('a scan collects controls inside open shadow roots', async ({ page }) => {
   expect(names).not.toContain('secret');
 });
 
+test('scanning the component itself finds what it renders (SPEC §4, §19)', async ({ page }) => {
+  // Choosing the host is the obvious thing to do — it is what the overlay
+  // highlights when you hover a component, because everything it draws is
+  // inside it. Its LIGHT dom is empty, though, and the walk only entered a
+  // shadow root it found among the descendants, never the root's own. So
+  // scanning a component returned nothing at all.
+  const found = await page.evaluate(() => {
+    const spike = window.__spike;
+    const at = (sel: string) =>
+      spike
+        .collectInteractive(document.querySelector(sel)!, false)
+        .map((el) => el.getAttribute('data-spike') ?? el.localName);
+    return {
+      mirrored: at('mirrored-field'),
+      nested: at('outer-panel'),
+      slotting: at('slotting-panel'),
+    };
+  });
+
+  // The input and the button the component renders.
+  expect(found.mirrored).toEqual(['mirrored-input', 'mirrored-submit']);
+  // Two boundaries down from the chosen container.
+  expect(found.nested).toEqual(['nested-input', 'nested-submit']);
+  // Slotted light DOM is an ordinary child of the host, so it is found the
+  // ordinary way — and exactly once, not again through the <slot>.
+  expect(found.slotting).toEqual(['slotted-button']);
+});
+
 test('shadowPathOf records the hosts, outermost first', async ({ page }) => {
   const paths = await page.evaluate(() => {
     const spike = window.__spike;
@@ -210,6 +238,30 @@ test('a closed root is reported, and nothing else is', async ({ page }) => {
   // would warn about every web component on the page and the warning would
   // mean nothing.
   expect(closed).toEqual(['closed-field']);
+});
+
+test('choosing a closed component says so rather than going quiet', async ({ page }) => {
+  // The same blind spot as the scan: asked about the container itself, this
+  // only ever looked at its descendants. So scanning a closed component
+  // returned nothing AND reported nothing to explain it — a scan that quietly
+  // gives less, which is the one outcome SPEC §19 exists to prevent.
+  const answers = await page.evaluate(() => {
+    const spike = window.__spike;
+    const at = (sel: string) =>
+      spike.collectClosedHosts(document.querySelector(sel)!).map((el) => el.localName);
+    return {
+      closed: at('closed-field'),
+      // An open one is not a closed one, asked the same way.
+      open: at('plain-field:not(.twin)'),
+      // Nor is a custom element that renders nothing — the false positive that
+      // would make the warning meaningless if it fired on every inert one.
+      inert: at('behaviour-only'),
+    };
+  });
+
+  expect(answers.closed).toEqual(['closed-field']);
+  expect(answers.open).toEqual([]);
+  expect(answers.inert).toEqual([]);
 });
 
 test('a host that mirrors an attribute does not double the count', async ({ page }) => {

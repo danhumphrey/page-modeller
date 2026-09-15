@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, inject, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useQuasar } from 'quasar';
 import { browser } from 'wxt/browser';
 import AppToolbar from './AppToolbar.vue';
@@ -124,6 +124,17 @@ const showCode = ref(false);
 /** Survive closing the dialog, not reloading the panel (SPEC §11, §12). */
 const codeShape = ref<string | undefined>();
 const codeClassName = ref<string | undefined>();
+
+// The class name is the ONE of those two that belongs to a model rather than
+// to the person: the shape is how you like your code, and the class name is
+// what this page's page object is called. It outlived its model — switch tab,
+// or delete the model and build another, and the name typed for the last one
+// was still overriding a default derived from the new page's URL. Keyed on the
+// model's own URL, so it survives picking more elements into the same model.
+watch(
+  () => model.value.url,
+  () => (codeClassName.value = undefined)
+);
 
 const rows = computed<ModelRow[]>(() =>
   model.value.elements.map((el) => ({
@@ -173,7 +184,9 @@ function helpOnFirstUse(mode: 'add' | 'scan') {
 function dismissHelp(modes: ('add' | 'scan')[]) {
   const patch = Object.fromEntries(modes.map((m) => [m === 'add' ? 'seenAddHelp' : 'seenScanHelp', true]));
   settings.value = { ...settings.value, ...patch };
-  void saveSettings(settings.value);
+  void saveSettings(settings.value).catch(() => {
+    notice('settings', { icon: 'error', color: 'negative', message: 'That setting could not be saved' });
+  });
 }
 
 const openNotices: Record<string, (() => void) | undefined> = {};
@@ -236,6 +249,23 @@ function onPanelKey(e: KeyboardEvent) {
   // the model is still empty.
   const target = e.target as HTMLElement | null;
   if (target?.closest('input, textarea, select, [contenteditable="true"], [role="listbox"], [role="menu"], .q-menu')) return;
+
+  // A dialog owns the keys it USES, and no more. Picking does not stop while
+  // one is open — Keep picking leaves the session armed, the guidance dialog
+  // opens on the first use of each mode, and a row can be opened for editing
+  // from under it — and on the capture phase these arrive here first: Escape
+  // stopped the pick instead of closing the dialog, and Enter on a focused
+  // dialog button picked whatever the pointer was over instead of activating
+  // it.
+  //
+  // The arrows are NOT among them. Taking every key was the wider rule and it
+  // broke the thing the guidance dialog exists to explain: that dialog is on
+  // screen telling you to walk the DOM with ↑ and ↓ at exactly the moment it
+  // was swallowing them. Quasar focuses a dialog when it opens, so every
+  // keystroke arrives with a target inside it until it is dismissed. Arrows
+  // that a dialog's own control needs are already handled above, by the
+  // input/select/listbox/menu check.
+  if (target?.closest('.q-dialog') && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
 
   if (e.key === 'Escape') {
     e.preventDefault();
@@ -314,7 +344,10 @@ function onRuntimeMessage(msg: unknown) {
     }
     else if (m.type === 'SCAN_STARTED') isBusy.value = true;
     else if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
-    else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count, m.hidden);
+    else if (m.type === 'HIGHLIGHT_RESULT') {
+      answeredSeq = highlightSeq;
+      showMatchCount(m.count, m.hidden);
+    }
   }
 }
 
@@ -349,10 +382,18 @@ function reportViewing() {
 
 onMounted(async () => {
   settings.value = await loadSettings();
-  applyTheme($q, settings.value.theme);
+  // `hostTheme` is what System resolves to on this surface: DevTools' own
+  // theme in a DevTools panel, and nothing at all in a side panel or sidebar,
+  // which leaves prefers-color-scheme to answer (SPEC §14).
+  let hostTheme = host.hostTheme();
+  applyTheme($q, settings.value.theme, hostTheme);
+  host.onHostThemeChanged((next) => {
+    hostTheme = next;
+    applyTheme($q, settings.value.theme, hostTheme);
+  });
   unwatchSettings = watchSettings((next) => {
     settings.value = next;
-    applyTheme($q, next.theme);
+    applyTheme($q, next.theme, hostTheme);
   });
 
   tabId.value = await host.getTabId();
@@ -449,9 +490,36 @@ function highlightEdited(candidate: LocatorCandidate) {
  */
 function highlightCandidate(candidate: LocatorCandidate, framePath?: FrameStep[], shadowPath?: ShadowStep[]) {
   if (tabId.value == null) return;
-  // Fire and forget; the count arrives as HIGHLIGHT_RESULT.
+  // The count arrives as HIGHLIGHT_RESULT, so this is fire and forget — but
+  // not answer-optional. Every frame hears HIGHLIGHT and exactly the one the
+  // element was picked in replies (SPEC §16), which means NOTHING replies once
+  // that frame is gone: a page navigated, a lazy frame that did not come back,
+  // a consent frame dismissed. The panel then showed nothing at all, and an
+  // eye that does nothing reads as a broken button rather than as the answer
+  // it actually is.
+  const seq = ++highlightSeq;
   send(tabId.value, { type: 'HIGHLIGHT', candidate, framePath, shadowPath });
+  setTimeout(() => {
+    // Superseded by a later click, or already answered.
+    if (seq !== highlightSeq || answeredSeq >= seq) return;
+    notice('matchCount', {
+      icon: 'error',
+      color: 'negative',
+      message: 'That element was picked in a frame that is no longer on this page',
+    });
+  }, HIGHLIGHT_TIMEOUT);
 }
+
+/** Eye clicks, so a late answer to an earlier one cannot be mistaken for this one. */
+let highlightSeq = 0;
+let answeredSeq = 0;
+
+/**
+ * Long enough that a slow frame is not called missing, short enough that the
+ * silence is still connected to the click that caused it. The reply is a
+ * same-process message hop, not a network one.
+ */
+const HIGHLIGHT_TIMEOUT = 600;
 
 function openEditor(id: string) {
   editing.value = model.value.elements.find((e) => e.id === id);
