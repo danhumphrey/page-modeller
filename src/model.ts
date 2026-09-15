@@ -101,9 +101,28 @@ export class ModelStore {
     return next;
   }
 
-  /** The model for a tab, created empty if this is the first time. */
-  get(tabId: number): Promise<TabModel> {
-    return this.update((models) => (models[tabId] ??= emptyModel(this.defaultFrameworkId)));
+  /**
+   * The model for a tab. Reads without creating.
+   *
+   * It used to create one as a side effect of reading, which made `clear()`
+   * followed by `get()` — what both Delete Model and last-panel-close do —
+   * put the row straight back. Combined with the navigation listener, which
+   * calls `mutate` for every URL change in every tab, the map only ever grew:
+   * four tabs navigated with no panel ever opened left four records behind.
+   */
+  async get(tabId: number): Promise<TabModel> {
+    const models = await this.read();
+    return models[tabId] ?? emptyModel(this.defaultFrameworkId);
+  }
+
+  /** Change a tab's model only if it HAS one. Returns null when it does not. */
+  mutateExisting(tabId: number, change: (model: TabModel) => void): Promise<TabModel | null> {
+    return this.update((models) => {
+      const model = models[tabId];
+      if (!model) return null;
+      change(model);
+      return model;
+    });
   }
 
   /** Read, change, and store in one serialised step. */

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { emptyModel } from '@/src/model';
 
 // The background's panel lifecycle (SPEC §5), which nothing else covers.
 //
@@ -27,6 +28,7 @@ interface FakePort {
 const listeners = {
   connect: [] as Listener[],
   installed: [] as Listener[],
+  updated: [] as Listener[],
 };
 
 /** Tabs the background opened of its own accord. */
@@ -56,7 +58,7 @@ vi.mock('wxt/browser', () => ({
         return Promise.resolve();
       },
       onRemoved: { addListener: () => {} },
-      onUpdated: { addListener: () => {} },
+      onUpdated: { addListener: (cb: Listener) => listeners.updated.push(cb) },
       query: () => Promise.resolve([]),
       create: (opts: { url?: string }) => {
         tabsCreated.push(opts?.url ?? '');
@@ -109,6 +111,7 @@ function connectPanel(): FakePort {
 async function startBackground() {
   listeners.connect.length = 0;
   listeners.installed.length = 0;
+  listeners.updated.length = 0;
   sentToTabs.length = 0;
   tabsCreated.length = 0;
   manifestVersion = '3.0.0';
@@ -119,6 +122,23 @@ async function startBackground() {
 }
 
 const stopsSentTo = (tabId: number) => sentToTabs.filter((s) => s.tabId === tabId && s.message.type === 'STOP_PICKING');
+
+/** Seed a model for `tabId`, as picking an element would. */
+function seedModel(tabId: number, url = 'https://example.test/one') {
+  const models = (sessionStore.models ??= {}) as Record<number, unknown>;
+  models[tabId] = { ...emptyModel('playwright-ts'), url, elements: [{ name: 'field' }] };
+}
+
+const modelledTabs = () => Object.keys((sessionStore.models ?? {}) as object).map(Number).sort();
+
+/** Drive `tabs.onUpdated`, as a navigation does. */
+async function navigate(tabId: number, url: string) {
+  for (const cb of listeners.updated) await cb(tabId, { url });
+  await flush();
+}
+
+/** Let the store's serialised queue drain. */
+const flush = () => new Promise((r) => setTimeout(r, 0));
 
 describe('closing the last panel on a tab', () => {
   beforeEach(startBackground);
@@ -167,6 +187,38 @@ describe('closing the last panel on a tab', () => {
     panel.disconnect();
 
     expect(sentToTabs).toHaveLength(0);
+  });
+});
+
+describe('navigation (SPEC §7)', () => {
+  beforeEach(startBackground);
+
+  it('does not create a model for a tab that has none', async () => {
+    // `tabs.onUpdated` fires for every URL change in every tab, panel or no
+    // panel. Reading through `mutate` created on read, so ordinary browsing
+    // woke the worker and left an empty record behind for each tab visited.
+    await navigate(4, 'https://example.test/somewhere');
+
+    expect(modelledTabs()).toEqual([]);
+  });
+
+  it('still marks an existing model stale when its tab navigates away', async () => {
+    seedModel(7, 'https://example.test/one');
+
+    await navigate(7, 'https://example.test/two');
+
+    const models = sessionStore.models as Record<number, { stale: boolean }>;
+    expect(models[7].stale).toBe(true);
+  });
+
+  it('clears stale when the tab comes back to where the model was built', async () => {
+    seedModel(7, 'https://example.test/one');
+
+    await navigate(7, 'https://example.test/two');
+    await navigate(7, 'https://example.test/one');
+
+    const models = sessionStore.models as Record<number, { stale: boolean }>;
+    expect(models[7].stale).toBe(false);
   });
 });
 

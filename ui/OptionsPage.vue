@@ -132,7 +132,19 @@ async function set<K extends keyof Settings>(key: K, value: Settings[K]) {
   // This page follows its own setting, so the choice is visible here rather
   // than only after opening the panel.
   applyTheme($q, settings.value.theme);
-  await saveSettings(settings.value);
+  try {
+    await saveSettings(settings.value);
+  } catch {
+    // Sync storage refuses a write when it is over quota or being written too
+    // often. The control has already moved, so saying nothing leaves a page
+    // showing a setting that is not stored anywhere.
+    $q.notify({
+      position: 'bottom',
+      color: 'negative',
+      icon: 'error',
+      message: 'That setting could not be saved — browser sync storage refused the write',
+    });
+  }
 }
 </script>
 

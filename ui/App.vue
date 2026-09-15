@@ -162,7 +162,9 @@ function helpOnFirstUse(mode: 'add' | 'scan') {
 function dismissHelp(modes: ('add' | 'scan')[]) {
   const patch = Object.fromEntries(modes.map((m) => [m === 'add' ? 'seenAddHelp' : 'seenScanHelp', true]));
   settings.value = { ...settings.value, ...patch };
-  void saveSettings(settings.value);
+  void saveSettings(settings.value).catch(() => {
+    notice('settings', { icon: 'error', color: 'negative', message: 'That setting could not be saved' });
+  });
 }
 
 const openNotices: Record<string, (() => void) | undefined> = {};
@@ -298,7 +300,10 @@ function onRuntimeMessage(msg: unknown) {
       });
     }
     else if (m.type === 'PICKING_STOPPED') isAdding.value = isScanning.value = false;
-    else if (m.type === 'HIGHLIGHT_RESULT') showMatchCount(m.count, m.hidden);
+    else if (m.type === 'HIGHLIGHT_RESULT') {
+      answeredSeq = highlightSeq;
+      showMatchCount(m.count, m.hidden);
+    }
   }
 }
 
@@ -433,9 +438,36 @@ function highlightEdited(candidate: LocatorCandidate) {
  */
 function highlightCandidate(candidate: LocatorCandidate, framePath?: FrameStep[], shadowPath?: ShadowStep[]) {
   if (tabId.value == null) return;
-  // Fire and forget; the count arrives as HIGHLIGHT_RESULT.
+  // The count arrives as HIGHLIGHT_RESULT, so this is fire and forget — but
+  // not answer-optional. Every frame hears HIGHLIGHT and exactly the one the
+  // element was picked in replies (SPEC §16), which means NOTHING replies once
+  // that frame is gone: a page navigated, a lazy frame that did not come back,
+  // a consent frame dismissed. The panel then showed nothing at all, and an
+  // eye that does nothing reads as a broken button rather than as the answer
+  // it actually is.
+  const seq = ++highlightSeq;
   send(tabId.value, { type: 'HIGHLIGHT', candidate, framePath, shadowPath });
+  setTimeout(() => {
+    // Superseded by a later click, or already answered.
+    if (seq !== highlightSeq || answeredSeq >= seq) return;
+    notice('matchCount', {
+      icon: 'error',
+      color: 'negative',
+      message: 'That element was picked in a frame that is no longer on this page',
+    });
+  }, HIGHLIGHT_TIMEOUT);
 }
+
+/** Eye clicks, so a late answer to an earlier one cannot be mistaken for this one. */
+let highlightSeq = 0;
+let answeredSeq = 0;
+
+/**
+ * Long enough that a slow frame is not called missing, short enough that the
+ * silence is still connected to the click that caused it. The reply is a
+ * same-process message hop, not a network one.
+ */
+const HIGHLIGHT_TIMEOUT = 600;
 
 function openEditor(id: string) {
   editing.value = model.value.elements.find((e) => e.id === id);
