@@ -48,6 +48,18 @@ test.beforeAll(async () => {
 test.afterAll(() => server?.kill());
 
 test('the generated Selenium finds every element it describes', async ({ page }) => {
+  // This drives real processes — a Python venv, chromedriver, and a Chrome per
+  // fixture — so it is bounded by machine speed rather than by anything the
+  // suite controls. It took 40s on a CI runner against Playwright's 30s
+  // default and was cut off mid-navigation, which presents as
+  // `page.goto: net::ERR_ABORTED; maybe frame was detached?` and reads like a
+  // browser fault rather than a clock.
+  //
+  // `shadow.probe.spec.ts` has the same shape and never hit this: its test
+  // body is synchronous, so `execFileSync` blocks the event loop and Playwright
+  // cannot interrupt it. That is luck, not design.
+  test.setTimeout(240_000);
+
   test.skip(!ready && !REQUIRE_FULL_SUITE, 'run `npm run fetch:test-deps` for the Python venv');
   expect(ready, 'PM_REQUIRE_FULL_SUITE is set but .test-venv is missing').toBe(true);
 

@@ -64,6 +64,7 @@ jobs:
           fi
 
       - run: npm run zip
+        id: zip
 
       # Firefox is submitted automatically; Chrome only if its secrets exist.
       #
@@ -106,7 +107,12 @@ jobs:
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
 
       - name: Keep the artifacts that were submitted
-        if: always()
+        # `always()` so a FAILED submission still leaves the zips behind — that
+        # is the whole point, since Chrome is uploaded by hand from here. But
+        # only once the zip step has actually run: a run that fell over in the
+        # test suite has nothing to keep, and `if-no-files-found: error` would
+        # otherwise report a second, invented failure on top of the real one.
+        if: always() && steps.zip.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: release-zips
