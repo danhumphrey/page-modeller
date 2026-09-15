@@ -124,6 +124,21 @@ export default defineBackground(() => {
     });
   });
 
+  /**
+   * The picking session each tab is currently in, keyed by tab.
+   *
+   * The panel mints a nonce per session and every frame carries it. The
+   * background learns it by watching START_PICKING go past, which is the only
+   * place it can: the panel never talks to a tab directly (SPEC §5).
+   *
+   * What it buys is the ability to drop a haul from a session that is over. A
+   * scan fans out across frames and each publishes its own, so a frame still
+   * working when the user presses Delete Model would otherwise put the model
+   * straight back — with a fraction of its rows, which is worse than either
+   * keeping it or losing it.
+   */
+  const session = new Map<number, string>();
+
   browser.runtime.onMessage.addListener((msg: unknown, sender: { tab?: { id?: number } }) => {
     if (!isMessage(msg)) return;
     const m = msg as Message;
@@ -134,6 +149,14 @@ export default defineBackground(() => {
       case 'ELEMENTS_PICKED': {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
+        // A haul from a session that has ended is dropped. `undefined` is a
+        // model written before hauls carried a nonce, or a frame that never
+        // saw a START_PICKING — accepted, because refusing it would be a
+        // regression for anything mid-flight across an extension reload.
+        if (m.nonce !== undefined && session.get(tabId) !== m.nonce) {
+          if (import.meta.env.DEV) console.log('[Page Modeller] dropped a haul from a finished session', tabId);
+          return;
+        }
         const url = sender.tab?.url ?? null;
         // One path for a single pick and a scan's haul, so both name and rank
         // identically — a scan is just Add, many times over.
@@ -196,6 +219,7 @@ export default defineBackground(() => {
       case 'FRAME_UNREADABLE':
       case 'SHADOW_UNREADABLE':
       case 'SCAN_STARTED':
+      case 'SCAN_COMPLETE':
       case 'HIGHLIGHT_RESULT': {
         const tabId = sender.tab?.id;
         if (tabId == null) return;
@@ -206,6 +230,7 @@ export default defineBackground(() => {
       // ---- from a panel ----
       case 'RELAY_TO_TAB': {
         if (import.meta.env.DEV) console.log('[Page Modeller] relay', m.message.type, '→ tab', m.tabId);
+        if (m.message.type === 'START_PICKING') session.set(m.tabId, m.message.nonce);
         browser.tabs.sendMessage(m.tabId, m.message).catch((err) => {
           // No content script: a browser-internal page, the add-on store, or a
           // tab open before the extension loaded.
@@ -235,6 +260,9 @@ export default defineBackground(() => {
         });
         return;
       case 'DELETE_MODEL':
+        // Ends the session as well as clearing the model, so a frame still
+        // scanning cannot refill what was just emptied.
+        session.delete(m.tabId);
         void store
           .clear(m.tabId)
           .then(() => store.get(m.tabId))

@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils';
 import * as quasar from 'quasar';
 import { Quasar, Dark, Notify, ClosePopup } from 'quasar';
 import App from '../../ui/App.vue';
+import { emptyModel } from '../../src/model';
 import { hostKey } from '../../host/types';
 
 // After clicking Add Element focus is in the PANEL, so the page never sees the
@@ -25,6 +26,8 @@ vi.stubGlobal('matchMedia', () => ({ matches: false, media: '', onchange: null, 
 
 /** Everything the panel sent to the background. */
 let sent: Array<{ type: string; message?: { type: string; direction?: string } }> = [];
+/** The panel's own runtime.onMessage handlers, so a test can drive them. */
+let listeners: Array<(m: unknown) => void> = [];
 
 vi.mock('wxt/browser', () => ({
   browser: {
@@ -33,7 +36,13 @@ vi.mock('wxt/browser', () => ({
         sent.push(m);
         return Promise.resolve();
       },
-      onMessage: { addListener() {}, removeListener() {} },
+      onMessage: {
+        addListener: (cb: (m: unknown) => void) => listeners.push(cb),
+        removeListener: (cb: (m: unknown) => void) => {
+          const i = listeners.indexOf(cb);
+          if (i >= 0) listeners.splice(i, 1);
+        },
+      },
       connect: () => ({ onDisconnect: { addListener() {} }, postMessage() {}, disconnect() {} }),
       getURL: (p: string) => `chrome-extension://test${p}`,
     },
@@ -91,12 +100,64 @@ function press(key: string, target: Element = document.body) {
 
 beforeEach(() => {
   sent = [];
+  listeners = [];
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   wrapper?.unmount();
   wrapper = undefined;
   document.body.innerHTML = '';
+});
+
+/** Deliver a background → panel message, as runtime.onMessage does. */
+function fromBackground(message: object) {
+  for (const cb of listeners) cb({ ...message, tabId: 7 });
+}
+
+describe('the scanning indicator ends with the SCAN, not the first model', () => {
+  const busy = () => !!document.querySelector('[data-testid="scanning"]');
+
+  it('stays up while frames are still reporting', async () => {
+    // A scan fans out and every frame publishes its own haul, so the first
+    // MODEL is the FIRST frame's finish. Clearing on it said the scan was over
+    // while the rest of the tree was still working.
+    await openPanel();
+    fromBackground({ type: 'FROM_TAB', message: { type: 'SCAN_STARTED' } });
+    await wrapper!.vm.$nextTick();
+    expect(busy(), 'the scan has started').toBe(true);
+
+    fromBackground({ type: 'MODEL', model: { ...emptyModel('playwright-ts'), elements: [] } });
+    await wrapper!.vm.$nextTick();
+    expect(busy(), 'a haul landed, but the scan is not over').toBe(true);
+  });
+
+  it('clears when the whole frame tree has reported', async () => {
+    await openPanel();
+    fromBackground({ type: 'FROM_TAB', message: { type: 'SCAN_STARTED' } });
+    await wrapper!.vm.$nextTick();
+
+    fromBackground({ type: 'FROM_TAB', message: { type: 'SCAN_COMPLETE' } });
+    await wrapper!.vm.$nextTick();
+
+    expect(busy()).toBe(false);
+  });
+
+  it('gives up on its own if completion never arrives', async () => {
+    // A frame navigated away mid-scan never reports, and a spinner that never
+    // stops is a worse failure than one that stops early.
+    // Mounted on real timers — `openPanel` awaits one itself, and faking them
+    // first means it never resolves.
+    await openPanel();
+    vi.useFakeTimers();
+    fromBackground({ type: 'FROM_TAB', message: { type: 'SCAN_STARTED' } });
+    await wrapper!.vm.$nextTick();
+    expect(busy()).toBe(true);
+
+    vi.advanceTimersByTime(60_000);
+    await wrapper!.vm.$nextTick();
+    expect(busy(), 'the ceiling let go').toBe(false);
+  });
 });
 
 describe('the panel forwards the picking keys (SPEC §4)', () => {

@@ -371,6 +371,16 @@ export default defineContentScript({
     const NEED_PATH = '__pageModellerNeedPath';
     /** A frame confirming it heard a scan request, so silence means something. */
     const SCAN_ACK = '__pageModellerScanAck';
+    /**
+     * A frame reporting that it AND everything below it has finished.
+     *
+     * Distinct from SCAN_ACK, which only says the request was heard. A scan
+     * fans out across the frame tree and each frame publishes its own haul, so
+     * without a rollup there is no moment anyone can call the end of it: the
+     * panel treated the first haul as the finish, which is the first frame's,
+     * not the last's.
+     */
+    const SCAN_DONE = '__pageModellerScanDone';
     /** A frame confirming it has a script at all, in answer to its path. */
     const FRAME_ALIVE = '__pageModellerFrameAlive';
 
@@ -566,6 +576,12 @@ export default defineContentScript({
         return;
       }
 
+      // A child reporting that its whole subtree has finished.
+      if (data[SCAN_DONE] && e.source && e.source !== window.parent) {
+        if (data[SCAN_DONE] === nonce) childSettled(e.source as Window);
+        return;
+      }
+
       // Confirming it heard a scan request, so silence means something.
       if (data[SCAN_ACK] && e.source !== window.parent) {
         const pending = awaitingAck.get(e.source as Window);
@@ -628,11 +644,47 @@ export default defineContentScript({
       if (data[SCAN_FRAME] !== nonce) return;
       // Answer before scanning: the parent is timing this.
       reply(e, { [SCAN_ACK]: nonce });
-      scanDocument();
+      scanDocument({ mine: false });
     });
 
     /** Frames asked to scan that have not yet answered. */
     const awaitingAck = new Map<Window, ReturnType<typeof setTimeout>>();
+
+    /**
+     * Child frames that have been asked to scan and not yet reported finished.
+     *
+     * A frame is done when its OWN scan has finished and every child it
+     * delegated to has said so — which is what makes the root's completion
+     * mean the whole tree, however deep it goes.
+     */
+    const awaitingDone = new Set<Window>();
+    /** Whether this frame is where the scan was started, rather than delegated to. */
+    let scanIsMine = false;
+    /** Whether this frame's own collection has finished. */
+    let ownScanDone = false;
+
+    /**
+     * Report completion once, upwards or outwards.
+     *
+     * A delegated frame answers the parent that asked; the frame the user
+     * actually clicked in tells the background, and that is the one message
+     * the panel treats as the end of the scan.
+     */
+    function finishScanIfDone() {
+      if (!ownScanDone || awaitingDone.size > 0) return;
+      ownScanDone = false;
+      if (scanIsMine) {
+        scanIsMine = false;
+        browser.runtime.sendMessage({ type: 'SCAN_COMPLETE', nonce }).catch(() => {});
+      } else if (window.parent !== window) {
+        window.parent.postMessage({ [SCAN_DONE]: nonce }, '*');
+      }
+    }
+
+    /** Stop waiting on a child, whether it finished or turned out unreachable. */
+    function childSettled(win: Window) {
+      if (awaitingDone.delete(win)) finishScanIfDone();
+    }
 
     /**
      * Ask a nested frame to scan itself, and everything below it.
@@ -645,10 +697,15 @@ export default defineContentScript({
       const win = (frame as HTMLIFrameElement).contentWindow;
       if (!win) return;
       postToFrame(frame, win, { [SCAN_FRAME]: nonce });
+      awaitingDone.add(win);
       awaitingAck.set(
         win,
         setTimeout(() => {
           awaitingAck.delete(win);
+          // No script in there, so no completion is ever coming either — stop
+          // waiting on it, or one unreadable frame would hold the whole scan
+          // open for ever.
+          childSettled(win);
           // `allow-same-origin` hands the frame its parent's origin back; a
           // sandbox without it has a null principal, and Firefox will not
           // inject into one. `allow-scripts` is a red herring — a bare sandbox
@@ -696,23 +753,31 @@ export default defineContentScript({
       if (count > 0) browser.runtime.sendMessage({ type: 'SHADOW_UNREADABLE', count }).catch(() => {});
     }
 
-    function scanDocument() {
+    /**
+     * `mine` is true in the frame the user clicked in and false in a frame
+     * that was delegated to — it decides who this frame reports completion to.
+     */
+    function scanDocument({ mine }: { mine: boolean }) {
       const root = document.body ?? document.documentElement;
       const nested = embeddedFrames();
+      scanIsMine = mine;
       // Stop first, so the overlay is gone while the work runs — it is drawn
       // over a page whose main thread is about to be held, and it cannot be
       // removed again until that finishes.
       stop({ notify: false });
       announceScan(() => {
         const results = batched(() => collectInteractive(root, includeHidden).map((el) => generate(el, myPath)));
-        // Sent even when empty. The panel shows "Scanning the page…" from
-        // SCAN_STARTED until the background publishes a model, and a scan that
-        // found nothing published nothing — so a page with no eligible
-        // controls, or a run ending on an empty child frame, left the spinner
-        // up for ever. An empty haul is an answer; silence is not.
-        browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+        // Sent even when empty. A scan that found nothing published nothing,
+        // so a page with no eligible controls told the panel nothing at all.
+        // An empty haul is an answer; silence is not.
+        browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results, nonce }).catch(() => {});
         reportClosedRoots(root);
+        // Delegated BEFORE this frame is marked done, or a frame with children
+        // would declare the whole subtree finished the moment its own
+        // collection ended.
         for (const frame of nested) delegateScan(frame);
+        ownScanDone = true;
+        finishScanIfDone();
       });
     }
 
@@ -764,7 +829,8 @@ export default defineContentScript({
       // frame: everything in it, frames below included. A smaller container
       // inside it does not, which is the boundary rule (SPEC §16).
       if (mode === 'scan' && (target === document.body || target === document.documentElement)) {
-        scanDocument();
+        // Clicked here, so this frame owns the scan and reports its end.
+        scanDocument({ mine: true });
         return;
       }
 
@@ -772,6 +838,9 @@ export default defineContentScript({
       // itself: you are modelling what is inside the section you chose.
       if (mode === 'scan') reportClosedRoots(target);
       if (mode === 'scan') {
+        // Clicking a container is always the start of a scan, never a
+        // delegated one — delegation always scans a whole document.
+        scanIsMine = true;
         announceScan(() => {
           const results = batched(() => collectInteractive(target, includeHidden).map((el) => generate(el, myPath)));
           // A container's frames are scanned too (SPEC §16). An element inside
@@ -783,12 +852,14 @@ export default defineContentScript({
           // container scan stopped, which made the same page give two different
           // answers depending on where the scan started.
           for (const frame of embeddedFrames(target)) delegateScan(frame);
-          browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results }).catch(() => {});
+          browser.runtime.sendMessage({ type: 'ELEMENTS_PICKED', results, nonce }).catch(() => {});
+          ownScanDone = true;
+          finishScanIfDone();
         });
         return;
       }
 
-      const message = { type: 'ELEMENT_PICKED', result: generate(target, myPath), keepPicking };
+      const message = { type: 'ELEMENT_PICKED', result: generate(target, myPath), keepPicking, nonce };
 
       // Rejects when no panel is open; that's fine, drop it.
       browser.runtime.sendMessage(message).catch(() => {});

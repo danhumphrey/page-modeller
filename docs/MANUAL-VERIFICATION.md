@@ -55,6 +55,11 @@ sites. Do a pass on one of those too.
 9. With **Model hidden elements** on, a scan picks up elements excluded from the accessibility tree;
    off, it does not.
 
+> **Scan `frames.html`.** *Scanning the page…* must stay up until every frame has reported — not vanish
+> as soon as the first rows appear — and must clear on its own afterwards. Then scan it again and press
+> **Delete Model** while it is still running: the model must stay deleted, not reappear with a handful of
+> rows from a frame that finished late.
+
 > **Scan a big page** — a long search-results or product-listing page, not a fixture. The panel says
 > *Scanning the page…* from the click until the rows land, and the page is usable again afterwards.
 
