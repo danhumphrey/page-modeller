@@ -44,5 +44,9 @@ export function sidePanelHost(): PanelHost {
     onTabChanged(cb) {
       listeners.push(cb);
     },
+    // A side panel and a sidebar sit in the browser chrome, which follows the
+    // operating system — exactly what prefers-color-scheme already reports.
+    hostTheme: () => undefined,
+    onHostThemeChanged() {},
   };
 }
