@@ -153,6 +153,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the stack, the scripts, and how the w
 
 ## License
 
-page-modeller is licensed under the GNU General Public License v3.0 (GPL-3.0). See LICENSE for the full text.
+page-modeller is licensed under the GNU General Public License v3.0 (GPL-3.0). See [LICENSE](LICENSE) for the full text.
 
 You're free to use, modify, and distribute this project — including commercially — as long as any distributed modified version is also licensed under GPL-3.0 with source code made available.
