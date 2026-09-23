@@ -153,8 +153,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the stack, the scripts, and how the w
 
 ## License
 
-This library is distributed under the MIT license. Please see the
-[LICENSE](https://github.com/danhumphrey/page-modeller/blob/master/LICENSE) file.
+page-modeller is licensed under the GNU General Public License v3.0 (GPL-3.0). See LICENSE for the full text.
 
-:point_up_2: I really should call this "licence" as I don't live in the US, but I'm adopting the MIT
-spelling :wink:
+You're free to use, modify, and distribute this project — including commercially — as long as any distributed modified version is also licensed under GPL-3.0 with source code made available.
