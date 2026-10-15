@@ -65,16 +65,6 @@ is Chrome only: two dev servers cannot run at once, so `dev`/`dev:chrome` are th
 - **Locator fidelity is the core contract.** `tests/engine.fidelity.spec.ts` checks generated
   locators against real Playwright resolution. If you touch the engine, that test is the arbiter.
 
-## v2.5.1 — the shipping extension
-
-Root `src/`, built with Webpack, tested with Jest. It is still what users run, so treat it as
-maintenance-only.
-
-`npm audit` at the root reports ~19–31 vulnerabilities. **Do not bulk-fix them.** The only two that
-reach shipped code are `vue` and `vuetify` — Vue 2 and Vuetify, which v3 replaces outright. The rest is
-dev tooling on a codebase being retired. Fix something here only if asked, or if it is being actively
-exploited.
-
 ## Gotchas
 
 - **v3 needs Node 22+.** jsdom's bundled undici calls `webidl.util.markAsUncloneable`, absent on Node
